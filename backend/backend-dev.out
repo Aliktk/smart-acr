@@ -1,0 +1,65 @@
+
+> @smart-acr/backend@0.1.0 dev D:\All AI Projects\smart-acr\backend
+> nest start --watch
+
+[2J[3J[H[[90m10:33:55 PM[0m] Starting compilation in watch mode...
+
+[[90m10:34:19 PM[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +111ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +65ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWorkflowModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +15ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHealthModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +6ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEmployeesModule dependencies initialized[39m[38;5;3m +11ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificationsModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuditModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mOrganizationModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTemplatesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSettingsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAnalyticsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDashboardModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAcrModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mArchiveModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mFilesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/v1/auth}:[39m[38;5;3m +295ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/auth/login, POST} route[39m[38;5;3m +16ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/auth/me, GET} route[39m[38;5;3m +5ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/auth/switch-role, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/auth/logout, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDashboardController {/api/v1/dashboard}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/dashboard/overview, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAcrController {/api/v1/acrs}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/acrs, GET} route[39m[38;5;3m +7ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/acrs/:id, GET} route[39m[38;5;3m +4ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/acrs, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/acrs/:id/transition, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mEmployeesController {/api/v1/employees}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/employees, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNotificationsController {/api/v1/notifications}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/notifications, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/notifications/:id/read, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuditController {/api/v1/audit}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/audit, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mOrganizationController {/api/v1/organization}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/organization/summary, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mTemplatesController {/api/v1/templates}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/templates, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mArchiveController {/api/v1/archive}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/archive, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mSettingsController {/api/v1/settings}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/settings, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/settings, PATCH} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAnalyticsController {/api/v1/analytics}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/analytics/leadership, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mFilesController {/api/v1/files}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/files/upload, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/api/v1/health}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:31 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/health, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 1584  - [39m04/02/2026, 10:34:32 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +137ms[39m
+ ELIFECYCLE  Command failed with exit code 3221225786.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ELIFECYCLE  Command failed with exit code 3221225786.

@@ -1,0 +1,451 @@
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================
+   FIA SMART ACR/PER — DESIGN TOKENS v2.0
+   Federal Investigation Agency, Pakistan
+   ============================================ */
+
+:root {
+  /* ─── Font Scale ─── */
+  --font-size: 15px;
+
+  /* ─── Brand Colors ─── */
+  --fia-navy:         #1A1C6E;
+  --fia-navy-700:     #14165A;
+  --fia-navy-600:     #1A1C6E;
+  --fia-navy-500:     #2D308F;
+  --fia-navy-400:     #4447B0;
+  --fia-navy-100:     #EEEEF8;
+  --fia-navy-50:      #F4F4FB;
+
+  --fia-cyan:         #0095D9;
+  --fia-cyan-600:     #0077B6;
+  --fia-cyan-100:     #E0F4FC;
+  --fia-cyan-50:      #F0FAFE;
+
+  /* ─── Neutrals ─── */
+  --fia-gray-950:     #0D0E12;
+  --fia-gray-900:     #111827;
+  --fia-gray-800:     #1F2937;
+  --fia-gray-700:     #374151;
+  --fia-gray-600:     #4B5563;
+  --fia-gray-500:     #6B7280;
+  --fia-gray-400:     #9CA3AF;
+  --fia-gray-300:     #D1D5DB;
+  --fia-gray-200:     #E5E7EB;
+  --fia-gray-100:     #F3F4F6;
+  --fia-gray-50:      #F9FAFB;
+  --fia-white:        #FFFFFF;
+  --color-white:      #FFFFFF;
+
+  /* ─── Status Colors ─── */
+  --fia-success:      #16A34A;
+  --fia-success-bg:   #F0FDF4;
+  --fia-warning:      #D97706;
+  --fia-warning-bg:   #FFFBEB;
+  --fia-danger:       #DC2626;
+  --fia-danger-bg:    #FEF2F2;
+  --fia-info:         #2563EB;
+  --fia-info-bg:      #EFF6FF;
+
+  /* ─── Spacing Scale ─── */
+  --space-0:  0px;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ─── Border Radius ─── */
+  --radius-xs:  4px;
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ─── Elevation / Shadows ─── */
+  --shadow-xs:  0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-sm:  0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.05);
+  --shadow-md:  0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg:  0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05);
+
+  /* ─── Sidebar ─── */
+  --sidebar-width:           240px;
+  --sidebar-collapsed-width: 64px;
+  --sidebar-bg:              #1A1C6E;
+  --sidebar-border:          rgba(255,255,255,0.08);
+  --sidebar-item-active:     rgba(255,255,255,0.14);
+  --sidebar-item-hover:      rgba(255,255,255,0.08);
+  --sidebar-text:            rgba(233,237,255,0.68);
+  --sidebar-text-active:     #FFFFFF;
+
+  /* ─── Layout ─── */
+  --topbar-height: 60px;
+
+  /* ─── Tailwind Compat Tokens ─── */
+  --background:              #F5F6FA;
+  --foreground:              #111827;
+  --card:                    #FFFFFF;
+  --card-foreground:         #111827;
+  --popover:                 #FFFFFF;
+  --popover-foreground:      #111827;
+  --primary:                 #1A1C6E;
+  --primary-foreground:      #FFFFFF;
+  --secondary:               #F3F4F6;
+  --secondary-foreground:    #374151;
+  --muted:                   #F3F4F6;
+  --muted-foreground:        #6B7280;
+  --accent:                  #EEEEF8;
+  --accent-foreground:       #1A1C6E;
+  --destructive:             #DC2626;
+  --destructive-foreground:  #FFFFFF;
+  --border:                  #E5E7EB;
+  --input:                   transparent;
+  --input-background:        #F3F4F6;
+  --switch-background:       #D1D5DB;
+  --ring:                    #1A1C6E;
+
+  /* ─── Chart Colors ─── */
+  --chart-1: #1A1C6E;
+  --chart-2: #0095D9;
+  --chart-3: #16A34A;
+  --chart-4: #D97706;
+  --chart-5: #DC2626;
+
+  /* ─── Radius (Tailwind compat) ─── */
+  --radius: 0.5rem;
+
+  /* ─── Font Weights ─── */
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+}
+
+.dark {
+  --background:              #0F1117;
+  --foreground:              #F9FAFB;
+  --card:                    #1A1D2E;
+  --card-foreground:         #F9FAFB;
+  --popover:                 #1A1D2E;
+  --popover-foreground:      #F9FAFB;
+  --primary:                 #0095D9;
+  --primary-foreground:      #FFFFFF;
+  --secondary:               #1F2937;
+  --secondary-foreground:    #F9FAFB;
+  --muted:                   #1F2937;
+  --muted-foreground:        #9CA3AF;
+  --accent:                  #1F2937;
+  --accent-foreground:       #F9FAFB;
+  --destructive:             #EF4444;
+  --destructive-foreground:  #FFFFFF;
+  --border:                  rgba(255,255,255,0.1);
+  --input:                   rgba(255,255,255,0.05);
+  --ring:                    #0095D9;
+  --chart-1: #60A5FA;
+  --chart-2: #34D399;
+  --chart-3: #FCD34D;
+  --chart-4: #F87171;
+  --chart-5: #A78BFA;
+}
+
+@theme inline {
+  --color-background:             var(--background);
+  --color-foreground:             var(--foreground);
+  --color-card:                   var(--card);
+  --color-card-foreground:        var(--card-foreground);
+  --color-popover:                var(--popover);
+  --color-popover-foreground:     var(--popover-foreground);
+  --color-primary:                var(--primary);
+  --color-primary-foreground:     var(--primary-foreground);
+  --color-secondary:              var(--secondary);
+  --color-secondary-foreground:   var(--secondary-foreground);
+  --color-muted:                  var(--muted);
+  --color-muted-foreground:       var(--muted-foreground);
+  --color-accent:                 var(--accent);
+  --color-accent-foreground:      var(--accent-foreground);
+  --color-destructive:            var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:                 var(--border);
+  --color-input:                  var(--input);
+  --color-input-background:       var(--input-background);
+  --color-switch-background:      var(--switch-background);
+  --color-ring:                   var(--ring);
+  --color-chart-1:                var(--chart-1);
+  --color-chart-2:                var(--chart-2);
+  --color-chart-3:                var(--chart-3);
+  --color-chart-4:                var(--chart-4);
+  --color-chart-5:                var(--chart-5);
+  --radius-sm:  calc(var(--radius) - 2px);
+  --radius-md:  var(--radius);
+  --radius-lg:  calc(var(--radius) + 4px);
+  --radius-xl:  calc(var(--radius) + 8px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: 1.375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--fia-gray-900);
+  }
+
+  h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--fia-gray-900);
+  }
+
+  h3 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--fia-gray-900);
+  }
+
+  h4 {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--fia-gray-900);
+  }
+
+  label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--fia-gray-700);
+  }
+
+  button {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  input, textarea, select {
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+}
+
+/* ─── Utility Classes ─── */
+.fia-card {
+  background: var(--fia-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--fia-gray-200);
+  box-shadow: var(--shadow-xs);
+}
+
+.fia-input {
+  background: var(--fia-gray-50);
+  border: 1px solid var(--fia-gray-200);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+  color: var(--fia-gray-900);
+}
+
+.fia-input:focus {
+  border-color: var(--fia-cyan);
+  box-shadow: 0 0 0 3px rgba(0,149,217,0.12);
+}
+
+.fia-btn-primary {
+  background: var(--fia-navy);
+  color: white;
+  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fia-btn-primary:hover {
+  background: var(--fia-navy-500);
+  box-shadow: var(--shadow-sm);
+}
+
+.fia-btn-primary:active {
+  transform: translateY(1px);
+}
+
+.fia-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.text-white {
+  color: var(--color-white) !important;
+}
+
+/* Keep branded solid action controls legible across pages. */
+:is(button, a)[class*="bg-[#1A1C6E]"],
+:is(button, a)[class*="bg-[#2D308F]"],
+:is(button, a)[class*="bg-[#0095D9]"],
+:is(button, a)[class*="bg-[var(--fia-navy)]"],
+:is(button, a)[class*="bg-[var(--fia-navy-500)]"],
+:is(button, a)[class*="bg-[var(--fia-cyan)]"] {
+  color: var(--fia-white) !important;
+}
+
+:is(button, a)[class*="bg-[#1A1C6E]"] *,
+:is(button, a)[class*="bg-[#2D308F]"] *,
+:is(button, a)[class*="bg-[#0095D9]"] *,
+:is(button, a)[class*="bg-[var(--fia-navy)]"] *,
+:is(button, a)[class*="bg-[var(--fia-navy-500)]"] *,
+:is(button, a)[class*="bg-[var(--fia-cyan)]"] * {
+  color: inherit !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--fia-gray-300);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fia-gray-400);
+}
+
+/* ============================================
+   GOVERNMENT ACR/PER FORM PRINT STYLES
+   ============================================ */
+
+/* Government Form Container */
+.form-container {
+  font-family: 'Times New Roman', 'Cambria', 'Georgia', serif;
+  color: #000;
+  background: #fff;
+}
+
+/* Urdu Font */
+.font-urdu {
+  font-family: var(--font-urdu);
+  direction: rtl;
+}
+
+/* Form Page - A4 Portrait */
+.form-page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: white;
+  position: relative;
+  font-family: 'Times New Roman', 'Cambria', 'Georgia', serif;
+  color: #000;
+  font-size: 11pt;
+  line-height: 1.4;
+}
+
+/* Page Break for Print */
+.page-break {
+  page-break-after: always;
+  break-after: page;
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Print Media Queries */
+@media print {
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .form-page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    padding: 12mm;
+    page-break-after: always;
+    box-shadow: none;
+  }
+
+  .page-break {
+    page-break-after: always;
+    break-after: page;
+    display: block;
+    height: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hide non-form elements during print */
+  nav, .sidebar, header, footer, button:not(.form-page button) {
+    display: none !important;
+  }
+
+  /* Ensure form elements print correctly */
+  .form-container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Force black and white printing */
+  * {
+    color: black !important;
+    background: white !important;
+    box-shadow: none !important;
+  }
+
+  /* Preserve borders and lines */
+  table, th, td {
+    border-color: black !important;
+  }
+
+  .border-black {
+    border-color: black !important;
+  }
+}
+
+/* Screen View - Add subtle shadow for visual separation */
+@media screen {
+  .form-page {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 24px;
+  }
+
+  .form-container {
+    padding: 20px;
+    background: #f5f5f5;
+  }
+}

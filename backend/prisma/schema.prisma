@@ -1,0 +1,369 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  IT_OPS
+  CLERK
+  REPORTING_OFFICER
+  COUNTERSIGNING_OFFICER
+  SECRET_BRANCH
+  WING_OVERSIGHT
+  ZONAL_OVERSIGHT
+  DG
+  EXECUTIVE_VIEWER
+  EMPLOYEE
+}
+
+enum AcrWorkflowState {
+  DRAFT
+  PENDING_REPORTING
+  PENDING_COUNTERSIGNING
+  SUBMITTED_TO_SECRET_BRANCH
+  ARCHIVED
+  RETURNED
+}
+
+enum TemplateFamilyCode {
+  ASSISTANT_UDC_LDC
+  APS_STENOTYPIST
+  INSPECTOR_SI_ASI
+  SUPERINTENDENT_AINCHARGE
+}
+
+enum LanguageMode {
+  ENGLISH
+  BILINGUAL
+}
+
+enum FileAssetKind {
+  SIGNATURE
+  STAMP
+  DOCUMENT
+}
+
+enum NotificationType {
+  info
+  warning
+  success
+  danger
+}
+
+enum AuthChallengePurpose {
+  LOGIN
+}
+
+model Wing {
+  id              String               @id @default(cuid())
+  code            String               @unique
+  name            String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  zones           Zone[]
+  offices         Office[]
+  users           User[]               @relation("WingUsers")
+  employees       Employee[]           @relation("WingEmployees")
+  roleAssignments UserRoleAssignment[]
+}
+
+model Zone {
+  id              String               @id @default(cuid())
+  code            String               @unique
+  name            String
+  wingId          String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  wing            Wing                 @relation(fields: [wingId], references: [id])
+  offices         Office[]
+  users           User[]               @relation("ZoneUsers")
+  employees       Employee[]           @relation("ZoneEmployees")
+  roleAssignments UserRoleAssignment[]
+}
+
+model Office {
+  id              String               @id @default(cuid())
+  code            String               @unique
+  name            String
+  wingId          String
+  zoneId          String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  wing            Wing                 @relation(fields: [wingId], references: [id])
+  zone            Zone                 @relation(fields: [zoneId], references: [id])
+  users           User[]
+  employees       Employee[]
+  roleAssignments UserRoleAssignment[]
+}
+
+model User {
+  id                             String                  @id @default(cuid())
+  username                       String                  @unique
+  email                          String                  @unique
+  badgeNo                        String                  @unique
+  displayName                    String
+  mobileNumber                   String?
+  passwordHash                   String
+  passwordChangedAt              DateTime?
+  twoFactorEnabled               Boolean                 @default(false)
+  avatarFileName                 String?
+  avatarMimeType                 String?
+  avatarStoragePath              String?
+  notificationPreferences        Json?
+  displayPreferences             Json?
+  isActive                       Boolean                 @default(true)
+  wingId                         String?
+  zoneId                         String?
+  officeId                       String?
+  createdAt                      DateTime                @default(now())
+  updatedAt                      DateTime                @updatedAt
+  wing                           Wing?                   @relation("WingUsers", fields: [wingId], references: [id])
+  zone                           Zone?                   @relation("ZoneUsers", fields: [zoneId], references: [id])
+  office                         Office?                 @relation(fields: [officeId], references: [id])
+  roleAssignments                UserRoleAssignment[]
+  authChallenges                 AuthChallenge[]
+  sessions                       Session[]
+  initiatedAcrs                  AcrRecord[]             @relation("InitiatedAcrs")
+  reportingAcrs                  AcrRecord[]             @relation("ReportingAcrs")
+  countersigningAcrs             AcrRecord[]             @relation("CountersigningAcrs")
+  currentHeldAcrs                AcrRecord[]             @relation("CurrentHolderAcrs")
+  archivedSnapshots              ArchiveSnapshot[]       @relation("ArchiveSnapshotsByUser")
+  uploadedFiles                  FileAsset[]             @relation("UploadedFiles")
+  employeeReportingAssignments   Employee[]              @relation("EmployeeReportingOfficer")
+  employeeCountersignAssignments Employee[]              @relation("EmployeeCountersigningOfficer")
+  employeeProfiles               Employee[]              @relation("EmployeeAccount")
+  timelineEntries                AcrTimelineEntry[]      @relation("TimelineActor")
+  notifications                  Notification[]
+  auditEntries                   AuditLog[]
+  updatedSettings                AdminSetting[]          @relation("SettingUpdatedBy")
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  role      UserRole
+  wingId    String?
+  zoneId    String?
+  officeId  String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  wing      Wing?    @relation(fields: [wingId], references: [id])
+  zone      Zone?    @relation(fields: [zoneId], references: [id])
+  office    Office?  @relation(fields: [officeId], references: [id])
+
+  @@index([userId, role])
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String
+  activeRole       UserRole
+  refreshTokenHash String
+  ipAddress        String?
+  userAgent        String?
+  expiresAt        DateTime
+  lastUsedAt       DateTime @default(now())
+  revokedAt        DateTime?
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, revokedAt, expiresAt])
+}
+
+model AuthChallenge {
+  id                String               @id
+  userId            String
+  purpose           AuthChallengePurpose @default(LOGIN)
+  codeHash          String
+  maskedDestination String
+  attemptCount      Int                  @default(0)
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  ipAddress         String?
+  userAgent         String?
+  lastSentAt        DateTime             @default(now())
+  createdAt         DateTime             @default(now())
+  user              User                 @relation(fields: [userId], references: [id])
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt, consumedAt])
+}
+
+model Employee {
+  id                      String               @id @default(cuid())
+  userId                  String?
+  serviceNumber           String               @unique
+  name                    String
+  rank                    String
+  designation             String
+  bps                     Int
+  cnic                    String               @unique
+  mobile                  String
+  email                   String
+  posting                 String
+  joiningDate             DateTime
+  serviceYears            Int
+  address                 String
+  templateFamily          TemplateFamilyCode
+  wingId                  String
+  zoneId                  String
+  officeId                String
+  reportingOfficerId      String?
+  countersigningOfficerId String?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  wing                    Wing                 @relation("WingEmployees", fields: [wingId], references: [id])
+  zone                    Zone                 @relation("ZoneEmployees", fields: [zoneId], references: [id])
+  office                  Office               @relation(fields: [officeId], references: [id])
+  userAccount             User?                @relation("EmployeeAccount", fields: [userId], references: [id])
+  reportingOfficer        User?                @relation("EmployeeReportingOfficer", fields: [reportingOfficerId], references: [id])
+  countersigningOfficer   User?                @relation("EmployeeCountersigningOfficer", fields: [countersigningOfficerId], references: [id])
+  acrRecords              AcrRecord[]
+
+  @@index([officeId])
+  @@index([zoneId])
+  @@index([wingId])
+  @@index([reportingOfficerId])
+  @@index([countersigningOfficerId])
+}
+
+model TemplateVersion {
+  id                     String               @id @default(cuid())
+  family                 TemplateFamilyCode
+  code                   String               @unique
+  version                String
+  title                  String
+  languageMode           LanguageMode
+  requiresCountersigning Boolean
+  pageCount              Int
+  isActive               Boolean              @default(true)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  acrRecords             AcrRecord[]
+}
+
+model AcrRecord {
+  id                      String               @id @default(cuid())
+  acrNo                   String               @unique
+  employeeId              String
+  initiatedById           String
+  reportingOfficerId      String
+  countersigningOfficerId String?
+  currentHolderId         String?
+  templateVersionId       String
+  workflowState           AcrWorkflowState
+  statusLabel             String
+  reportingPeriodFrom     DateTime
+  reportingPeriodTo       DateTime
+  dueDate                 DateTime
+  completedDate           DateTime?
+  archivedAt              DateTime?
+  isPriority              Boolean              @default(false)
+  correctionRemarks       String?
+  performanceScore        Int?
+  formData                Json?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  employee                Employee             @relation(fields: [employeeId], references: [id])
+  initiatedBy             User                 @relation("InitiatedAcrs", fields: [initiatedById], references: [id])
+  reportingOfficer        User                 @relation("ReportingAcrs", fields: [reportingOfficerId], references: [id])
+  countersigningOfficer   User?                @relation("CountersigningAcrs", fields: [countersigningOfficerId], references: [id])
+  currentHolder           User?                @relation("CurrentHolderAcrs", fields: [currentHolderId], references: [id])
+  templateVersion         TemplateVersion      @relation(fields: [templateVersionId], references: [id])
+  timeline                AcrTimelineEntry[]
+  notifications           Notification[]
+  auditLogs               AuditLog[]
+  files                   FileAsset[]
+  archiveSnapshot         ArchiveSnapshot?
+
+  @@index([employeeId])
+  @@index([initiatedById])
+  @@index([reportingOfficerId])
+  @@index([countersigningOfficerId])
+  @@index([currentHolderId, workflowState])
+  @@index([workflowState, dueDate])
+}
+
+model AcrTimelineEntry {
+  id          String    @id @default(cuid())
+  acrRecordId String
+  actorId     String?
+  actorRole   String
+  action      String
+  status      String
+  remarks     String?
+  createdAt   DateTime  @default(now())
+  acrRecord   AcrRecord @relation(fields: [acrRecordId], references: [id])
+  actor       User?     @relation("TimelineActor", fields: [actorId], references: [id])
+
+  @@index([acrRecordId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String?
+  acrRecordId String?
+  type        NotificationType
+  title       String
+  message     String
+  createdAt   DateTime         @default(now())
+  readAt      DateTime?
+  user        User?            @relation(fields: [userId], references: [id])
+  acrRecord   AcrRecord?       @relation(fields: [acrRecordId], references: [id])
+
+  @@index([userId, readAt, createdAt])
+  @@index([acrRecordId, createdAt])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  actorId     String?
+  acrRecordId String?
+  action      String
+  actorRole   String
+  ipAddress   String
+  details     String
+  createdAt   DateTime  @default(now())
+  actor       User?     @relation(fields: [actorId], references: [id])
+  acrRecord   AcrRecord? @relation(fields: [acrRecordId], references: [id])
+}
+
+model FileAsset {
+  id           String        @id @default(cuid())
+  acrRecordId  String?
+  uploadedById String?
+  kind         FileAssetKind
+  fileName     String
+  mimeType     String
+  storagePath  String
+  createdAt    DateTime      @default(now())
+  acrRecord    AcrRecord?    @relation(fields: [acrRecordId], references: [id])
+  uploadedBy   User?         @relation("UploadedFiles", fields: [uploadedById], references: [id])
+}
+
+model ArchiveSnapshot {
+  id            String    @id @default(cuid())
+  acrRecordId   String    @unique
+  archivedById  String
+  documentPath  String
+  checksum      String
+  immutableHash String
+  createdAt     DateTime  @default(now())
+  acrRecord     AcrRecord @relation(fields: [acrRecordId], references: [id])
+  archivedBy    User      @relation("ArchiveSnapshotsByUser", fields: [archivedById], references: [id])
+}
+
+model AdminSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+  updatedBy   User?    @relation("SettingUpdatedBy", fields: [updatedById], references: [id])
+}

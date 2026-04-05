@@ -1,0 +1,33 @@
+@import "tailwindcss";
+@import "../themes/fonts.css";
+@import "../themes/theme.css";
+
+.portal-floating-action-bar {
+  position: fixed;
+  right: 16px;
+  left: calc(var(--active-sidebar-width, 0px) + 16px);
+  bottom: 20px;
+  z-index: 40;
+}
+
+@media (max-width: 1023px) {
+  .portal-floating-action-bar {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: #f5f6fa;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

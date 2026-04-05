@@ -1,0 +1,29 @@
+{
+  "name": "smart-acr",
+  "private": true,
+  "packageManager": "pnpm@10.8.1",
+  "scripts": {
+    "dev:frontend": "pnpm --filter @smart-acr/frontend dev",
+    "dev:backend": "pnpm --filter @smart-acr/backend start:dev",
+    "dev:web": "pnpm --filter @smart-acr/frontend dev",
+    "dev:api": "pnpm --filter @smart-acr/backend start:dev",
+    "dev": "concurrently --names frontend,backend --prefix-colors blue,green --restart-tries 20 --restart-after 3000 \"pnpm dev:frontend\" \"pnpm dev:backend\"",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "seed": "pnpm --filter @smart-acr/backend prisma:seed",
+    "db:generate": "pnpm --filter @smart-acr/backend prisma:generate",
+    "db:push": "pnpm --filter @smart-acr/backend prisma:push",
+    "db:migrate": "pnpm --filter @smart-acr/backend prisma:migrate",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up --build",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down -v"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
