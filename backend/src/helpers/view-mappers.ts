@@ -55,6 +55,10 @@ function deriveAuditModule(log: Pick<AuditLog, "action" | "acrRecordId">) {
     return "Administration";
   }
 
+  if (action.includes("user account") || action.includes("password reset")) {
+    return "Administration";
+  }
+
   return "System";
 }
 
@@ -207,10 +211,10 @@ export function mapAudit(log: AuditWithActor) {
     performedBy: log.actor?.displayName ?? "System",
     actorRole: log.actorRole,
     role: log.actorRole,
-    recordType: log.acrRecordId ? "ACR" : "System",
-    recordId: log.acrRecordId ?? undefined,
+    recordType: log.recordType ?? (log.acrRecordId ? "ACR" : "System"),
+    recordId: log.recordId ?? log.acrRecordId ?? undefined,
     acrId: log.acrRecordId ?? undefined,
-    recordLabel: log.acrRecord?.acrNo ?? undefined,
+    recordLabel: log.acrRecord?.acrNo ?? log.recordId ?? undefined,
     acrNo: log.acrRecord?.acrNo ?? undefined,
     module,
     eventType,

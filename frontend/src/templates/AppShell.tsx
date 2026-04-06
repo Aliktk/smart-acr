@@ -28,6 +28,11 @@ function ShellGate({ children }: { children: React.ReactNode }) {
     setUser(sessionQuery.data);
     setActiveRole(sessionQuery.data.activeRole);
 
+    if (sessionQuery.data.mustChangePassword && pathname !== "/settings") {
+      router.replace("/settings?tab=security&forcePassword=1");
+      return;
+    }
+
     if (!canAccessPortalPath(sessionQuery.data.activeRoleCode, pathname)) {
       router.replace(getDefaultPortalRoute(sessionQuery.data.activeRoleCode));
     }

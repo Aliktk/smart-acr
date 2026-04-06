@@ -9,6 +9,7 @@ import { getAcrs, transitionAcr } from "@/api/client";
 import { PortalPageHeader, PortalSurface, EmptyState, SegmentedTabs } from "@/components/portal/PortalPrimitives";
 import { FloatingToast, OverdueBadge, PriorityBadge, StatusChip } from "@/components/ui";
 import { useShell } from "@/hooks/useShell";
+import { syncAcrSummaryCaches } from "@/utils/acr-cache";
 import {
   countStatuses,
   getCurrentOwnerLabel,
@@ -91,8 +92,9 @@ export function QueueClientPage() {
 
   const mutation = useMutation({
     mutationFn: ({ id, action }: { id: string; action: string }) => transitionAcr(id, { action }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       setActionError(null);
+      syncAcrSummaryCaches(queryClient, updated);
       queryClient.invalidateQueries({ queryKey: ["acrs"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
     },

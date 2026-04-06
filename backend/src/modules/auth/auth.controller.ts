@@ -4,6 +4,8 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import type { AuthenticatedUser } from "../../@types/authenticated-user.interface";
 import { LoginDto } from "./dto/login.dto";
+import { RequestPasswordResetDto } from "./dto/request-password-reset.dto";
+import { ResetPasswordWithTokenDto } from "./dto/reset-password-with-token.dto";
 import { RequestAuthChallengeDto } from "./dto/request-auth-challenge.dto";
 import { ResendAuthChallengeDto } from "./dto/resend-auth-challenge.dto";
 import { SwitchRoleDto } from "./dto/switch-role.dto";
@@ -47,6 +49,16 @@ export class AuthController {
     @Ip() ipAddress: string,
   ) {
     return this.authService.login(dto.username, dto.password, response, ipAddress, request.headers["user-agent"]);
+  }
+
+  @Post("forgot-password/request")
+  requestPasswordReset(@Body() dto: RequestPasswordResetDto, @Ip() ipAddress: string) {
+    return this.authService.requestPasswordReset(dto.identifier, ipAddress);
+  }
+
+  @Post("forgot-password/reset")
+  resetPasswordWithToken(@Body() dto: ResetPasswordWithTokenDto, @Ip() ipAddress: string) {
+    return this.authService.completePasswordReset(dto.token, dto.nextPassword, ipAddress);
   }
 
   @Post("refresh")

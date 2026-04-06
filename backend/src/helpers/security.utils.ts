@@ -74,6 +74,8 @@ const AUDIT_ROLES: UserRole[] = [
   UserRole.ZONAL_OVERSIGHT,
 ];
 
+const USER_ADMIN_ROLES: UserRole[] = [UserRole.SUPER_ADMIN, UserRole.IT_OPS];
+
 function scopeValue(user: ScopedUser, field: "wingId" | "zoneId" | "officeId") {
   return user.activeAssignment?.[field] ?? user[field] ?? null;
 }
@@ -190,19 +192,19 @@ export function canTransitionAcr(user: ScopedUser, acr: AcrScopeRecord, action: 
   }
 
   if (action === "save_draft" || action === "submit_to_reporting") {
-    return hasRole(user, UserRole.CLERK) && (acr.initiatedById === user.id || acr.currentHolderId === user.id);
+    return hasRole(user, UserRole.CLERK) && acr.currentHolderId === user.id && (acr.initiatedById === user.id || acr.currentHolderId === user.id);
   }
 
   if (action === "forward_to_countersigning") {
-    return hasRole(user, UserRole.REPORTING_OFFICER) && acr.reportingOfficerId === user.id;
+    return hasRole(user, UserRole.REPORTING_OFFICER) && acr.reportingOfficerId === user.id && acr.currentHolderId === user.id;
   }
 
   if (action === "submit_to_secret_branch" || action === "return_to_clerk") {
-    if (hasRole(user, UserRole.REPORTING_OFFICER) && acr.reportingOfficerId === user.id) {
+    if (hasRole(user, UserRole.REPORTING_OFFICER) && acr.reportingOfficerId === user.id && acr.currentHolderId === user.id) {
       return true;
     }
 
-    if (hasRole(user, UserRole.COUNTERSIGNING_OFFICER) && acr.countersigningOfficerId === user.id) {
+    if (hasRole(user, UserRole.COUNTERSIGNING_OFFICER) && acr.countersigningOfficerId === user.id && acr.currentHolderId === user.id) {
       return true;
     }
 
@@ -218,16 +220,21 @@ export function canEditAcrForm(user: ScopedUser, acr: AcrScopeRecord) {
   }
 
   if (hasRole(user, UserRole.CLERK)) {
-    return (acr.initiatedById === user.id || acr.currentHolderId === user.id) &&
+    return acr.currentHolderId === user.id &&
+      (acr.initiatedById === user.id || acr.currentHolderId === user.id) &&
       (acr.workflowState === AcrWorkflowState.DRAFT || acr.workflowState === AcrWorkflowState.RETURNED);
   }
 
   if (hasRole(user, UserRole.REPORTING_OFFICER)) {
-    return acr.reportingOfficerId === user.id && acr.workflowState === AcrWorkflowState.PENDING_REPORTING;
+    return acr.reportingOfficerId === user.id &&
+      acr.currentHolderId === user.id &&
+      acr.workflowState === AcrWorkflowState.PENDING_REPORTING;
   }
 
   if (hasRole(user, UserRole.COUNTERSIGNING_OFFICER)) {
-    return acr.countersigningOfficerId === user.id && acr.workflowState === AcrWorkflowState.PENDING_COUNTERSIGNING;
+    return acr.countersigningOfficerId === user.id &&
+      acr.currentHolderId === user.id &&
+      acr.workflowState === AcrWorkflowState.PENDING_COUNTERSIGNING;
   }
 
   return false;
@@ -245,7 +252,19 @@ export function canViewAudit(user: ScopedUser) {
   return AUDIT_ROLES.includes(user.activeRole);
 }
 
+export function canManageUsers(user: ScopedUser) {
+  return USER_ADMIN_ROLES.includes(user.activeRole);
+}
+
 export function displayRole(role: string) {
+  if (role === UserRole.DG || role === "DG") {
+    return "DG";
+  }
+
+  if (role === UserRole.IT_OPS || role === "IT_OPS") {
+    return "IT Ops";
+  }
+
   return role
     .split("_")
     .map((part) => part[0] + part.slice(1).toLowerCase())

@@ -1275,12 +1275,6 @@ export default function NewAcrPage() {
                 </div>
               </div>
 
-              <div className="rounded-[20px] border border-[#D8DEE8] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#475569]">
-                <p className="font-semibold text-[#111827]">Reviewer form handoff</p>
-                <p className="mt-2">
-                  After submission, the Reporting Officer opens the editable official form replica. Checkboxes, signature areas, and reviewer text fields remain available there instead of showing an empty form at the clerk stage.
-                </p>
-              </div>
             </div>
           ) : null}
         </div>

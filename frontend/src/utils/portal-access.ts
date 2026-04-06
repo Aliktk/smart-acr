@@ -13,7 +13,7 @@ function matchesAnyPrefix(pathname: string, prefixes: string[]) {
 export function getDefaultPortalRoute(roleCode: UserRoleCode) {
   switch (roleCode) {
     case "CLERK":
-      return "/queue";
+      return "/acr/new";
     case "EMPLOYEE":
       return "/queue";
     default:
@@ -34,6 +34,10 @@ export function canAccessPortalPath(roleCode: UserRoleCode, pathname: string) {
     return ["CLERK", "SUPER_ADMIN", "IT_OPS"].includes(roleCode);
   }
 
+  if (pathname === "/user-management") {
+    return ["SUPER_ADMIN", "IT_OPS"].includes(roleCode);
+  }
+
   if (pathname === "/form-templates") {
     return roleCode !== "DG";
   }
@@ -50,10 +54,10 @@ export function canAccessPortalPath(roleCode: UserRoleCode, pathname: string) {
     case "COUNTERSIGNING_OFFICER":
       return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/search", "/priority", "/overdue"]);
     case "SECRET_BRANCH":
-      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization"]);
+      return matchesAnyPrefix(pathname, ["/dashboard", "/archive", "/search", "/analytics", "/audit-logs", "/organization"]);
     case "SUPER_ADMIN":
     case "IT_OPS":
-      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization", "/acr/new"]);
+      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization", "/acr/new", "/user-management"]);
     case "DG":
       return matchesAnyPrefix(pathname, ["/dashboard", "/archive", "/search", "/profile", "/settings", "/notifications", "/help-support"]);
     case "EXECUTIVE_VIEWER":

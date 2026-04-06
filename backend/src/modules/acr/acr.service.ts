@@ -1,9 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AcrWorkflowState, NotificationType, Prisma, UserRole } from "@prisma/client";
 import { PrismaService } from "../../common/prisma.service";
 import { canAccessAcr, canCreateAcr, canEditAcrForm, canTransitionAcr, displayRole, loadScopedUser } from "../../helpers/security.utils";
-import { mapAcr, mapTimeline } from "../../helpers/view-mappers";
+import { mapAcr, mapTimeline, mapWorkflowState } from "../../helpers/view-mappers";
 import { WorkflowService, type AcrAction } from "../workflow/workflow.service";
+import { getActionFormValidationMessage } from "./acr-form-validation";
 
 @Injectable()
 export class AcrService {
@@ -11,6 +12,22 @@ export class AcrService {
     private readonly prisma: PrismaService,
     private readonly workflowService: WorkflowService,
   ) {}
+
+  private mergeFormData(
+    existingFormData: Record<string, unknown> | null | undefined,
+    incomingFormData: Record<string, unknown> | null | undefined,
+    actorName: string,
+    actorRole: UserRole,
+  ) {
+    return this.withWorkflowMeta(
+      {
+        ...(existingFormData ?? {}),
+        ...(incomingFormData ?? {}),
+      },
+      actorName,
+      actorRole,
+    );
+  }
 
   private withWorkflowMeta(
     formData: Record<string, unknown> | null | undefined,
@@ -273,6 +290,8 @@ export class AcrService {
       data: {
         actorId: user.id,
         acrRecordId: acr.id,
+        recordType: "ACR",
+        recordId: acr.id,
         action: "ACR Created",
         actorRole: displayRole(user.activeRole),
         ipAddress: "127.0.0.1",
@@ -302,11 +321,9 @@ export class AcrService {
       throw new ForbiddenException("The current role cannot edit the official form at this workflow stage.");
     }
 
-    const nextFormData = this.withWorkflowMeta(
-      {
-        ...((acr.formData as Record<string, unknown> | null) ?? {}),
-        ...formData,
-      },
+    const nextFormData = this.mergeFormData(
+      (acr.formData as Record<string, unknown> | null) ?? null,
+      formData,
       user.displayName,
       user.activeRole,
     );
@@ -351,6 +368,8 @@ export class AcrService {
       data: {
         actorId: user.id,
         acrRecordId: acr.id,
+        recordType: "ACR",
+        recordId: acr.id,
         action: acr.workflowState === AcrWorkflowState.RETURNED && user.activeRole === UserRole.CLERK ? "Returned ACR corrected" : "ACR form updated",
         actorRole: displayRole(user.activeRole),
         ipAddress: "127.0.0.1",
@@ -364,7 +383,14 @@ export class AcrService {
     return mapAcr(updated, this.workflowService);
   }
 
-  async transition(userId: string, activeRole: UserRole, acrId: string, action: AcrAction, remarks?: string) {
+  async transition(
+    userId: string,
+    activeRole: UserRole,
+    acrId: string,
+    action: AcrAction,
+    remarks?: string,
+    formData?: Record<string, unknown>,
+  ) {
     const user = await loadScopedUser(this.prisma, userId, activeRole);
     const acr = await this.prisma.acrRecord.findUnique({
       where: { id: acrId },
@@ -394,7 +420,31 @@ export class AcrService {
       throw new ForbiddenException("This action is not permitted for your current assignment.");
     }
 
-    this.workflowService.assertTransition(acr.workflowState, action, acr.templateVersion.family);
+    if (!this.workflowService.canTransition(acr.workflowState, action, acr.templateVersion.family)) {
+      throw new BadRequestException(
+        `This ACR is already in '${mapWorkflowState(acr.workflowState)}'. Refresh the queue and reopen the latest record before taking another action.`,
+      );
+    }
+
+    const nextFormData = formData
+      ? this.mergeFormData(
+          (acr.formData as Record<string, unknown> | null) ?? null,
+          formData,
+          user.displayName,
+          user.activeRole,
+        )
+      : ((acr.formData as Record<string, unknown> | null) ?? null);
+
+    const formValidationMessage = getActionFormValidationMessage({
+      action,
+      workflowState: acr.workflowState,
+      formData: nextFormData,
+    });
+
+    if (formValidationMessage) {
+      throw new BadRequestException(formValidationMessage);
+    }
+
     const wasReturnedRecord = acr.workflowState === AcrWorkflowState.RETURNED;
     const next = this.workflowService.nextStateForAction(action, acr.templateVersion.family);
     const secretBranchUser = action === "submit_to_secret_branch"
@@ -424,6 +474,7 @@ export class AcrService {
         currentHolderId: nextHolderId,
         archivedAt: closesRecord ? new Date() : acr.archivedAt,
         completedDate: closesRecord ? new Date() : acr.completedDate,
+        ...(formData ? { formData: nextFormData as Prisma.InputJsonValue } : {}),
       },
       include: {
         employee: { include: { wing: true, zone: true, office: true } },
@@ -471,6 +522,8 @@ export class AcrService {
       data: {
         actorId: user.id,
         acrRecordId: acr.id,
+        recordType: "ACR",
+        recordId: acr.id,
         action: wasReturnedRecord && action === "submit_to_reporting" ? "ACR resubmitted to reporting" : `ACR ${action}`,
         actorRole: displayRole(user.activeRole),
         ipAddress: "127.0.0.1",

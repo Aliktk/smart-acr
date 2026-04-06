@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { randomInt, randomUUID } from "crypto";
+import { randomBytes, randomInt, randomUUID } from "crypto";
 import type { Response } from "express";
 import { PrismaService } from "../../common/prisma.service";
 
@@ -54,6 +54,7 @@ type MappedSession = {
     officeId: string | null;
     officeName: string | null;
   };
+  mustChangePassword: boolean;
 };
 
 type AuthResult =
@@ -204,6 +205,141 @@ export class AuthService {
     };
   }
 
+  async requestPasswordReset(identifier: string, ipAddress?: string) {
+    const enabled = this.forgotPasswordEnabled();
+    const normalizedIdentifier = this.normalizeAuthIdentifier(identifier);
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: normalizedIdentifier },
+          { email: normalizedIdentifier },
+          { badgeNo: this.normalizeBadgeNumber(identifier) },
+        ],
+        isActive: true,
+      },
+    });
+
+    if (!enabled || !user) {
+      return {
+        success: true,
+        message: "If the account is eligible for self-service recovery, password reset instructions will be issued.",
+      };
+    }
+
+    await this.prisma.passwordResetToken.updateMany({
+      where: {
+        userId: user.id,
+        consumedAt: null,
+      },
+      data: {
+        consumedAt: new Date(),
+      },
+    });
+
+    const resetToken = randomBytes(24).toString("base64url");
+    const expiresAt = new Date(Date.now() + this.resetTokenTtlMinutes() * 60 * 1000);
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: await bcrypt.hash(resetToken, 10),
+        expiresAt,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: user.id,
+        actorRole: "User",
+        action: "Password reset requested",
+        recordType: "USER",
+        recordId: user.id,
+        ipAddress: ipAddress ?? "unknown",
+        details: `Password reset requested for ${user.username}.`,
+      },
+    });
+
+    return {
+      success: true,
+      message: "If the account is eligible for self-service recovery, password reset instructions will be issued.",
+      ...(this.isProduction() ? {} : { demoResetToken: resetToken }),
+    };
+  }
+
+  async completePasswordReset(token: string, nextPassword: string, ipAddress?: string) {
+    if (!this.forgotPasswordEnabled()) {
+      throw new ForbiddenException("Self-service password reset is not enabled in this environment.");
+    }
+
+    const candidates = await this.prisma.passwordResetToken.findMany({
+      where: {
+        consumedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      include: {
+        user: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    });
+
+    let matchingToken: (typeof candidates)[number] | null = null;
+    for (const candidate of candidates) {
+      if (await bcrypt.compare(token, candidate.tokenHash)) {
+        matchingToken = candidate;
+        break;
+      }
+    }
+
+    if (!matchingToken) {
+      throw new UnauthorizedException("The password reset token is invalid or has expired.");
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: matchingToken.userId },
+        data: {
+          passwordHash: await bcrypt.hash(nextPassword, 12),
+          passwordChangedAt: new Date(),
+          mustChangePassword: false,
+        },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: matchingToken.id },
+        data: {
+          consumedAt: new Date(),
+        },
+      }),
+      this.prisma.session.updateMany({
+        where: {
+          userId: matchingToken.userId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          actorId: matchingToken.userId,
+          actorRole: "User",
+          action: "Password reset completed",
+          recordType: "USER",
+          recordId: matchingToken.userId,
+          ipAddress: ipAddress ?? "unknown",
+          details: `Password reset completed for ${matchingToken.user.username}.`,
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      message: "Password updated successfully. You can now sign in with the new password.",
+    };
+  }
+
   async refreshSession(response: Response) {
     const refreshToken = response.req?.cookies?.acr_refresh_token;
     if (!refreshToken) {
@@ -310,6 +446,8 @@ export class AuthService {
       actorId: userId,
       actorRole: this.displayRole(session.activeRole),
       action: "Role switched",
+      recordType: "USER",
+      recordId: userId,
       details: `Active role changed to ${this.displayRole(nextRole)}.`,
       ipAddress,
     });
@@ -332,6 +470,8 @@ export class AuthService {
       actorId: userId,
       actorRole: this.displayRole(activeRole),
       action: "User logout",
+      recordType: "USER",
+      recordId: userId,
       details: "User ended the current portal session.",
       ipAddress,
     });
@@ -418,12 +558,20 @@ export class AuthService {
         refreshTokenHash: await bcrypt.hash(refreshToken, 12),
       },
     });
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: new Date(),
+      },
+    });
 
     this.setCookies(response, user.id, session.id, defaultRole, refreshToken);
     await this.createAuditEntry({
       actorId: user.id,
       actorRole: this.displayRole(defaultRole),
       action: "User login",
+      recordType: "USER",
+      recordId: user.id,
       details: `User authenticated successfully${userAgent ? ` via ${userAgent}` : ""}.`,
       ipAddress,
     });
@@ -435,6 +583,8 @@ export class AuthService {
     actorId: string;
     actorRole: string;
     action: string;
+    recordType?: string;
+    recordId?: string;
     details: string;
     ipAddress?: string;
   }) {
@@ -443,6 +593,8 @@ export class AuthService {
         actorId: params.actorId,
         action: params.action,
         actorRole: params.actorRole,
+        recordType: params.recordType,
+        recordId: params.recordId,
         ipAddress: params.ipAddress ?? "unknown",
         details: params.details,
       },
@@ -585,10 +737,19 @@ export class AuthService {
         officeId: activeAssignment?.office?.id ?? user.office?.id ?? null,
         officeName: activeAssignment?.office?.name ?? user.office?.name ?? null,
       },
+      mustChangePassword: user.mustChangePassword,
     };
   }
 
   private displayRole(role: UserRole) {
+    if (role === UserRole.DG) {
+      return "DG";
+    }
+
+    if (role === UserRole.IT_OPS) {
+      return "IT Ops";
+    }
+
     return role
       .split("_")
       .map((part) => part[0] + part.slice(1).toLowerCase())
@@ -625,6 +786,14 @@ export class AuthService {
 
   private refreshTokenTtlDays() {
     return this.configService.getOrThrow<number>("REFRESH_TOKEN_TTL_DAYS");
+  }
+
+  private forgotPasswordEnabled() {
+    return this.configService.get<boolean>("FORGOT_PASSWORD_ENABLED") ?? false;
+  }
+
+  private resetTokenTtlMinutes() {
+    return this.configService.get<number>("FORGOT_PASSWORD_TOKEN_TTL_MINUTES") ?? 30;
   }
 
   private isProduction() {

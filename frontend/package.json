@@ -10,8 +10,8 @@
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "next lint",
-    "typecheck": "node -e \"require('fs').mkdirSync('.next',{ recursive: true })\" && next typegen && tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test src/**/*.spec.tsx"
+    "typecheck": "node -e \"require('fs').rmSync('.next/types',{ recursive: true, force: true }); require('fs').mkdirSync('.next',{ recursive: true })\" && next typegen && tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.spec.json && node -e \"require('fs').mkdirSync('.test-dist',{ recursive: true }); require('fs').writeFileSync('.test-dist/package.json', JSON.stringify({ type: 'commonjs' }))\" && node .test-dist/components/forms/form-templates.spec.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.69.0",

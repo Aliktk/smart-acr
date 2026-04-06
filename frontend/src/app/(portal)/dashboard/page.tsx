@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getAnalytics, getDashboardOverview, getSession } from "@/api/client";
+import { getDashboardOverview, getSession } from "@/api/client";
 import { RoleDashboard } from "@/components/dashboard/RoleDashboard";
 import { getDashboardMode } from "@/utils/acr";
 
@@ -13,19 +13,14 @@ export default function DashboardPage() {
     queryFn: getSession,
   });
 
+  const mode = sessionQuery.data ? getDashboardMode(sessionQuery.data.activeRoleCode) : "clerk";
   const overviewQuery = useQuery({
     queryKey: ["dashboard-overview"],
     queryFn: getDashboardOverview,
+    enabled: Boolean(sessionQuery.data) && !leadershipModes.has(mode),
   });
 
-  const mode = sessionQuery.data ? getDashboardMode(sessionQuery.data.activeRoleCode) : "clerk";
-  const analyticsQuery = useQuery({
-    queryKey: ["analytics", mode],
-    queryFn: getAnalytics,
-    enabled: leadershipModes.has(mode),
-  });
-
-  if (sessionQuery.isLoading || overviewQuery.isLoading) {
+  if (sessionQuery.isLoading || (!leadershipModes.has(mode) && overviewQuery.isLoading)) {
     return <div className="p-6 text-sm text-[var(--fia-gray-500)]">Loading dashboard...</div>;
   }
 
@@ -33,7 +28,6 @@ export default function DashboardPage() {
     <RoleDashboard
       session={sessionQuery.data}
       overview={overviewQuery.data}
-      analytics={analyticsQuery.data}
     />
   );
 }

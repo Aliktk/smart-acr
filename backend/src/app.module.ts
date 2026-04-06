@@ -17,6 +17,7 @@ import { AnalyticsModule } from "./modules/analytics/analytics.module";
 import { FilesModule } from "./modules/files/files.module";
 import { WorkflowModule } from "./modules/workflow/workflow.module";
 import { HealthModule } from "./modules/health/health.module";
+import { UsersModule } from "./modules/users/users.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { HealthModule } from "./modules/health/health.module";
     FilesModule,
     WorkflowModule,
     HealthModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

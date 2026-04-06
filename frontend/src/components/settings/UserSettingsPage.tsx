@@ -149,7 +149,13 @@ function TokenRow({ name, value, sample }: { name: string; value: string; sample
   );
 }
 
-export function UserSettingsPage({ initialTab = "profile" }: { initialTab?: SettingsTab }) {
+export function UserSettingsPage({
+  initialTab = "profile",
+  forcePasswordChange = false,
+}: {
+  initialTab?: SettingsTab;
+  forcePasswordChange?: boolean;
+}) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { user, setUser, setSidebarCollapsed } = useShell();
@@ -206,7 +212,14 @@ export function UserSettingsPage({ initialTab = "profile" }: { initialTab?: Sett
   });
   const passwordMutation = useMutation({
     mutationFn: updateUserPassword,
-    onSuccess: () => setPasswordForm({ currentPassword: "", nextPassword: "", confirmPassword: "" }),
+    onSuccess: () => {
+      setPasswordForm({ currentPassword: "", nextPassword: "", confirmPassword: "" });
+      if (user) {
+        const nextSession = { ...user, mustChangePassword: false };
+        setUser(nextSession);
+        queryClient.setQueryData(["session"], nextSession);
+      }
+    },
   });
 
   const currentSettings = settingsQuery.data;
@@ -367,6 +380,20 @@ export function UserSettingsPage({ initialTab = "profile" }: { initialTab?: Sett
 
           {activeTab === "security" ? (
             <>
+              {forcePasswordChange ? (
+                <PortalSurface className="border-[#FDE68A] bg-[linear-gradient(135deg,#FFFBEA_0%,#FFFFFF_100%)]">
+                  <div className="flex items-start gap-3">
+                    <Info size={18} className="mt-0.5 text-[#B45309]" />
+                    <div>
+                      <p className="text-sm font-semibold text-[#92400E]">Password change required</p>
+                      <p className="mt-1 text-sm leading-6 text-[#A16207]">
+                        This account was provisioned or reset with a temporary password. Update it here before continuing regular portal work.
+                      </p>
+                    </div>
+                  </div>
+                </PortalSurface>
+              ) : null}
+
               <PortalSurface title="Change Password" subtitle="Update your account password and manage sign-in protection from this security section." action={<ActionButton label="Update Password" busyLabel="Updating password..." successLabel="Password Updated" pending={passwordMutation.isPending} success={passwordMutation.isSuccess} onClick={handlePasswordSave} disabled={!passwordForm.currentPassword || !passwordForm.nextPassword || !passwordForm.confirmPassword || passwordForm.nextPassword !== passwordForm.confirmPassword} />}>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Current Password" type="password" value={passwordForm.currentPassword} onChange={(currentPassword) => setPasswordForm((current) => ({ ...current, currentPassword }))} />

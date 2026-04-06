@@ -145,7 +145,7 @@ function makeFieldKey(kind: ReplicaFieldKind, root: HTMLElement, element: HTMLEl
     return `${kind}:${scope}:${binding}`;
   }
 
-  return `${kind}:${slugify(contextTextForElement(element))}:${buildElementPath(root, element)}`;
+  return `${kind}:${scope}:${slugify(contextTextForElement(element))}:${buildElementPath(root, element)}`;
 }
 
 function makeLegacyFieldKey(kind: ReplicaFieldKind, root: HTMLElement, element: HTMLElement) {
@@ -544,10 +544,22 @@ export function InteractiveForm({
 }: InteractiveFormProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<AcrReplicaState>(cloneReplicaState(formData?.replicaState));
+  const onReplicaStateChangeRef = useRef(onReplicaStateChange);
+  const editableScopesKey = editableScopes?.join("|") ?? "";
+  const reviewerContextKey = [
+    reviewerContext?.reporting.name ?? "",
+    reviewerContext?.reporting.designation ?? "",
+    reviewerContext?.countersigning?.name ?? "",
+    reviewerContext?.countersigning?.designation ?? "",
+  ].join("|");
 
   useEffect(() => {
     stateRef.current = cloneReplicaState(formData?.replicaState);
   }, [formData?.replicaState]);
+
+  useEffect(() => {
+    onReplicaStateChangeRef.current = onReplicaStateChange;
+  }, [onReplicaStateChange]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -556,17 +568,33 @@ export function InteractiveForm({
       return;
     }
 
-    const emitReplicaState = () => onReplicaStateChange?.(cloneReplicaState(stateRef.current));
+    const emitReplicaState = () => onReplicaStateChangeRef.current?.(cloneReplicaState(stateRef.current));
+    let didMigrateLegacyKeys = false;
 
     Array.from(container.querySelectorAll<HTMLElement>("span,div,td")).forEach((element) => {
       if (isTextField(element)) {
         const key = makeFieldKey("text", container, element);
-        const legacyKey = explicitBinding(element) ? makeLegacyFieldKey("text", container, element) : null;
+        const legacyKey = makeLegacyFieldKey("text", container, element);
         const fieldEditable = editable && (!editableScopes || editableScopes.includes(resolveFieldScope(element)));
         element.dataset.replicaKind = "text";
         element.dataset.replicaKey = key;
+        const isMultilineField = element.tagName === "DIV" || element.className.includes("min-h-[");
 
-        const savedValue = stateRef.current.textFields[key] ?? (legacyKey ? stateRef.current.textFields[legacyKey] : undefined);
+        if (isMultilineField) {
+          element.style.whiteSpace = "pre-wrap";
+          element.style.overflowWrap = "anywhere";
+        } else {
+          element.style.whiteSpace = "";
+          element.style.overflowWrap = "";
+        }
+
+        if (stateRef.current.textFields[key] === undefined && stateRef.current.textFields[legacyKey] !== undefined) {
+          stateRef.current.textFields[key] = stateRef.current.textFields[legacyKey];
+          delete stateRef.current.textFields[legacyKey];
+          didMigrateLegacyKeys = true;
+        }
+
+        const savedValue = stateRef.current.textFields[key];
         const prefillValue = savedValue !== undefined ? savedValue : resolveTextPrefill(element, formData, reviewerContext);
 
         if (prefillValue) {
@@ -581,7 +609,8 @@ export function InteractiveForm({
           element.style.cursor = "text";
           element.style.backgroundColor = "rgba(4, 157, 217, 0.05)";
           element.oninput = () => {
-            stateRef.current.textFields[key] = element.textContent ?? "";
+            const nextValue = (element.innerText ?? element.textContent ?? "").replace(/\r\n?/g, "\n");
+            stateRef.current.textFields[key] = nextValue === "\n" ? "" : nextValue;
             emitReplicaState();
           };
           element.onfocus = () => {
@@ -589,7 +618,8 @@ export function InteractiveForm({
           };
           element.onblur = () => {
             element.style.backgroundColor = "rgba(4, 157, 217, 0.05)";
-            stateRef.current.textFields[key] = element.textContent ?? "";
+            const nextValue = (element.innerText ?? element.textContent ?? "").replace(/\r\n?/g, "\n");
+            stateRef.current.textFields[key] = nextValue === "\n" ? "" : nextValue;
             emitReplicaState();
           };
         } else {
@@ -604,13 +634,20 @@ export function InteractiveForm({
 
       if (isCheckboxField(element) || isRatingCell(element)) {
         const key = makeFieldKey("check", container, element);
-        const legacyKey = explicitBinding(element) ? makeLegacyFieldKey("check", container, element) : null;
+        const legacyKey = makeLegacyFieldKey("check", container, element);
         const fieldEditable = editable && (!editableScopes || editableScopes.includes(resolveFieldScope(element)));
         element.dataset.replicaKind = "check";
         element.dataset.replicaKey = key;
         element.style.cursor = fieldEditable ? "pointer" : "default";
         element.style.backgroundColor = fieldEditable ? "rgba(4, 157, 217, 0.05)" : "transparent";
-        applyCheckValue(element, Boolean(stateRef.current.checkFields[key] ?? (legacyKey ? stateRef.current.checkFields[legacyKey] : undefined)));
+
+        if (stateRef.current.checkFields[key] === undefined && stateRef.current.checkFields[legacyKey] !== undefined) {
+          stateRef.current.checkFields[key] = stateRef.current.checkFields[legacyKey];
+          delete stateRef.current.checkFields[legacyKey];
+          didMigrateLegacyKeys = true;
+        }
+
+        applyCheckValue(element, Boolean(stateRef.current.checkFields[key]));
         element.onclick = fieldEditable
           ? () => {
               const group = getSiblingCheckElements(container, element);
@@ -640,10 +677,16 @@ export function InteractiveForm({
       if (isAssetField(element)) {
         const key = makeFieldKey("asset", container, element);
         const binding = explicitBinding(element);
-        const legacyKey = explicitBinding(element) ? makeLegacyFieldKey("asset", container, element) : null;
+        const legacyKey = makeLegacyFieldKey("asset", container, element);
+
+        if (stateRef.current.assetFields[key] === undefined && stateRef.current.assetFields[legacyKey] !== undefined) {
+          stateRef.current.assetFields[key] = stateRef.current.assetFields[legacyKey];
+          delete stateRef.current.assetFields[legacyKey];
+          didMigrateLegacyKeys = true;
+        }
+
         const currentAssetValue =
           stateRef.current.assetFields[key] ??
-          (legacyKey ? stateRef.current.assetFields[legacyKey] : undefined) ??
           findCompatibleAssetValue(binding, stateRef.current);
         const fieldEditable = editable && (!editableScopes || editableScopes.includes(resolveFieldScope(element)));
         element.dataset.replicaKind = "asset";
@@ -655,14 +698,11 @@ export function InteractiveForm({
           ? async () => {
               const latestAssetValue =
                 stateRef.current.assetFields[key] ??
-                (legacyKey ? stateRef.current.assetFields[legacyKey] : undefined) ??
                 findCompatibleAssetValue(binding, stateRef.current);
 
               if (latestAssetValue) {
                 delete stateRef.current.assetFields[key];
-                if (legacyKey) {
-                  delete stateRef.current.assetFields[legacyKey];
-                }
+                delete stateRef.current.assetFields[legacyKey];
                 applyAssetValue(element);
                 emitReplicaState();
                 return;
@@ -705,7 +745,11 @@ export function InteractiveForm({
           : null;
       }
     });
-  }, [acrRecordId, editable, editableScopes, formData?.clerkSection, formData?.employeeSnapshot, onReplicaStateChange, reviewerContext]);
+
+    if (didMigrateLegacyKeys) {
+      emitReplicaState();
+    }
+  }, [acrRecordId, editable, editableScopesKey, formData?.clerkSection, formData?.employeeSnapshot, formData?.replicaState, reviewerContextKey]);
 
   return (
     <div ref={containerRef} className="interactive-form-wrapper">

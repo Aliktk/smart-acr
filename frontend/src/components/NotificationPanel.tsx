@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Bell, CheckCircle2, ExternalLink, Info, MoreHorizontal, X, XCircle } from "lucide-react";
 import { dismissNotification, getNotifications, markAllNotificationsRead, markNotificationRead } from "@/api/client";
@@ -35,6 +35,7 @@ function getNotificationVisuals(notification: NotificationItem) {
 }
 
 export function NotificationPanel() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { notificationPanelOpen, setNotificationPanelOpen } = useShell();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -46,6 +47,7 @@ export function NotificationPanel() {
   const markAllMutation = useMutation({
     mutationFn: markAllNotificationsRead,
     onSuccess: () => {
+      setOpenMenuId(null);
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
@@ -68,13 +70,42 @@ export function NotificationPanel() {
   const notifications = data?.items ?? [];
   const unreadCount = notifications.filter((notification) => !notification.read).length;
 
+  useEffect(() => {
+    if (!notificationPanelOpen) {
+      setOpenMenuId(null);
+    }
+  }, [notificationPanelOpen]);
+
+  function closePanel() {
+    setOpenMenuId(null);
+    setNotificationPanelOpen(false);
+  }
+
+  function openNotification(notification: NotificationItem, destination?: string) {
+    closePanel();
+    if (!notification.read) {
+      markReadMutation.mutate(notification.id);
+    }
+    router.push(destination ?? (notification.acrId ? `/acr/${notification.acrId}` : "/notifications"));
+  }
+
   return (
-    <aside
-      aria-hidden={!notificationPanelOpen}
-      className={`pointer-events-none fixed bottom-0 right-0 top-14 z-40 hidden w-[320px] border-l border-[#D7DEEA] bg-[#F8FAFD] shadow-[-16px_0_36px_rgba(15,23,42,0.16)] transition-transform duration-300 xl:flex ${
-        notificationPanelOpen ? "translate-x-0 pointer-events-auto" : "translate-x-full"
-      }`}
-    >
+    <>
+      <button
+        type="button"
+        aria-hidden={!notificationPanelOpen}
+        tabIndex={notificationPanelOpen ? 0 : -1}
+        onClick={closePanel}
+        className={`fixed inset-y-14 left-[var(--active-sidebar-width,0px)] right-[320px] z-30 hidden bg-transparent xl:block ${
+          notificationPanelOpen ? "pointer-events-auto" : "pointer-events-none"
+        }`}
+      />
+      <aside
+        aria-hidden={!notificationPanelOpen}
+        className={`fixed bottom-0 right-0 top-14 z-40 hidden w-[320px] border-l border-[#D7DEEA] bg-[#F8FAFD] shadow-[-16px_0_36px_rgba(15,23,42,0.16)] transition-transform duration-300 xl:flex ${
+          notificationPanelOpen ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"
+        }`}
+      >
       <div className="flex w-full flex-col">
         <div className="bg-[#1A1C6E] px-4 py-3.5 text-white">
           <div className="flex items-center justify-between">
@@ -87,7 +118,7 @@ export function NotificationPanel() {
             </div>
             <button
               type="button"
-              onClick={() => setNotificationPanelOpen(false)}
+              onClick={closePanel}
               className="rounded-full p-1 text-white/80 transition hover:bg-white/10 hover:text-white"
               aria-label="Close notifications"
             >
@@ -106,7 +137,7 @@ export function NotificationPanel() {
             onClick={() => markAllMutation.mutate()}
             className="font-medium text-[#0095D9] disabled:cursor-not-allowed disabled:text-[#94A3B8]"
           >
-            Mark all read
+            {markAllMutation.isPending ? "Updating..." : "Mark all read"}
           </button>
         </div>
 
@@ -122,15 +153,10 @@ export function NotificationPanel() {
                   key={notification.id}
                   className="group relative rounded-[16px] border border-transparent bg-white px-3.5 py-3.5 shadow-[0_8px_20px_rgba(15,23,42,0.05)] transition hover:border-[#D7DEEA]"
                 >
-                  <Link
-                    href={notification.acrId ? `/acr/${notification.acrId}` : "/notifications"}
-                    onClick={() => {
-                      setNotificationPanelOpen(false);
-                      if (!notification.read) {
-                        markReadMutation.mutate(notification.id);
-                      }
-                    }}
-                    className="block"
+                  <button
+                    type="button"
+                    onClick={() => openNotification(notification)}
+                    className="block w-full text-left"
                   >
                     <div className="flex items-start gap-3 pr-8">
                       <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${visuals.iconWrap}`}>
@@ -145,12 +171,15 @@ export function NotificationPanel() {
                         <p className="mt-1.5 text-xs text-[#9CA3AF]">{notification.time}</p>
                       </div>
                     </div>
-                  </Link>
+                  </button>
 
                   <div className="absolute right-2 top-2">
                     <button
                       type="button"
-                      onClick={() => setOpenMenuId((current) => (current === notification.id ? null : notification.id))}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setOpenMenuId((current) => (current === notification.id ? null : notification.id));
+                      }}
                       className={`rounded-full p-1.5 text-[#64748B] transition hover:bg-[#F1F5F9] hover:text-[#111827] ${menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                       aria-label="Notification actions"
                     >
@@ -171,17 +200,29 @@ export function NotificationPanel() {
                             Mark as read
                           </button>
                         ) : null}
-                        <Link
-                          href={notification.acrId ? `/acr/${notification.acrId}` : "/notifications"}
+                        <button
+                          type="button"
                           onClick={() => {
                             setOpenMenuId(null);
-                            setNotificationPanelOpen(false);
+                            openNotification(notification);
                           }}
-                          className="flex items-center gap-2 px-3.5 py-2 text-sm text-[#334155] transition hover:bg-[#F8FAFC]"
+                          className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[#334155] transition hover:bg-[#F8FAFC]"
                         >
                           <ExternalLink size={15} />
                           Open notification
-                        </Link>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            closePanel();
+                            router.push("/notifications");
+                          }}
+                          className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[#334155] transition hover:bg-[#F8FAFC]"
+                        >
+                          <Bell size={15} />
+                          View all
+                        </button>
                         <button
                           type="button"
                           onClick={() => dismissMutation.mutate(notification.id)}
@@ -200,15 +241,19 @@ export function NotificationPanel() {
         </div>
 
         <div className="border-t border-[#E4E8F0] bg-white px-4 py-3">
-          <Link
-            href="/notifications"
-            onClick={() => setNotificationPanelOpen(false)}
-            className="block text-center text-sm font-semibold text-[#0095D9]"
+          <button
+            type="button"
+            onClick={() => {
+              closePanel();
+              router.push("/notifications");
+            }}
+            className="block w-full text-center text-sm font-semibold text-[#0095D9]"
           >
             View all notifications →
-          </Link>
+          </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

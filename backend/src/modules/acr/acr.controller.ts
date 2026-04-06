@@ -39,6 +39,6 @@ export class AcrController {
 
   @Post(":id/transition")
   transition(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: TransitionAcrDto) {
-    return this.acrService.transition(user.id, user.activeRole, id, dto.action, dto.remarks);
+    return this.acrService.transition(user.id, user.activeRole, id, dto.action, dto.remarks, dto.formData);
   }
 }

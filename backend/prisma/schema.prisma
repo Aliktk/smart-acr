@@ -107,9 +107,12 @@ model User {
   email                          String                  @unique
   badgeNo                        String                  @unique
   displayName                    String
+  departmentName                 String?
   mobileNumber                   String?
   passwordHash                   String
   passwordChangedAt              DateTime?
+  mustChangePassword             Boolean                 @default(false)
+  lastLoginAt                    DateTime?
   twoFactorEnabled               Boolean                 @default(false)
   avatarFileName                 String?
   avatarMimeType                 String?
@@ -120,6 +123,8 @@ model User {
   wingId                         String?
   zoneId                         String?
   officeId                       String?
+  createdById                    String?
+  updatedById                    String?
   createdAt                      DateTime                @default(now())
   updatedAt                      DateTime                @updatedAt
   wing                           Wing?                   @relation("WingUsers", fields: [wingId], references: [id])
@@ -141,6 +146,10 @@ model User {
   notifications                  Notification[]
   auditEntries                   AuditLog[]
   updatedSettings                AdminSetting[]          @relation("SettingUpdatedBy")
+  passwordResetTokens            PasswordResetToken[]    @relation("PasswordResetTokens")
+
+  @@index([isActive, updatedAt])
+  @@index([lastLoginAt])
 }
 
 model UserRoleAssignment {
@@ -322,16 +331,36 @@ model Notification {
 }
 
 model AuditLog {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   actorId     String?
   acrRecordId String?
+  recordType  String?
+  recordId    String?
   action      String
   actorRole   String
   ipAddress   String
   details     String
-  createdAt   DateTime  @default(now())
-  actor       User?     @relation(fields: [actorId], references: [id])
+  metadata    Json?
+  createdAt   DateTime   @default(now())
+  actor       User?      @relation(fields: [actorId], references: [id])
   acrRecord   AcrRecord? @relation(fields: [acrRecordId], references: [id])
+
+  @@index([recordType, recordId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model PasswordResetToken {
+  id            String   @id @default(cuid())
+  userId        String
+  tokenHash     String
+  requestedById String?
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime @default(now())
+  user          User     @relation("PasswordResetTokens", fields: [userId], references: [id])
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt, consumedAt])
 }
 
 model FileAsset {

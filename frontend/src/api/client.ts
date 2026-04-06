@@ -11,11 +11,19 @@ import type {
   AuditEvent,
   AuditListResponse,
   DashboardOverview,
+  DashboardAnalyticsResponse,
+  DashboardDatePreset,
   EmployeeSummary,
+  ManagedUserDetail,
+  ManagedUserListResponse,
+  ManagedUserSummary,
+  CreateManagedUserPayload,
   ManualEmployeeOptions,
   ManualEmployeePayload,
   NotificationItem,
   TemplateDescriptor,
+  UpdateManagedUserPayload,
+  UserManagementOptions,
   UserDisplayPreferences,
   UserNotificationPreferences,
   UserRoleCode,
@@ -163,6 +171,20 @@ export function switchRole(role: UserRoleCode) {
   });
 }
 
+export function requestPasswordReset(identifier: string) {
+  return apiFetch<{ success: boolean; message: string; demoResetToken?: string }>("/auth/forgot-password/request", {
+    method: "POST",
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+export function resetPasswordWithToken(token: string, nextPassword: string) {
+  return apiFetch<{ success: boolean; message: string }>("/auth/forgot-password/reset", {
+    method: "POST",
+    body: JSON.stringify({ token, nextPassword }),
+  });
+}
+
 export function getCurrentUserAvatarUrl(avatarVersion?: string | null) {
   const suffix = avatarVersion ? `?v=${encodeURIComponent(avatarVersion)}` : "";
   return `${API_BASE}/settings/profile/avatar${suffix}`;
@@ -181,8 +203,9 @@ export function getAcrs(filters?: { status?: string; priority?: boolean; query?:
   return apiFetch<ApiListResponse<AcrSummary>>(`/acrs${suffix}`);
 }
 
-export function getAcrDetail(id: string) {
-  return apiFetch<AcrDetail>(`/acrs/${id}`);
+export function getAcrDetail(id: string, options?: { fresh?: boolean }) {
+  const suffix = options?.fresh ? `?_=${Date.now()}` : "";
+  return apiFetch<AcrDetail>(`/acrs/${id}${suffix}`, options?.fresh ? { cache: "no-store" } : undefined);
 }
 
 export function createAcr(payload: {
@@ -198,7 +221,7 @@ export function createAcr(payload: {
   });
 }
 
-export function transitionAcr(id: string, payload: { action: string; remarks?: string }) {
+export function transitionAcr(id: string, payload: { action: string; remarks?: string; formData?: AcrFormData }) {
   return apiFetch<AcrSummary>(`/acrs/${id}/transition`, {
     method: "POST",
     body: JSON.stringify(payload),
@@ -206,7 +229,7 @@ export function transitionAcr(id: string, payload: { action: string; remarks?: s
 }
 
 export function updateAcrFormData(id: string, formData: AcrFormData) {
-  return apiFetch<AcrDetail>(`/acrs/${id}/form-data`, {
+  return apiFetch<AcrSummary>(`/acrs/${id}/form-data`, {
     method: "PATCH",
     body: JSON.stringify({ formData }),
   });
@@ -368,9 +391,92 @@ export function updateUserPassword(payload: { currentPassword: string; nextPassw
   });
 }
 
+export function getManagedUsers(filters?: {
+  page?: number;
+  pageSize?: number;
+  query?: string;
+  role?: UserRoleCode;
+  status?: "active" | "inactive";
+  wingId?: string;
+  zoneId?: string;
+  officeId?: string;
+}) {
+  const search = new URLSearchParams();
+  if (filters?.page) search.set("page", String(filters.page));
+  if (filters?.pageSize) search.set("pageSize", String(filters.pageSize));
+  if (filters?.query?.trim()) search.set("query", filters.query.trim());
+  if (filters?.role) search.set("role", filters.role);
+  if (filters?.status) search.set("status", filters.status);
+  if (filters?.wingId) search.set("wingId", filters.wingId);
+  if (filters?.zoneId) search.set("zoneId", filters.zoneId);
+  if (filters?.officeId) search.set("officeId", filters.officeId);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch<ManagedUserListResponse>(`/users${suffix}`);
+}
+
+export function getUserManagementOptions() {
+  return apiFetch<UserManagementOptions>("/users/options");
+}
+
+export function getManagedUserDetail(id: string) {
+  return apiFetch<ManagedUserDetail>(`/users/${id}`);
+}
+
+export function createManagedUser(payload: CreateManagedUserPayload) {
+  return apiFetch<ManagedUserSummary>("/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateManagedUser(id: string, payload: UpdateManagedUserPayload) {
+  return apiFetch<ManagedUserSummary>(`/users/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function resetManagedUserPassword(id: string, payload: { nextPassword: string; mustChangePassword?: boolean }) {
+  return apiFetch<{ success: boolean; message: string }>(`/users/${id}/reset-password`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deactivateManagedUser(id: string) {
+  return apiFetch<ManagedUserSummary>(`/users/${id}/deactivate`, {
+    method: "POST",
+  });
+}
+
+export function reactivateManagedUser(id: string) {
+  return apiFetch<ManagedUserSummary>(`/users/${id}/reactivate`, {
+    method: "POST",
+  });
+}
+
 export function getAnalytics() {
   return apiFetch<{
     wingWiseTrends: Array<{ name: string; employees: number; offices: number; acrCount: number }>;
     backlogDistribution: Array<{ name: string; pending: number }>;
   }>("/analytics/leadership");
+}
+
+export function getDashboardAnalytics(filters?: {
+  datePreset?: DashboardDatePreset;
+  wingId?: string;
+  zoneId?: string;
+  officeId?: string;
+  status?: string;
+  templateFamily?: string;
+}) {
+  const search = new URLSearchParams();
+  if (filters?.datePreset) search.set("datePreset", filters.datePreset);
+  if (filters?.wingId) search.set("wingId", filters.wingId);
+  if (filters?.zoneId) search.set("zoneId", filters.zoneId);
+  if (filters?.officeId) search.set("officeId", filters.officeId);
+  if (filters?.status) search.set("status", filters.status);
+  if (filters?.templateFamily) search.set("templateFamily", filters.templateFamily);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch<DashboardAnalyticsResponse>(`/analytics/dashboard${suffix}`);
 }

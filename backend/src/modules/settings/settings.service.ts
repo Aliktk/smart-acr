@@ -91,6 +91,8 @@ export class SettingsService {
         actorId: userId,
         actorRole: this.displayRole(activeRole),
         action: "Profile updated",
+        recordType: "USER",
+        recordId: userId,
         details: `Profile details updated for ${normalizedDisplayName}.`,
         ipAddress,
       });
@@ -137,6 +139,8 @@ export class SettingsService {
       actorId: userId,
       actorRole: this.displayRole(activeRole),
       action: "Preferences updated",
+      recordType: "USER",
+      recordId: userId,
       details: "Notification, display, or security preferences were updated.",
       ipAddress,
     });
@@ -170,6 +174,7 @@ export class SettingsService {
       data: {
         passwordHash: await bcrypt.hash(dto.nextPassword, 12),
         passwordChangedAt: new Date(),
+        mustChangePassword: false,
       },
     });
 
@@ -177,6 +182,8 @@ export class SettingsService {
       actorId: userId,
       actorRole: this.displayRole(activeRole),
       action: "Password updated",
+      recordType: "USER",
+      recordId: userId,
       details: "User password was changed successfully.",
       ipAddress,
     });
@@ -218,6 +225,8 @@ export class SettingsService {
         actorId: userId,
         actorRole: this.displayRole(activeRole),
         action: "Profile avatar updated",
+        recordType: "USER",
+        recordId: userId,
         details: `Profile avatar uploaded: ${file.originalname}.`,
         ipAddress,
       });
@@ -275,6 +284,8 @@ export class SettingsService {
       actorId: userId,
       actorRole: "Administrator",
       action: "Admin setting updated",
+      recordType: "SETTING",
+      recordId: key,
       details: `System setting ${key} was updated.`,
       ipAddress,
     });
@@ -372,6 +383,14 @@ export class SettingsService {
   }
 
   private displayRole(role: UserRole) {
+    if (role === "DG") {
+      return "DG";
+    }
+
+    if (role === "IT_OPS") {
+      return "IT Ops";
+    }
+
     return role
       .split("_")
       .map((segment) => segment[0] + segment.slice(1).toLowerCase())
@@ -427,6 +446,8 @@ export class SettingsService {
     actorId: string;
     actorRole: string;
     action: string;
+    recordType?: string;
+    recordId?: string;
     details: string;
     ipAddress?: string;
   }) {
@@ -435,6 +456,8 @@ export class SettingsService {
         actorId: params.actorId,
         action: params.action,
         actorRole: params.actorRole,
+        recordType: params.recordType,
+        recordId: params.recordId,
         ipAddress: params.ipAddress ?? "unknown",
         details: params.details,
       },

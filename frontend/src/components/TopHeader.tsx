@@ -22,6 +22,7 @@ const routeLabels: Record<string, string> = {
   notifications: "Notifications",
   "audit-logs": "Audit Logs",
   organization: "Organization",
+  "user-management": "User Management",
   settings: "Settings",
   profile: "My Profile",
   "help-support": "Help & Support",

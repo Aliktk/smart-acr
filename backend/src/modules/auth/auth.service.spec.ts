@@ -64,6 +64,10 @@ describe("AuthService", () => {
     const prisma = {
       user: {
         findFirst: jest.fn().mockResolvedValue(user),
+        update: jest.fn().mockResolvedValue({ id: user.id }),
+      },
+      auditLog: {
+        create: jest.fn().mockResolvedValue({ id: "audit-1" }),
       },
       session: {
         create: jest.fn().mockResolvedValue({ id: "session-1" }),
@@ -95,6 +99,10 @@ describe("AuthService", () => {
     const prisma = {
       user: {
         findFirst: jest.fn().mockResolvedValue(user),
+        update: jest.fn().mockResolvedValue({ id: user.id }),
+      },
+      auditLog: {
+        create: jest.fn().mockResolvedValue({ id: "audit-1" }),
       },
       session: {
         create: jest.fn().mockResolvedValue({ id: "session-1" }),
@@ -120,6 +128,10 @@ describe("AuthService", () => {
     const prisma = {
       user: {
         findFirst: jest.fn().mockResolvedValue(user),
+        update: jest.fn().mockResolvedValue({ id: user.id }),
+      },
+      auditLog: {
+        create: jest.fn().mockResolvedValue({ id: "audit-1" }),
       },
       session: {
         create: jest.fn().mockResolvedValue({ id: "session-1" }),
@@ -144,6 +156,10 @@ describe("AuthService", () => {
     const prisma = {
       user: {
         findFirst: jest.fn().mockResolvedValue(user),
+        update: jest.fn().mockResolvedValue({ id: user.id }),
+      },
+      auditLog: {
+        create: jest.fn().mockResolvedValue({ id: "audit-1" }),
       },
       session: {
         create: jest.fn().mockResolvedValue({ id: "session-1" }),
@@ -169,6 +185,9 @@ describe("AuthService", () => {
     const prisma = {
       user: {
         findFirst: jest.fn().mockResolvedValue(user),
+      },
+      auditLog: {
+        create: jest.fn().mockResolvedValue({ id: "audit-1" }),
       },
       authChallenge: {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -202,6 +221,9 @@ describe("AuthService", () => {
       user: {
         findFirst: jest.fn().mockResolvedValue(user),
       },
+      auditLog: {
+        create: jest.fn().mockResolvedValue({ id: "audit-1" }),
+      },
       session: {
         create: jest.fn(),
         update: jest.fn(),
@@ -217,6 +239,9 @@ describe("AuthService", () => {
   it("blocks switching to a role the user does not have", async () => {
     const user = await buildUser();
     const prisma = {
+      auditLog: {
+        create: jest.fn().mockResolvedValue({ id: "audit-1" }),
+      },
       session: {
         findUnique: jest.fn().mockResolvedValue({
           id: "session-1",

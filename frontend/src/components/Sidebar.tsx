@@ -19,6 +19,7 @@ import {
   Search,
   Settings,
   Star,
+  Users,
   UserCircle,
 } from "lucide-react";
 import { FIALogo, UserAvatar } from "@/components/ui";
@@ -62,9 +63,9 @@ const navGroups: Array<{ label?: string; items: NavItem[] }> = [
     label: "ACR Management",
     items: [
       { path: "/acr/new", label: "Initiate ACR", icon: FilePlus, roles: ["CLERK", "SUPER_ADMIN", "IT_OPS"] },
-      { path: "/queue", label: "My Queue", icon: InboxIcon },
-      { path: "/priority", label: "Priority", icon: Star, roles: leadershipRoles.concat(["REPORTING_OFFICER", "COUNTERSIGNING_OFFICER"]) },
-      { path: "/overdue", label: "Overdue", icon: AlertTriangle, roles: leadershipRoles.concat(["REPORTING_OFFICER", "COUNTERSIGNING_OFFICER"]) },
+      { path: "/queue", label: "My Queue", icon: InboxIcon, roles: ["CLERK", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "EMPLOYEE"] },
+      { path: "/priority", label: "Priority", icon: Star, roles: ["SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER"] },
+      { path: "/overdue", label: "Overdue", icon: AlertTriangle, roles: ["SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER"] },
     ],
   },
   {
@@ -79,6 +80,7 @@ const navGroups: Array<{ label?: string; items: NavItem[] }> = [
     label: "Administration",
     items: [
       { path: "/notifications", label: "Notifications", icon: Bell },
+      { path: "/user-management", label: "User Management", icon: Users, roles: ["SUPER_ADMIN", "IT_OPS"] },
       { path: "/audit-logs", label: "Audit Logs", icon: ScrollText, roles: adminAuditRoles },
       { path: "/organization", label: "Organization", icon: Network, roles: leadershipRoles },
       { path: "/settings", label: "Settings", icon: Settings },
@@ -125,7 +127,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="relative flex h-full flex-shrink-0 flex-col overflow-visible transition-all duration-300"
+      className="relative flex h-full min-h-0 flex-shrink-0 flex-col overflow-visible transition-all duration-300"
       style={{
         width: sidebarCollapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-width)",
         background: "linear-gradient(180deg, var(--fia-navy) 0%, var(--fia-navy-500) 100%)",
@@ -133,7 +135,7 @@ export function Sidebar() {
       }}
     >
       <div
-        className="flex h-14 items-center border-b px-3"
+        className="flex h-14 shrink-0 items-center border-b px-3"
         style={{ borderColor: "rgba(255,255,255,0.08)", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}
       >
         {sidebarCollapsed ? (
@@ -151,7 +153,7 @@ export function Sidebar() {
         {sidebarCollapsed ? <ChevronRight size={12} className="text-gray-500" /> : <ChevronLeft size={12} className="text-gray-500" />}
       </button>
 
-      <nav className="flex-1 space-y-3 overflow-y-auto px-2 py-3">
+      <nav className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-2 py-3">
         {visibleGroups.map((group, index) => (
           <div key={index}>
             {group.label && !sidebarCollapsed ? (
@@ -186,7 +188,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t p-2.5" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+      <div className="shrink-0 border-t p-2.5" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
         {!sidebarCollapsed ? (
           <div className="rounded-xl p-2.5" style={{ background: "rgba(255,255,255,0.08)" }}>
             <div className="flex items-center gap-2.5">

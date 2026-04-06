@@ -32,6 +32,7 @@ import {
   type DashboardMode,
 } from "@/utils/acr";
 import { getRoleLabel } from "@/utils/roles";
+import { LeadershipDashboard } from "@/components/dashboard/LeadershipDashboard";
 
 type LeadershipAnalytics = {
   wingWiseTrends: Array<{ name: string; employees: number; offices: number; acrCount: number }>;
@@ -467,6 +468,11 @@ export function RoleDashboard({
 }) {
   const activeRoleCode: UserRoleCode = session?.activeRoleCode ?? "CLERK";
   const mode = getDashboardMode(activeRoleCode);
+
+  if (session && (mode === "executive" || mode === "secret-branch")) {
+    return <LeadershipDashboard session={session} />;
+  }
+
   const config = buildModeConfig(mode);
   const items = overview?.items ?? [];
   const ownerScopedItems =

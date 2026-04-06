@@ -47,7 +47,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       extraHTTPHeaders: cookieHeader ? { cookie: cookieHeader } : undefined,
     });
 
-    await page.goto(`${origin}/print/acr/${id}`, {
+    await page.goto(`${origin}/print/acr/${id}?ts=${Date.now()}`, {
       waitUntil: "domcontentloaded",
       timeout: 45000,
     });

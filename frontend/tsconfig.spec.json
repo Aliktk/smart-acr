@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".test-dist",
+    "rootDir": "src",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "declaration": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": [
+    "src/components/forms/form-templates.spec.tsx",
+    "src/components/forms/FormB_S121E.tsx",
+    "src/components/forms/FormC_Inspector.tsx",
+    "src/components/forms/FormD_Superintendent.tsx",
+    "src/components/forms/FormPrimitives.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    ".test-dist"
+  ]
+}

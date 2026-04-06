@@ -95,6 +95,10 @@ function VerifyPageContent() {
       queryClient.setQueryData(["session"], session);
       setUser(session);
       setActiveRole(session.activeRole);
+      if (session.mustChangePassword) {
+        router.push("/settings?tab=security&forcePassword=1");
+        return;
+      }
       router.push(
         session.availableRoleCodes.length > 1 ? "/login/role" : getDefaultPortalRoute(session.activeRoleCode),
       );

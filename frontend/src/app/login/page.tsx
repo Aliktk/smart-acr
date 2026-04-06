@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Eye, EyeOff, Lock, ShieldCheck, User } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { requestAuthChallenge } from "@/api/client";
@@ -28,6 +29,10 @@ export default function LoginPage() {
         queryClient.setQueryData(["session"], result.session);
         setUser(result.session);
         setActiveRole(result.session.activeRole);
+        if (result.session.mustChangePassword) {
+          router.push("/settings?tab=security&forcePassword=1");
+          return;
+        }
         router.push(
           result.session.availableRoleCodes.length > 1
             ? "/login/role"
@@ -138,6 +143,12 @@ export default function LoginPage() {
           {mutation.isPending ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <ShieldCheck size={18} />}
           {mutation.isPending ? "Signing you in..." : "Secure Sign In"}
         </button>
+
+        <div className="flex justify-center">
+          <Link href="/forgot-password" className="text-sm font-medium text-[#64748B] transition-colors hover:text-[#1A1C6E]">
+            Forgot password?
+          </Link>
+        </div>
       </form>
     </AuthShell>
   );

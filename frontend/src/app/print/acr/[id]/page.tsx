@@ -14,8 +14,8 @@ function sanitizeFileName(value: string) {
 export default function AcrPrintPage() {
   const params = useParams<{ id: string }>();
   const { data, error, isLoading } = useQuery({
-    queryKey: ["acr-print", params.id],
-    queryFn: () => getAcrDetail(params.id),
+    queryKey: ["acr-print", params.id, "fresh"],
+    queryFn: () => getAcrDetail(params.id, { fresh: true }),
     retry: false,
   });
 

@@ -74,6 +74,97 @@ export interface UserSession {
   availableRoles: UserRole[];
   availableRoleCodes: UserRoleCode[];
   scope: UserScope;
+  mustChangePassword: boolean;
+}
+
+export type ManagedUserStatus = "active" | "inactive";
+
+export interface ManagedUserSummary {
+  id: string;
+  fullName: string;
+  username: string;
+  email: string;
+  badgeNo: string;
+  mobileNumber?: string | null;
+  departmentName?: string | null;
+  status: ManagedUserStatus;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  scope: {
+    wingId?: string | null;
+    wingName?: string | null;
+    zoneId?: string | null;
+    zoneName?: string | null;
+    officeId?: string | null;
+    officeName?: string | null;
+    departmentName?: string | null;
+  };
+  roles: UserRoleCode[];
+  roleLabels: string[];
+}
+
+export interface ManagedUserAuditEntry {
+  id: string;
+  action: string;
+  actorName: string;
+  actorRole: string;
+  details: string;
+  createdAt: string;
+}
+
+export interface ManagedUserDetail extends ManagedUserSummary {
+  recentAudit: ManagedUserAuditEntry[];
+}
+
+export interface ManagedUserListResponse extends ApiListResponse<ManagedUserSummary> {
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  filters: {
+    activeAdmin: string;
+  };
+}
+
+export interface UserManagementOptions {
+  roles: Array<{ code: UserRoleCode; label: string }>;
+  wings: Array<{ id: string; name: string; code: string }>;
+  zones: Array<{ id: string; name: string; code: string; wingId: string }>;
+  offices: Array<{ id: string; name: string; code: string; wingId: string; zoneId: string }>;
+}
+
+export interface ManagedUserScopeInput {
+  wingId?: string;
+  zoneId?: string;
+  officeId?: string;
+  departmentName?: string;
+}
+
+export interface CreateManagedUserPayload {
+  fullName: string;
+  username: string;
+  email: string;
+  badgeNo: string;
+  mobileNumber?: string;
+  temporaryPassword: string;
+  roles: UserRoleCode[];
+  isActive?: boolean;
+  mustChangePassword?: boolean;
+  scope: ManagedUserScopeInput;
+}
+
+export interface UpdateManagedUserPayload {
+  fullName?: string;
+  username?: string;
+  email?: string;
+  badgeNo?: string;
+  mobileNumber?: string;
+  roles?: UserRoleCode[];
+  isActive?: boolean;
+  mustChangePassword?: boolean;
+  scope?: ManagedUserScopeInput;
 }
 
 export interface UserNotificationPreferences {
@@ -316,6 +407,157 @@ export interface DashboardOverview {
   summary: DashboardSummary;
   distribution: DashboardDistributionEntry[];
   items: AcrSummary[];
+}
+
+export type DashboardDatePreset = "30d" | "90d" | "180d" | "365d" | "fy" | "all";
+
+export type DashboardTone = "navy" | "cyan" | "green" | "amber" | "red" | "slate";
+
+export interface DashboardAnalyticsAppliedFilters {
+  datePreset: DashboardDatePreset;
+  dateLabel: string;
+  wingId: string;
+  zoneId: string;
+  officeId: string;
+  status: string;
+  templateFamily: TemplateFamilyCode | "";
+}
+
+export interface DashboardAnalyticsFilterOptions {
+  datePresets: Array<{ value: DashboardDatePreset; label: string }>;
+  wings: Array<{ id: string; label: string }>;
+  zones: Array<{ id: string; label: string; wingId: string }>;
+  offices: Array<{ id: string; label: string; wingId: string; zoneId: string }>;
+  statuses: Array<{ value: string; label: string }>;
+  templateFamilies: Array<{ value: TemplateFamilyCode; label: string }>;
+}
+
+export interface DashboardKpi {
+  key: string;
+  label: string;
+  value: string | number;
+  helper: string;
+  tone: DashboardTone;
+}
+
+export interface DashboardTrendPoint {
+  key: string;
+  label: string;
+  initiated: number;
+  pending: number;
+  completed: number;
+  overdue: number;
+  archived: number;
+  cumulativeArchived: number;
+  receivedFromReporting: number;
+  receivedFromCountersigning: number;
+  returnedBeforeArchive: number;
+  downloads: number;
+  anomalies: number;
+}
+
+export interface DashboardTrendSeriesMeta {
+  key: keyof DashboardTrendPoint | string;
+  label: string;
+  color: DashboardTone;
+}
+
+export interface DashboardTrendCard {
+  title: string;
+  subtitle: string;
+  points: DashboardTrendPoint[];
+  series: DashboardTrendSeriesMeta[];
+  defaultSeries: string[];
+}
+
+export interface DashboardPerformanceEntry {
+  id: string;
+  label: string;
+  total: number;
+  pending?: number;
+  completed?: number;
+  overdue?: number;
+  returned?: number;
+  completionRate?: number;
+  avgTurnaroundDays?: number;
+  rate?: number;
+  archived?: number;
+  anomalies?: number;
+  downloads?: number;
+}
+
+export interface DashboardTurnaroundEntry {
+  key: string;
+  label: string;
+  avgDays: number;
+}
+
+export interface DashboardDistributionItem {
+  key: string;
+  label: string;
+  value: number;
+  filterValue?: string;
+}
+
+export interface DashboardHeatmapColumn {
+  key: string;
+  label: string;
+}
+
+export interface DashboardHeatmapRow {
+  id: string;
+  label: string;
+  values: Record<string, number>;
+  completionRate: number;
+  overdue: number;
+  total: number;
+  completed: number;
+}
+
+export interface DashboardHeatmap {
+  title: string;
+  subtitle: string;
+  columns: DashboardHeatmapColumn[];
+  rows: DashboardHeatmapRow[];
+}
+
+export interface DashboardAnalyticsResponse {
+  mode: "executive" | "secret-branch";
+  heading: {
+    eyebrow: string;
+    title: string;
+    description: string;
+  };
+  appliedFilters: DashboardAnalyticsAppliedFilters;
+  filterOptions: DashboardAnalyticsFilterOptions;
+  kpis: DashboardKpi[];
+  trends: {
+    workload: DashboardTrendCard;
+    archive: DashboardTrendCard;
+  };
+  performance: {
+    wing: DashboardPerformanceEntry[];
+    zone: DashboardPerformanceEntry[];
+    offices: DashboardPerformanceEntry[];
+    turnaroundByStage: DashboardTurnaroundEntry[];
+  };
+  distributions: {
+    status: DashboardDistributionItem[];
+    template: DashboardDistributionItem[];
+    returnRateByWing: DashboardPerformanceEntry[];
+    sourceFlow?: DashboardDistributionItem[];
+  };
+  heatmap: DashboardHeatmap | null;
+  focus: {
+    title: string;
+    subtitle: string;
+    items: AcrSummary[];
+  };
+  benchmarks?: {
+    previousPeriodCompleted: number;
+    previousPeriodOverdue: number;
+  };
+  generatedAt: string;
 }
 
 export interface NotificationItem {

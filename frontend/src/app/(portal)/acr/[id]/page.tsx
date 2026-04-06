@@ -1,5 +1,7 @@
 "use client";
 
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -11,6 +13,8 @@ import { FormPreview } from "@/components/FormPreview";
 import { useShell } from "@/hooks/useShell";
 import { FloatingToast, OverdueBadge, PriorityBadge, StatusChip, Timeline } from "@/components/ui";
 import type { AcrFormData, AcrReplicaState, AcrReviewerContext } from "@/types/contracts";
+import { syncAcrSummaryCaches } from "@/utils/acr-cache";
+import { getActionFormValidationMessage, getReviewerSubmissionValidationMessage } from "@/utils/acr-form-validation";
 
 function createEmptyReplicaState(): AcrReplicaState {
   return {
@@ -26,34 +30,51 @@ const actionButtonSecondary = `${actionButtonBase} border border-[#D8DEE8] bg-wh
 const actionButtonPrimary = `${actionButtonBase} bg-[#1A1C6E] text-white hover:bg-[#2D308F]`;
 const actionButtonDanger = `${actionButtonBase} border border-[#FECACA] bg-[#FFF1F2] text-[#BE123C]`;
 
+function sanitizePdfFileName(value: string) {
+  return value.replace(/[\\/:*?"<>|]+/g, "-").trim();
+}
+
 export default function AcrDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useShell();
+  const exportReplicaRef = useRef<HTMLDivElement | null>(null);
   const { data, error, isLoading } = useQuery({
     queryKey: ["acr-detail", params.id],
     queryFn: () => getAcrDetail(params.id),
     retry: false,
   });
   const [replicaStateSeed, setReplicaStateSeed] = useState<AcrReplicaState>(() => createEmptyReplicaState());
+  const [replicaStateSnapshot, setReplicaStateSnapshot] = useState<AcrReplicaState>(() => createEmptyReplicaState());
   const replicaStateRef = useRef<AcrReplicaState>(createEmptyReplicaState());
+  const replicaStateSnapshotRef = useRef<AcrReplicaState>(createEmptyReplicaState());
   const [formDirty, setFormDirty] = useState(false);
+  const formDirtyRef = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [pageToast, setPageToast] = useState<{ title: string; message?: string; tone?: "success" | "info" | "warning" | "danger" } | null>(null);
+  const [workflowActionLocked, setWorkflowActionLocked] = useState(false);
 
   useEffect(() => {
     if (data?.formData?.replicaState) {
       replicaStateRef.current = data.formData.replicaState;
+      replicaStateSnapshotRef.current = data.formData.replicaState;
       setReplicaStateSeed(data.formData.replicaState);
+      setReplicaStateSnapshot(data.formData.replicaState);
+      formDirtyRef.current = false;
       setFormDirty(false);
+      setWorkflowActionLocked(false);
       return;
     }
 
     const nextReplicaState = createEmptyReplicaState();
     replicaStateRef.current = nextReplicaState;
+    replicaStateSnapshotRef.current = nextReplicaState;
     setReplicaStateSeed(nextReplicaState);
+    setReplicaStateSnapshot(nextReplicaState);
+    formDirtyRef.current = false;
     setFormDirty(false);
+    setWorkflowActionLocked(false);
   }, [data?.formData?.replicaState]);
 
   useEffect(() => {
@@ -67,9 +88,11 @@ export default function AcrDetailPage() {
 
   const saveFormMutation = useMutation({
     mutationFn: (formData: AcrFormData) => updateAcrFormData(params.id, formData),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      formDirtyRef.current = false;
       setFormDirty(false);
       setActionError(null);
+      syncAcrSummaryCaches(queryClient, updated);
       setPageToast({
         title: "Form changes saved",
         message: "The latest official form updates are now stored for the next workflow holder.",
@@ -84,9 +107,12 @@ export default function AcrDetailPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (payload: { action: string; remarks?: string }) => transitionAcr(params.id, payload),
-    onSuccess: (_result, variables) => {
+    mutationFn: (payload: { action: string; remarks?: string; formData?: AcrFormData }) => transitionAcr(params.id, payload),
+    onSuccess: (result, variables) => {
+      formDirtyRef.current = false;
       setActionError(null);
+      syncAcrSummaryCaches(queryClient, result);
+      queryClient.invalidateQueries({ queryKey: ["acr-detail", params.id] });
       queryClient.invalidateQueries({ queryKey: ["acrs"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
       const nextTitle =
@@ -114,6 +140,7 @@ export default function AcrDetailPage() {
       router.replace("/queue");
     },
     onError: (error: Error) => {
+      setWorkflowActionLocked(false);
       setActionError(error.message);
     },
   });
@@ -123,10 +150,11 @@ export default function AcrDetailPage() {
       return [];
     }
 
+    const timeline = Array.isArray(data.timeline) ? data.timeline : [];
     const requiresCountersigning = data.templateFamily !== "APS_STENOTYPIST";
     const activeState = data.workflowState;
-    const completedActions = data.timeline.map((entry) => entry.action.toLowerCase());
-    const touchedRoles = new Set(data.timeline.map((entry) => entry.role.toLowerCase()));
+    const completedActions = timeline.map((entry) => entry.action.toLowerCase());
+    const touchedRoles = new Set(timeline.map((entry) => entry.role.toLowerCase()));
     const reportingTouched =
       activeState === "Pending Countersigning" ||
       activeState === "Archived" ||
@@ -161,6 +189,23 @@ export default function AcrDetailPage() {
   const canReviewAsCountersigningOfficer =
     activeRoleCode === "COUNTERSIGNING_OFFICER" && data?.workflowState === "Pending Countersigning";
   const canReturnToClerk = canReviewAsReportingOfficer || canReviewAsCountersigningOfficer;
+  const reportingSubmissionValidation =
+    canReviewAsReportingOfficer ? getReviewerSubmissionValidationMessage({ scope: "reporting", replicaState: replicaStateSnapshot }) : null;
+  const countersigningSubmissionValidation =
+    canReviewAsCountersigningOfficer ? getReviewerSubmissionValidationMessage({ scope: "countersigning", replicaState: replicaStateSnapshot }) : null;
+  const stageValidationMessage =
+    canSubmitDraft
+      ? getActionFormValidationMessage({
+          action: "submit_to_reporting",
+          workflowState: data?.workflowState ?? "Draft",
+          formData: data?.formData,
+          replicaState: replicaStateSnapshot,
+        })
+      : canReviewAsReportingOfficer
+        ? reportingSubmissionValidation
+        : canReviewAsCountersigningOfficer
+          ? countersigningSubmissionValidation
+          : null;
 
   if (error instanceof Error) {
     return (
@@ -183,11 +228,12 @@ export default function AcrDetailPage() {
     return <div className="p-6 text-sm text-gray-500">Loading ACR record...</div>;
   }
 
+  const timeline = Array.isArray(data.timeline) ? data.timeline : [];
   const isFinalizedRecord = data.workflowState === "Archived" || data.workflowState === "Submitted to Secret Branch";
   const isSecretBranchView = activeRoleCode === "SECRET_BRANCH";
   const isExecutiveView = activeRoleCode === "DG" || activeRoleCode === "EXECUTIVE_VIEWER";
   const compactFinalView = isFinalizedRecord && (isSecretBranchView || isExecutiveView);
-  const finalizedAt = data.completedDate ?? data.timeline.at(-1)?.timestamp ?? null;
+  const finalizedAt = data.completedDate ?? timeline.at(-1)?.timestamp ?? null;
   const finalStateLabel =
     data.workflowState === "Archived" ? "Archived in Secret Branch" : "Received by Secret Branch";
 
@@ -218,16 +264,60 @@ export default function AcrDetailPage() {
         }
       : null,
   };
-  const formBusy = mutation.isPending || saveFormMutation.isPending;
+  const formBusy = mutation.isPending || saveFormMutation.isPending || workflowActionLocked;
   const workflowMeta = data?.formData?.workflowMeta;
   const currentOwnerLabel = data.currentHolderName
     ? data.currentHolderRole
       ? `${data.currentHolderName} · ${data.currentHolderRole}`
       : data.currentHolderName
     : "Unassigned";
-  const latestReturnEntry = [...data.timeline]
+  const latestReturnEntry = [...timeline]
     .reverse()
     .find((entry) => entry.status === "returned" || entry.action.toLowerCase().includes("return to clerk"));
+
+  async function exportReplicaAsPdf(fileName: string) {
+    const exportTarget = exportReplicaRef.current;
+    if (!exportTarget) {
+      throw new Error("The official form replica is not ready for PDF export.");
+    }
+
+    const canvas = await html2canvas(exportTarget, {
+      scale: Math.min(window.devicePixelRatio || 1.5, 2),
+      useCORS: true,
+      backgroundColor: "#EDF2F7",
+      logging: false,
+      windowWidth: exportTarget.scrollWidth,
+      windowHeight: exportTarget.scrollHeight,
+    });
+
+    const imageData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+    });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 6;
+    const printableWidth = pageWidth - margin * 2;
+    const printableHeight = pageHeight - margin * 2;
+    const imageHeight = (canvas.height * printableWidth) / canvas.width;
+    let remainingHeight = imageHeight;
+    let offsetY = margin;
+
+    pdf.addImage(imageData, "PNG", margin, offsetY, printableWidth, imageHeight, undefined, "FAST");
+    remainingHeight -= printableHeight;
+
+    while (remainingHeight > 0) {
+      offsetY = remainingHeight - imageHeight + margin;
+      pdf.addPage();
+      pdf.addImage(imageData, "PNG", margin, offsetY, printableWidth, imageHeight, undefined, "FAST");
+      remainingHeight -= printableHeight;
+    }
+
+    pdf.save(`${sanitizePdfFileName(fileName)}.pdf`);
+  }
 
   async function handleExport() {
     if (!data) {
@@ -243,7 +333,7 @@ export default function AcrDetailPage() {
       });
 
       if (!response.ok) {
-        throw new Error((await response.text()) || "Unable to export this ACR as PDF.");
+        throw new Error((await response.text()) || "Server-side PDF export is unavailable.");
       }
 
       const blob = await response.blob();
@@ -259,7 +349,22 @@ export default function AcrDetailPage() {
         tone: "success",
       });
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Unable to export this ACR as PDF.");
+      try {
+        await exportReplicaAsPdf(data.acrNo);
+        setActionError(null);
+        setPageToast({
+          title: "PDF exported",
+          message: "The current official form view was exported successfully.",
+          tone: "success",
+        });
+      } catch (fallbackError) {
+        const primaryMessage = error instanceof Error ? error.message : "Unable to export this ACR as PDF.";
+        const fallbackMessage =
+          fallbackError instanceof Error && fallbackError.message !== primaryMessage
+            ? ` ${fallbackError.message}`
+            : "";
+        setActionError(`${primaryMessage}${fallbackMessage}`.trim());
+      }
     }
   }
 
@@ -271,22 +376,64 @@ export default function AcrDetailPage() {
   }
 
   async function persistFormIfNeeded() {
-    if (!canEditForm || !formDirty) {
+    if (!canEditForm || !formDirtyRef.current) {
       return;
     }
 
     const normalizedReplicaState = await upgradeInlineReplicaAssets(replicaStateRef.current, params.id);
     replicaStateRef.current = normalizedReplicaState;
+    replicaStateSnapshotRef.current = normalizedReplicaState;
     setReplicaStateSeed(normalizedReplicaState);
+    setReplicaStateSnapshot(normalizedReplicaState);
     await saveFormMutation.mutateAsync(buildFormData(normalizedReplicaState));
   }
 
   async function handleWorkflowAction(payload: { action: string; remarks?: string }) {
     try {
+      if (workflowActionLocked) {
+        return;
+      }
+
+      if (!data) {
+        return;
+      }
+
       setActionError(null);
-      await persistFormIfNeeded();
-      await mutation.mutateAsync(payload);
+      let nextReplicaState = replicaStateSnapshotRef.current;
+
+      if (canEditForm) {
+        nextReplicaState = await upgradeInlineReplicaAssets(replicaStateRef.current, params.id);
+        replicaStateRef.current = nextReplicaState;
+        replicaStateSnapshotRef.current = nextReplicaState;
+        setReplicaStateSeed(nextReplicaState);
+        setReplicaStateSnapshot(nextReplicaState);
+      }
+
+      const nextFormData = buildFormData(nextReplicaState);
+      const validationMessage = getActionFormValidationMessage({
+        action: payload.action,
+        workflowState: data.workflowState,
+        formData: nextFormData,
+        replicaState: nextReplicaState,
+      });
+
+      if (validationMessage) {
+        setActionError(validationMessage);
+        setPageToast({
+          title: "Complete the form first",
+          message: validationMessage,
+          tone: "danger",
+        });
+        return;
+      }
+
+      setWorkflowActionLocked(true);
+      await mutation.mutateAsync({
+        ...payload,
+        formData: canEditForm ? nextFormData : undefined,
+      });
     } catch (error) {
+      setWorkflowActionLocked(false);
       setActionError(error instanceof Error ? error.message : "Unable to complete this workflow action.");
     }
   }
@@ -387,7 +534,7 @@ export default function AcrDetailPage() {
         <aside className="space-y-4">
           <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
             <h2 className="mb-4 text-[1.15rem] font-semibold text-[#111827]">Workflow Timeline</h2>
-            <Timeline items={data.timeline} />
+            <Timeline items={timeline} />
           </div>
 
           <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
@@ -477,7 +624,7 @@ export default function AcrDetailPage() {
                   </div>
                   <StatusChip status={data.status} />
                 </div>
-                <Timeline items={data.timeline} />
+                <Timeline items={timeline} />
               </div>
             </div>
           </div>
@@ -508,19 +655,22 @@ export default function AcrDetailPage() {
         </summary>
         <div className="border-t border-[#EEF2F7] p-4">
           <div className="overflow-x-auto rounded-[20px] bg-[#EDF2F7] p-3">
-            <div className="mx-auto w-full max-w-[1120px]">
-              <FormPreview
-                templateFamily={data.templateFamily}
-                editable={canEditForm}
+            <div ref={exportReplicaRef} className="mx-auto w-full max-w-[1120px]">
+                <FormPreview
+                  templateFamily={data.templateFamily}
+                  editable={canEditForm}
                 editableScopes={editableScopes}
                 acrRecordId={data.id}
                 reviewerContext={reviewerContext}
-                formData={buildFormData(replicaStateSeed)}
-                onReplicaStateChange={(nextReplicaState) => {
-                  replicaStateRef.current = nextReplicaState;
-                  setFormDirty((current) => (current ? current : true));
-                }}
-              />
+                  formData={buildFormData(replicaStateSeed)}
+                  onReplicaStateChange={(nextReplicaState) => {
+                    replicaStateRef.current = nextReplicaState;
+                    replicaStateSnapshotRef.current = nextReplicaState;
+                    setReplicaStateSnapshot(nextReplicaState);
+                    formDirtyRef.current = true;
+                    setFormDirty((current) => (current ? current : true));
+                  }}
+                />
             </div>
           </div>
         </div>
@@ -543,19 +693,22 @@ export default function AcrDetailPage() {
         </div>
 
         <div className="mt-4 overflow-x-auto rounded-[20px] bg-[#EDF2F7] p-3 sm:p-4 lg:p-5">
-          <div className="mx-auto w-full max-w-[1120px]">
-            <FormPreview
-              templateFamily={data.templateFamily}
-              editable={canEditForm}
+          <div ref={exportReplicaRef} className="mx-auto w-full max-w-[1120px]">
+              <FormPreview
+                templateFamily={data.templateFamily}
+                editable={canEditForm}
               editableScopes={editableScopes}
               acrRecordId={data.id}
               reviewerContext={reviewerContext}
-              formData={buildFormData(replicaStateSeed)}
-              onReplicaStateChange={(nextReplicaState) => {
-                replicaStateRef.current = nextReplicaState;
-                setFormDirty((current) => (current ? current : true));
-              }}
-            />
+                formData={buildFormData(replicaStateSeed)}
+                onReplicaStateChange={(nextReplicaState) => {
+                  replicaStateRef.current = nextReplicaState;
+                  replicaStateSnapshotRef.current = nextReplicaState;
+                  setReplicaStateSnapshot(nextReplicaState);
+                  formDirtyRef.current = true;
+                  setFormDirty((current) => (current ? current : true));
+                }}
+              />
           </div>
         </div>
       </section>
@@ -565,13 +718,6 @@ export default function AcrDetailPage() {
       <section className="portal-floating-action-bar">
         <div className="rounded-[24px] border border-[#D8DEE8] bg-white/96 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur">
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-          <div className="min-w-0 rounded-2xl bg-[#F8FAFC] px-4 py-2.5 text-sm text-[#475569]">
-            <p className="font-semibold text-[#111827]">{canEditForm ? "Editable workflow stage" : "Read-only record view"}</p>
-            <p className="mt-1">
-              Current owner: <span className="font-medium text-[#111827]">{currentOwnerLabel}</span>
-            </p>
-          </div>
-
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5 xl:justify-end">
             <Link

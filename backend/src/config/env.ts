@@ -10,6 +10,8 @@ const envSchema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().default(7),
   WEB_ORIGIN: z.string().default("http://localhost:3000"),
   STORAGE_PATH: z.string().default("storage"),
+  FORGOT_PASSWORD_ENABLED: z.coerce.boolean().default(false),
+  FORGOT_PASSWORD_TOKEN_TTL_MINUTES: z.coerce.number().default(30),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

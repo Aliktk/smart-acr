@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString } from "class-validator";
+import { IsIn, IsObject, IsOptional, IsString } from "class-validator";
 import type { AcrAction } from "../../workflow/workflow.service";
 
 export class TransitionAcrDto {
@@ -8,4 +8,8 @@ export class TransitionAcrDto {
   @IsOptional()
   @IsString()
   remarks?: string;
+
+  @IsOptional()
+  @IsObject()
+  formData?: Record<string, unknown>;
 }

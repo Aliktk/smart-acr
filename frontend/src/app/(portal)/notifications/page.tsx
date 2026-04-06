@@ -91,7 +91,7 @@ export default function NotificationsPage() {
         <div className="bg-[#1A1C6E] px-5 py-4 text-white">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-xl font-semibold">Notifications</h1>
+              <h1 className="text-xl font-semibold text-white">Notifications</h1>
             </div>
             <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-semibold">
               {unreadCount} unread
@@ -166,7 +166,7 @@ export default function NotificationsPage() {
             const Icon = visuals.icon;
 
             return (
-              <div key={notification.id} className="rounded-[18px] bg-white px-4 py-3.5 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+              <div key={notification.id} className="rounded-[18px] bg-[#1A1C6E] px-4 py-3.5 shadow-[0_8px_20px_rgba(15,23,42,0.12)]">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 gap-3">
                     <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${visuals.iconWrap}`}>
@@ -174,17 +174,17 @@ export default function NotificationsPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-[#111827]">{notification.title}</p>
+                        <p className="text-sm font-semibold text-white">{notification.title}</p>
                         {!notification.read ? <span className="h-2.5 w-2.5 rounded-full bg-[#0095D9]" /> : null}
                       </div>
-                      <p className="mt-0.5 text-sm leading-5 text-[#6B7280]">{notification.message}</p>
-                      <p className="mt-1.5 text-xs text-[#9CA3AF]">{notification.time}</p>
+                      <p className="mt-0.5 text-sm leading-5 text-white/88">{notification.message}</p>
+                      <p className="mt-1.5 text-xs text-white/60">{notification.time}</p>
                     </div>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-3">
                     {notification.acrId ? (
-                      <Link href={`/acr/${notification.acrId}`} className="text-sm font-semibold text-[#0095D9]">
+                      <Link href={`/acr/${notification.acrId}`} className="text-sm font-semibold text-white">
                         Open record
                       </Link>
                     ) : null}

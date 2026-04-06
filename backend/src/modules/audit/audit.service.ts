@@ -69,6 +69,12 @@ export class AuditService {
       and.push({
         OR: [
           {
+            recordId: {
+              contains: recordQuery,
+              mode: "insensitive",
+            },
+          },
+          {
             acrRecord: {
               is: {
                 acrNo: {
@@ -220,6 +226,8 @@ export class AuditService {
           OR: [
             { action: { contains: "admin setting", mode: "insensitive" } },
             { action: { contains: "system setting", mode: "insensitive" } },
+            { action: { contains: "user account", mode: "insensitive" } },
+            { action: { contains: "password reset", mode: "insensitive" } },
           ],
         };
       case "System":
