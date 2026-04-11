@@ -1,4 +1,11 @@
-import type { UserRoleCode } from "@/types/contracts";
+import type { SecretBranchProfileSummary, UserRoleCode } from "@/types/contracts";
+
+type PortalAccessSubject =
+  | UserRoleCode
+  | {
+      activeRoleCode: UserRoleCode;
+      secretBranchProfile?: SecretBranchProfileSummary | null;
+    };
 
 const COMMON_PORTAL_PREFIXES = ["/profile", "/settings", "/notifications", "/help-support", "/acr"];
 
@@ -15,27 +22,47 @@ export function getDefaultPortalRoute(roleCode: UserRoleCode) {
     case "CLERK":
       return "/acr/new";
     case "EMPLOYEE":
-      return "/queue";
+      return "/dashboard";
     default:
       return "/dashboard";
   }
 }
 
 export function canUseGlobalSearch(roleCode: UserRoleCode) {
-  return roleCode !== "CLERK";
+  return roleCode !== "CLERK" && roleCode !== "EMPLOYEE";
 }
 
-export function canAccessPortalPath(roleCode: UserRoleCode, pathname: string) {
+function resolveRoleCode(subject: PortalAccessSubject) {
+  return typeof subject === "string" ? subject : subject.activeRoleCode;
+}
+
+export function canManageUserAccounts(subject: PortalAccessSubject) {
+  const roleCode = resolveRoleCode(subject);
+
+  if (roleCode === "SUPER_ADMIN") {
+    return true;
+  }
+
+  if (roleCode !== "SECRET_BRANCH" || typeof subject === "string") {
+    return false;
+  }
+
+  return Boolean(subject.secretBranchProfile?.canManageUsers) && (subject.secretBranchProfile?.isActive ?? true);
+}
+
+export function canAccessPortalPath(subject: PortalAccessSubject, pathname: string) {
+  const roleCode = resolveRoleCode(subject);
+
   if (pathname === "/" || pathname === "") {
     return true;
   }
 
   if (pathname === "/acr/new") {
-    return ["CLERK", "SUPER_ADMIN", "IT_OPS"].includes(roleCode);
+    return ["CLERK", "SUPER_ADMIN", "IT_OPS", "SECRET_BRANCH"].includes(roleCode);
   }
 
-  if (pathname === "/user-management") {
-    return ["SUPER_ADMIN", "IT_OPS"].includes(roleCode);
+  if (matchesPrefix(pathname, "/user-management")) {
+    return canManageUserAccounts(subject);
   }
 
   if (pathname === "/form-templates") {
@@ -54,10 +81,10 @@ export function canAccessPortalPath(roleCode: UserRoleCode, pathname: string) {
     case "COUNTERSIGNING_OFFICER":
       return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/search", "/priority", "/overdue"]);
     case "SECRET_BRANCH":
-      return matchesAnyPrefix(pathname, ["/dashboard", "/archive", "/search", "/analytics", "/audit-logs", "/organization"]);
+      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization", "/acr/new"]);
     case "SUPER_ADMIN":
     case "IT_OPS":
-      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization", "/acr/new", "/user-management"]);
+      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization", "/acr/new"]);
     case "DG":
       return matchesAnyPrefix(pathname, ["/dashboard", "/archive", "/search", "/profile", "/settings", "/notifications", "/help-support"]);
     case "EXECUTIVE_VIEWER":
@@ -65,7 +92,7 @@ export function canAccessPortalPath(roleCode: UserRoleCode, pathname: string) {
     case "ZONAL_OVERSIGHT":
       return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/organization", "/audit-logs"]);
     case "EMPLOYEE":
-      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/search"]);
+      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/profile", "/settings", "/notifications", "/help-support", "/acr"]);
     default:
       return false;
   }

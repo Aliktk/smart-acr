@@ -26,6 +26,7 @@ import { FIALogo, UserAvatar } from "@/components/ui";
 import { useShell } from "@/hooks/useShell";
 import { getCurrentUserAvatarUrl, logout } from "@/api/client";
 import type { UserRoleCode } from "@/types/contracts";
+import { canManageUserAccounts } from "@/utils/portal-access";
 
 type NavItem = {
   path: string;
@@ -62,17 +63,17 @@ const navGroups: Array<{ label?: string; items: NavItem[] }> = [
   {
     label: "ACR Management",
     items: [
-      { path: "/acr/new", label: "Initiate ACR", icon: FilePlus, roles: ["CLERK", "SUPER_ADMIN", "IT_OPS"] },
-      { path: "/queue", label: "My Queue", icon: InboxIcon, roles: ["CLERK", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "EMPLOYEE"] },
-      { path: "/priority", label: "Priority", icon: Star, roles: ["SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER"] },
-      { path: "/overdue", label: "Overdue", icon: AlertTriangle, roles: ["SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER"] },
+      { path: "/acr/new", label: "Initiate ACR", icon: FilePlus, roles: ["CLERK", "SUPER_ADMIN", "IT_OPS", "SECRET_BRANCH"] },
+      { path: "/queue", label: "My Queue", icon: InboxIcon, roles: ["CLERK", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "SECRET_BRANCH", "SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "EMPLOYEE"] },
+      { path: "/priority", label: "Priority", icon: Star, roles: ["SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "SECRET_BRANCH"] },
+      { path: "/overdue", label: "Overdue", icon: AlertTriangle, roles: ["SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "SECRET_BRANCH"] },
     ],
   },
   {
     label: "Records",
     items: [
       { path: "/archive", label: "Archive", icon: Archive, roles: leadershipRoles },
-      { path: "/search", label: "Search Records", icon: Search, roles: leadershipRoles.concat(["REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "EMPLOYEE"]) },
+      { path: "/search", label: "Search Records", icon: Search, roles: leadershipRoles.concat(["REPORTING_OFFICER", "COUNTERSIGNING_OFFICER"]) },
       { path: "/form-templates", label: "Form Templates", icon: FileText },
     ],
   },
@@ -80,7 +81,7 @@ const navGroups: Array<{ label?: string; items: NavItem[] }> = [
     label: "Administration",
     items: [
       { path: "/notifications", label: "Notifications", icon: Bell },
-      { path: "/user-management", label: "User Management", icon: Users, roles: ["SUPER_ADMIN", "IT_OPS"] },
+      { path: "/user-management", label: "User Management", icon: Users, roles: ["SUPER_ADMIN", "SECRET_BRANCH"] },
       { path: "/audit-logs", label: "Audit Logs", icon: ScrollText, roles: adminAuditRoles },
       { path: "/organization", label: "Organization", icon: Network, roles: leadershipRoles },
       { path: "/settings", label: "Settings", icon: Settings },
@@ -98,7 +99,17 @@ export function Sidebar() {
   const baseGroups = navGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.roles || item.roles.includes(activeRoleCode)),
+      items: group.items.filter((item) => {
+        if (item.path === "/user-management") {
+          if (!user) {
+            return false;
+          }
+
+          return canManageUserAccounts(user);
+        }
+
+        return !item.roles || item.roles.includes(activeRoleCode);
+      }),
     }))
     .filter((group) => group.items.length > 0);
   const visibleGroups =
@@ -110,6 +121,23 @@ export function Sidebar() {
           }))
           .filter((group) => group.items.length > 0)
       : baseGroups;
+  const normalizedGroups =
+    activeRoleCode === "EMPLOYEE"
+      ? visibleGroups.map((group) => ({
+          ...group,
+          items: group.items
+            .map((item) => {
+              if (item.path === "/queue") {
+                return { ...item, label: "My ACR History" };
+              }
+              if (item.path === "/archive") {
+                return { ...item, label: "Archive History" };
+              }
+              return item;
+            })
+            .filter((item) => item.path !== "/form-templates"),
+        }))
+      : visibleGroups;
 
   async function handleLogout() {
     try {
@@ -147,14 +175,14 @@ export function Sidebar() {
 
       <button
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        className="absolute -right-3 top-[66px] z-20 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-colors hover:bg-gray-50"
+        className="absolute -right-3 top-[66px] z-20 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--fia-gray-200)] bg-[var(--card)] shadow-sm transition-colors hover:bg-[var(--fia-gray-50)]"
         title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        {sidebarCollapsed ? <ChevronRight size={12} className="text-gray-500" /> : <ChevronLeft size={12} className="text-gray-500" />}
+        {sidebarCollapsed ? <ChevronRight size={12} className="text-[var(--fia-gray-500)]" /> : <ChevronLeft size={12} className="text-[var(--fia-gray-500)]" />}
       </button>
 
       <nav className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-2 py-3">
-        {visibleGroups.map((group, index) => (
+        {normalizedGroups.map((group, index) => (
           <div key={index}>
             {group.label && !sidebarCollapsed ? (
               <p className="mb-1 px-3 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/32">{group.label}</p>
