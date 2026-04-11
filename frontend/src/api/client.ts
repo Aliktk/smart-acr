@@ -5,7 +5,10 @@ import type {
   AcrDetail,
   AcrFormData,
   AcrSummary,
+  AdverseRemarkSummary,
   ApiListResponse,
+  ArchiveRecordSource,
+  ArchiveRecordSummary,
   AuthChallengeResponse,
   AuthLoginResult,
   AuditEvent,
@@ -13,6 +16,8 @@ import type {
   DashboardOverview,
   DashboardAnalyticsResponse,
   DashboardDatePreset,
+  EmployeePortalProfile,
+  EmployeePortalProfileInput,
   EmployeeSummary,
   ManagedUserDetail,
   ManagedUserListResponse,
@@ -21,19 +26,37 @@ import type {
   ManualEmployeeOptions,
   ManualEmployeePayload,
   NotificationItem,
+  OrgScopeTrack,
+  OrganizationMasterData,
+  OrganizationSummaryEntry,
   TemplateDescriptor,
+  UpdateEmployeeMetadataPayload,
+  UpdateEmployeeProfilePayload,
   UpdateManagedUserPayload,
   UserManagementOptions,
   UserDisplayPreferences,
   UserNotificationPreferences,
+  UserAssetType,
   UserRoleCode,
   UserSecurityPreferencesInput,
   UserSession,
   UserSettings,
   UploadedFileAsset,
+  SecretBranchDeskCode,
 } from "@/types/contracts";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+
+/**
+ * Thrown when a session has expired or been revoked beyond recovery.
+ * Handled globally in AppProviders — redirects to /login with no console noise.
+ */
+export class SessionExpiredError extends Error {
+  constructor() {
+    super("session_expired");
+    this.name = "SessionExpiredError";
+  }
+}
 
 let refreshPromise: Promise<void> | null = null;
 
@@ -59,11 +82,31 @@ async function rawFetch(path: string, init?: RequestInit) {
 }
 
 async function readError(response: Response) {
+  const requestId = response.headers.get("x-request-id") ?? undefined;
   const errorText = await response.text();
+  const method = response.url.split("/api/v1").pop() ?? response.url;
+
+  // Log API errors for debugging
+  if (typeof window !== "undefined") {
+    try {
+      const stored = JSON.parse(sessionStorage.getItem("acr_api_errors") ?? "[]") as unknown[];
+      stored.push({
+        status: response.status,
+        path: method,
+        requestId,
+        message: errorText.slice(0, 200),
+        timestamp: new Date().toISOString(),
+      });
+      if (stored.length > 30) stored.splice(0, stored.length - 30);
+      sessionStorage.setItem("acr_api_errors", JSON.stringify(stored));
+    } catch {
+      // Storage unavailable
+    }
+  }
 
   if (errorText) {
     try {
-      const parsed = JSON.parse(errorText) as { message?: string | string[] };
+      const parsed = JSON.parse(errorText) as { message?: string | string[]; requestId?: string };
       if (Array.isArray(parsed.message) && parsed.message[0]) {
         throw new Error(parsed.message[0]);
       }
@@ -107,9 +150,14 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (response.status === 401 && shouldTryRefresh(path)) {
     try {
       await ensureRefreshed();
-      response = await rawFetch(path, init);
     } catch {
-      response = await rawFetch(path, init);
+      // Refresh itself failed — session is terminal, redirect to login
+      throw new SessionExpiredError();
+    }
+    response = await rawFetch(path, init);
+    if (response.status === 401) {
+      // Still 401 after a successful refresh — session is terminal
+      throw new SessionExpiredError();
     }
   }
 
@@ -117,10 +165,10 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     await readError(response);
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
-function toAbsoluteApiUrl(path: string) {
+export function toAbsoluteApiUrl(path: string) {
   if (/^https?:\/\//i.test(path)) {
     return path;
   }
@@ -221,7 +269,7 @@ export function createAcr(payload: {
   });
 }
 
-export function transitionAcr(id: string, payload: { action: string; remarks?: string; formData?: AcrFormData }) {
+export function transitionAcr(id: string, payload: { action: string; remarks?: string; formData?: AcrFormData; targetDeskCode?: SecretBranchDeskCode }) {
   return apiFetch<AcrSummary>(`/acrs/${id}/transition`, {
     method: "POST",
     body: JSON.stringify(payload),
@@ -261,6 +309,20 @@ export function getManualEmployeeOptions(officeId?: string) {
 export function createEmployee(payload: ManualEmployeePayload) {
   return apiFetch<EmployeeSummary>("/employees", {
     method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateEmployeeStatus(employeeId: string, status: string, retirementDate?: string) {
+  return apiFetch<EmployeeSummary>(`/employees/${employeeId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, retirementDate }),
+  });
+}
+
+export function updateEmployeeMetadata(employeeId: string, payload: UpdateEmployeeMetadataPayload) {
+  return apiFetch<EmployeeSummary>(`/employees/${employeeId}/metadata`, {
+    method: "PATCH",
     body: JSON.stringify(payload),
   });
 }
@@ -320,21 +382,124 @@ export function getAuditLogs(filters?: {
 }
 
 export function getOrganizationSummary() {
-  return apiFetch<Array<{
-    id: string;
-    name: string;
-    code: string;
-    zones: Array<{
-      id: string;
-      name: string;
-      code: string;
-      offices: Array<{ id: string; name: string; code: string; employeeCount: number; userCount: number }>;
-    }>;
-  }>>("/organization/summary");
+  return apiFetch<OrganizationSummaryEntry[]>("/organization/summary");
+}
+
+export function getOrganizationMasterData() {
+  return apiFetch<OrganizationMasterData>("/organization/master-data");
 }
 
 export function getArchive() {
-  return apiFetch<ApiListResponse<AcrDetail>>("/archive");
+  return apiFetch<ApiListResponse<ArchiveRecordSummary>>("/archive/records");
+}
+
+export function getArchiveRecords(filters?: {
+  query?: string;
+  source?: ArchiveRecordSource;
+  templateFamily?: string;
+  scopeTrack?: OrgScopeTrack;
+  wingId?: string;
+  directorateId?: string;
+  regionId?: string;
+  zoneId?: string;
+  circleId?: string;
+  stationId?: string;
+  branchId?: string;
+  cellId?: string;
+  officeId?: string;
+  departmentId?: string;
+}) {
+  const search = new URLSearchParams();
+  if (filters?.query?.trim()) search.set("query", filters.query.trim());
+  if (filters?.source) search.set("source", filters.source);
+  if (filters?.templateFamily) search.set("templateFamily", filters.templateFamily);
+  if (filters?.scopeTrack) search.set("scopeTrack", filters.scopeTrack);
+  if (filters?.wingId) search.set("wingId", filters.wingId);
+  if (filters?.directorateId) search.set("directorateId", filters.directorateId);
+  if (filters?.regionId) search.set("regionId", filters.regionId);
+  if (filters?.zoneId) search.set("zoneId", filters.zoneId);
+  if (filters?.circleId) search.set("circleId", filters.circleId);
+  if (filters?.stationId) search.set("stationId", filters.stationId);
+  if (filters?.branchId) search.set("branchId", filters.branchId);
+  if (filters?.cellId) search.set("cellId", filters.cellId);
+  if (filters?.officeId) search.set("officeId", filters.officeId);
+  if (filters?.departmentId) search.set("departmentId", filters.departmentId);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch<ApiListResponse<ArchiveRecordSummary>>(`/archive/records${suffix}`);
+}
+
+export function getArchiveRecordDetail(id: string) {
+  return apiFetch<ArchiveRecordSummary>(`/archive/records/${id}`);
+}
+
+export function uploadHistoricalArchive(payload: {
+  employeeId: string;
+  templateFamily?: string;
+  reportingPeriodFrom?: string;
+  reportingPeriodTo?: string;
+  archiveReference?: string;
+  remarks?: string;
+  file: File | Blob;
+  fileName?: string;
+}) {
+  const body = new FormData();
+  body.append("employeeId", payload.employeeId);
+  if (payload.templateFamily) body.append("templateFamily", payload.templateFamily);
+  if (payload.reportingPeriodFrom) body.append("reportingPeriodFrom", payload.reportingPeriodFrom);
+  if (payload.reportingPeriodTo) body.append("reportingPeriodTo", payload.reportingPeriodTo);
+  if (payload.archiveReference) body.append("archiveReference", payload.archiveReference);
+  if (payload.remarks) body.append("remarks", payload.remarks);
+  body.append("file", payload.file, payload.fileName ?? "historical-acr.pdf");
+
+  return apiFetch<ArchiveRecordSummary>("/archive/historical", {
+    method: "POST",
+    body,
+  });
+}
+
+export function updateHistoricalArchiveMetadata(id: string, payload: {
+  templateFamily?: string;
+  reportingPeriodFrom?: string;
+  reportingPeriodTo?: string;
+  archiveReference?: string;
+  remarks?: string;
+}) {
+  return apiFetch<ArchiveRecordSummary>(`/archive/historical/${id}/metadata`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function verifyHistoricalArchive(id: string, remarks?: string) {
+  return apiFetch<ArchiveRecordSummary>(`/archive/historical/${id}/verify`, {
+    method: "POST",
+    body: JSON.stringify({ remarks }),
+  });
+}
+
+export function deleteHistoricalArchive(id: string) {
+  return apiFetch<{ success: boolean }>(`/archive/historical/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function getEmployeeProfile() {
+  return apiFetch<EmployeePortalProfile>("/employee/profile");
+}
+
+export function updateEmployeePortalProfile(payload: EmployeePortalProfileInput) {
+  return apiFetch<EmployeePortalProfile>("/employee/profile", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getEmployeeAcrs() {
+  return apiFetch<ApiListResponse<AcrSummary>>("/employee/acrs");
+}
+
+export function getEmployeeAcrDetail(id: string) {
+  return apiFetch<AcrDetail>(`/employee/acrs/${id}`);
 }
 
 export function getTemplates() {
@@ -373,6 +538,32 @@ export function uploadUserProfileAvatar(file: File) {
   });
 }
 
+export function uploadUserProfileAsset(assetType: UserAssetType, file: File) {
+  const body = new FormData();
+  body.append("file", file);
+
+  return apiFetch<{ id: string }>(`/user-assets/me/${assetType}`, {
+    method: "POST",
+    body,
+  }).then(() => getUserSettings());
+}
+
+export function removeUserProfileAsset(assetType: UserAssetType) {
+  return apiFetch<{ removed: boolean }>(`/user-assets/me/${assetType}`, {
+    method: "DELETE",
+  }).then(() => getUserSettings());
+}
+
+export function getUserAssetContentUrl(assetId: string, options?: { acrId?: string | null }) {
+  const search = new URLSearchParams();
+  if (options?.acrId) {
+    search.set("acrId", options.acrId);
+  }
+
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return `/api/user-assets/${assetId}${suffix}`;
+}
+
 export function updateUserSettingsPreferences(payload: {
   notifications?: UserNotificationPreferences;
   display?: UserDisplayPreferences;
@@ -391,15 +582,30 @@ export function updateUserPassword(payload: { currentPassword: string; nextPassw
   });
 }
 
+export function updateUserEmployeeProfile(payload: UpdateEmployeeProfilePayload) {
+  return apiFetch<UserSettings>("/settings/employee-profile", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function getManagedUsers(filters?: {
   page?: number;
   pageSize?: number;
   query?: string;
   role?: UserRoleCode;
   status?: "active" | "inactive";
+  scopeTrack?: OrgScopeTrack;
   wingId?: string;
+  directorateId?: string;
+  regionId?: string;
   zoneId?: string;
+  circleId?: string;
+  stationId?: string;
+  branchId?: string;
+  cellId?: string;
   officeId?: string;
+  departmentId?: string;
 }) {
   const search = new URLSearchParams();
   if (filters?.page) search.set("page", String(filters.page));
@@ -407,9 +613,17 @@ export function getManagedUsers(filters?: {
   if (filters?.query?.trim()) search.set("query", filters.query.trim());
   if (filters?.role) search.set("role", filters.role);
   if (filters?.status) search.set("status", filters.status);
+  if (filters?.scopeTrack) search.set("scopeTrack", filters.scopeTrack);
   if (filters?.wingId) search.set("wingId", filters.wingId);
+  if (filters?.directorateId) search.set("directorateId", filters.directorateId);
+  if (filters?.regionId) search.set("regionId", filters.regionId);
   if (filters?.zoneId) search.set("zoneId", filters.zoneId);
+  if (filters?.circleId) search.set("circleId", filters.circleId);
+  if (filters?.stationId) search.set("stationId", filters.stationId);
+  if (filters?.branchId) search.set("branchId", filters.branchId);
+  if (filters?.cellId) search.set("cellId", filters.cellId);
   if (filters?.officeId) search.set("officeId", filters.officeId);
+  if (filters?.departmentId) search.set("departmentId", filters.departmentId);
   const suffix = search.toString() ? `?${search.toString()}` : "";
   return apiFetch<ManagedUserListResponse>(`/users${suffix}`);
 }
@@ -464,19 +678,90 @@ export function getAnalytics() {
 
 export function getDashboardAnalytics(filters?: {
   datePreset?: DashboardDatePreset;
+  scopeTrack?: OrgScopeTrack;
   wingId?: string;
+  directorateId?: string;
+  regionId?: string;
   zoneId?: string;
+  circleId?: string;
+  stationId?: string;
+  branchId?: string;
+  cellId?: string;
   officeId?: string;
+  departmentId?: string;
   status?: string;
   templateFamily?: string;
 }) {
   const search = new URLSearchParams();
   if (filters?.datePreset) search.set("datePreset", filters.datePreset);
+  if (filters?.scopeTrack) search.set("scopeTrack", filters.scopeTrack);
   if (filters?.wingId) search.set("wingId", filters.wingId);
+  if (filters?.directorateId) search.set("directorateId", filters.directorateId);
+  if (filters?.regionId) search.set("regionId", filters.regionId);
   if (filters?.zoneId) search.set("zoneId", filters.zoneId);
+  if (filters?.circleId) search.set("circleId", filters.circleId);
+  if (filters?.stationId) search.set("stationId", filters.stationId);
+  if (filters?.branchId) search.set("branchId", filters.branchId);
+  if (filters?.cellId) search.set("cellId", filters.cellId);
   if (filters?.officeId) search.set("officeId", filters.officeId);
+  if (filters?.departmentId) search.set("departmentId", filters.departmentId);
   if (filters?.status) search.set("status", filters.status);
   if (filters?.templateFamily) search.set("templateFamily", filters.templateFamily);
   const suffix = search.toString() ? `?${search.toString()}` : "";
   return apiFetch<DashboardAnalyticsResponse>(`/analytics/dashboard${suffix}`);
+}
+
+// --- Reference Data ---
+
+export function getReferencePostings() {
+  return apiFetch<string[]>("/settings/reference/postings");
+}
+
+export function getReferenceZonesCircles() {
+  return apiFetch<string[]>("/settings/reference/zones-circles");
+}
+
+// --- Adverse Remarks ---
+
+export function getAdverseRemarks(acrId: string) {
+  return apiFetch<AdverseRemarkSummary[]>(`/acrs/${acrId}/adverse-remarks`);
+}
+
+export function createAdverseRemark(acrId: string, payload: { remarkText: string; counsellingDate?: string; counsellingNotes?: string }) {
+  return apiFetch<AdverseRemarkSummary>(`/acrs/${acrId}/adverse-remarks`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function endorseAdverseRemark(acrId: string, remarkId: string) {
+  return apiFetch<AdverseRemarkSummary>(`/acrs/${acrId}/adverse-remarks/${remarkId}/endorse`, {
+    method: "PATCH",
+  });
+}
+
+export function acknowledgeAdverseRemark(acrId: string, remarkId: string) {
+  return apiFetch<AdverseRemarkSummary>(`/acrs/${acrId}/adverse-remarks/${remarkId}/acknowledge`, {
+    method: "PATCH",
+  });
+}
+
+export function communicateAdverseRemark(acrId: string, remarkId: string) {
+  return apiFetch<AdverseRemarkSummary>(`/acrs/${acrId}/adverse-remarks/${remarkId}/communicate`, {
+    method: "PATCH",
+  });
+}
+
+export function submitAdverseRepresentation(acrId: string, remarkId: string, representationText: string) {
+  return apiFetch<AdverseRemarkSummary>(`/acrs/${acrId}/adverse-remarks/${remarkId}/representation`, {
+    method: "POST",
+    body: JSON.stringify({ representationText }),
+  });
+}
+
+export function decideAdverseRepresentation(acrId: string, remarkId: string, decision: string, decisionNotes: string) {
+  return apiFetch<AdverseRemarkSummary>(`/acrs/${acrId}/adverse-remarks/${remarkId}/decide`, {
+    method: "PATCH",
+    body: JSON.stringify({ decision, decisionNotes }),
+  });
 }

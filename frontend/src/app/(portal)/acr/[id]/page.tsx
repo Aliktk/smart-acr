@@ -1,20 +1,20 @@
 "use client";
 
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Download, FileText, Send } from "lucide-react";
-import { getAcrDetail, transitionAcr, updateAcrFormData } from "@/api/client";
+import { ArrowLeft, Download, FileText, Send, ShieldCheck } from "lucide-react";
+import { getAcrDetail, getEmployeeAcrDetail, transitionAcr, updateAcrFormData } from "@/api/client";
 import { upgradeInlineReplicaAssets } from "@/components/forms";
+import { AdverseRemarksPanel } from "@/components/AdverseRemarksPanel";
 import { FormPreview } from "@/components/FormPreview";
 import { useShell } from "@/hooks/useShell";
 import { FloatingToast, OverdueBadge, PriorityBadge, StatusChip, Timeline } from "@/components/ui";
-import type { AcrFormData, AcrReplicaState, AcrReviewerContext } from "@/types/contracts";
+import type { AcrFormData, AcrReplicaState, AcrReviewerContext, SecretBranchDeskCode } from "@/types/contracts";
 import { syncAcrSummaryCaches } from "@/utils/acr-cache";
 import { getActionFormValidationMessage, getReviewerSubmissionValidationMessage } from "@/utils/acr-form-validation";
+import { templateRequiresCountersigning } from "@/utils/templates";
 
 function createEmptyReplicaState(): AcrReplicaState {
   return {
@@ -26,8 +26,8 @@ function createEmptyReplicaState(): AcrReplicaState {
 
 const actionButtonBase =
   "group inline-flex cursor-pointer items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 [&_svg]:transition-transform hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)] hover:[&_svg]:scale-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none";
-const actionButtonSecondary = `${actionButtonBase} border border-[#D8DEE8] bg-white text-[#475569]`;
-const actionButtonPrimary = `${actionButtonBase} bg-[#1A1C6E] text-white hover:bg-[#2D308F]`;
+const actionButtonSecondary = `${actionButtonBase} border border-[var(--fia-border,#D8DEE8)] bg-white text-[var(--fia-text-secondary,#475569)]`;
+const actionButtonPrimary = `${actionButtonBase} bg-[var(--fia-navy,#1A1C6E)] text-white hover:bg-[var(--fia-navy-hover,#2D308F)]`;
 const actionButtonDanger = `${actionButtonBase} border border-[#FECACA] bg-[#FFF1F2] text-[#BE123C]`;
 
 function sanitizePdfFileName(value: string) {
@@ -41,8 +41,8 @@ export default function AcrDetailPage() {
   const { user } = useShell();
   const exportReplicaRef = useRef<HTMLDivElement | null>(null);
   const { data, error, isLoading } = useQuery({
-    queryKey: ["acr-detail", params.id],
-    queryFn: () => getAcrDetail(params.id),
+    queryKey: ["acr-detail", params.id, user?.activeRoleCode],
+    queryFn: () => user?.activeRoleCode === "EMPLOYEE" ? getEmployeeAcrDetail(params.id) : getAcrDetail(params.id),
     retry: false,
   });
   const [replicaStateSeed, setReplicaStateSeed] = useState<AcrReplicaState>(() => createEmptyReplicaState());
@@ -54,6 +54,8 @@ export default function AcrDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [pageToast, setPageToast] = useState<{ title: string; message?: string; tone?: "success" | "info" | "warning" | "danger" } | null>(null);
   const [workflowActionLocked, setWorkflowActionLocked] = useState(false);
+  const [selectedDeskCode, setSelectedDeskCode] = useState<SecretBranchDeskCode | "">("");
+  const [showDeskSelector, setShowDeskSelector] = useState(false);
 
   useEffect(() => {
     if (data?.formData?.replicaState) {
@@ -86,6 +88,17 @@ export default function AcrDetailPage() {
     return () => window.clearTimeout(timer);
   }, [pageToast]);
 
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (formDirtyRef.current) {
+        event.preventDefault();
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   const saveFormMutation = useMutation({
     mutationFn: (formData: AcrFormData) => updateAcrFormData(params.id, formData),
     onSuccess: (updated) => {
@@ -107,7 +120,7 @@ export default function AcrDetailPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (payload: { action: string; remarks?: string; formData?: AcrFormData }) => transitionAcr(params.id, payload),
+    mutationFn: (payload: { action: string; remarks?: string; formData?: AcrFormData; targetDeskCode?: SecretBranchDeskCode }) => transitionAcr(params.id, payload),
     onSuccess: (result, variables) => {
       formDirtyRef.current = false;
       setActionError(null);
@@ -118,21 +131,37 @@ export default function AcrDetailPage() {
       const nextTitle =
         variables.action === "submit_to_secret_branch"
           ? "Submitted to Secret Branch"
-          : variables.action === "submit_to_reporting" && data?.workflowState === "Returned"
-            ? "Resubmitted to Reporting Officer"
-          : variables.action === "return_to_clerk"
-            ? "Returned to Clerk"
-            : variables.action === "forward_to_countersigning"
-              ? "Sent to Countersigning Officer"
-              : "Submitted to Reporting Officer";
+          : variables.action === "complete_secret_branch_review"
+            ? "Secret Branch Review Completed"
+            : variables.action === "verify_secret_branch"
+              ? "Archived by Secret Branch"
+              : variables.action === "submit_to_reporting" && (data?.workflowState === "Returned" || data?.workflowState === "Returned to Clerk")
+                ? "Resubmitted to Reporting Officer"
+                : variables.action === "return_to_clerk"
+                  ? "Returned to Clerk"
+                  : variables.action === "return_to_reporting"
+                    ? "Returned to Reporting Officer"
+                    : variables.action === "return_to_countersigning"
+                      ? "Returned to Countersigning Officer"
+                      : variables.action === "forward_to_countersigning"
+                        ? "Sent to Countersigning Officer"
+                        : "Submitted to Reporting Officer";
       const nextMessage =
         variables.action === "submit_to_secret_branch"
-          ? "The finalized record has moved out of your desk and into the final branch workflow."
-          : variables.action === "submit_to_reporting" && data?.workflowState === "Returned"
-            ? "The corrected ACR has been sent back into the workflow for reporting review."
-          : variables.action === "return_to_clerk"
-            ? "The record has been returned for correction."
-            : "The workflow owner has been updated successfully.";
+          ? "The ACR has entered the Secret Branch review queue."
+          : variables.action === "complete_secret_branch_review"
+            ? "The ACR has been reviewed and assigned to the selected desk for completion."
+            : variables.action === "verify_secret_branch"
+              ? "The record has been archived successfully."
+              : variables.action === "submit_to_reporting" && (data?.workflowState === "Returned" || data?.workflowState === "Returned to Clerk")
+                ? "The corrected ACR has been sent back into the workflow for reporting review."
+                : variables.action === "return_to_clerk"
+                  ? "The record has been returned to the clerk for correction."
+                  : variables.action === "return_to_reporting"
+                    ? "The record has been returned to the reporting officer for correction."
+                    : variables.action === "return_to_countersigning"
+                      ? "The record has been returned to the countersigning officer for correction."
+                      : "The workflow owner has been updated successfully.";
       sessionStorage.setItem(
         "fia-smart-acr-flash",
         JSON.stringify({ title: nextTitle, message: nextMessage, tone: "success" }),
@@ -150,56 +179,108 @@ export default function AcrDetailPage() {
       return [];
     }
 
-    const timeline = Array.isArray(data.timeline) ? data.timeline : [];
-    const requiresCountersigning = data.templateFamily !== "APS_STENOTYPIST";
+    const requiresCountersigning = templateRequiresCountersigning(data.templateFamily);
     const activeState = data.workflowState;
-    const completedActions = timeline.map((entry) => entry.action.toLowerCase());
-    const touchedRoles = new Set(timeline.map((entry) => entry.role.toLowerCase()));
-    const reportingTouched =
-      activeState === "Pending Countersigning" ||
-      activeState === "Archived" ||
-      activeState === "Submitted to Secret Branch" ||
-      touchedRoles.has("reporting officer") ||
-      completedActions.some((action) => action.includes("forward to countersigning") || action.includes("submit to secret branch"));
+    const reportingTouched = [
+      "Pending Countersigning",
+      "Pending Secret Branch Review",
+      "Pending Secret Branch Verification",
+      "Archived",
+      "Returned to Reporting Officer",
+      "Returned to Countersigning Officer",
+    ].includes(activeState);
     const countersigningTouched = requiresCountersigning
-      ? activeState === "Submitted to Secret Branch" ||
-        activeState === "Archived" ||
-        touchedRoles.has("countersigning officer") ||
-        completedActions.some((action) => action.includes("submit to secret branch"))
+      ? [
+          "Pending Secret Branch Review",
+          "Pending Secret Branch Verification",
+          "Archived",
+          "Returned to Countersigning Officer",
+        ].includes(activeState)
       : false;
-    const secretBranchTouched =
-      activeState === "Submitted to Secret Branch" ||
-      activeState === "Archived" ||
-      completedActions.some((action) => action.includes("secret branch") || action.includes("archived"));
+    const secretBranchReviewTouched = [
+      "Pending Secret Branch Review",
+      "Pending Secret Branch Verification",
+      "Archived",
+    ].includes(activeState);
+    const secretBranchVerificationTouched = ["Pending Secret Branch Verification", "Archived"].includes(activeState);
     const steps = [
       { label: "Clerk Initiation", done: true },
       { label: "Reporting Officer", done: reportingTouched },
       ...(requiresCountersigning ? [{ label: "Countersigning", done: countersigningTouched }] : []),
-      { label: "Secret Branch", done: secretBranchTouched },
+      { label: "Secret Branch Review", done: secretBranchReviewTouched },
+      { label: "AD Verification", done: secretBranchVerificationTouched },
+      { label: "Archive", done: activeState === "Archived" },
     ];
 
     return steps;
   }, [data]);
 
-  const requiresCountersigning = data?.templateFamily !== "APS_STENOTYPIST";
+  const requiresCountersigning = data ? templateRequiresCountersigning(data.templateFamily) : true;
   const activeRoleCode = user?.activeRoleCode;
   const canSubmitDraft =
-    activeRoleCode === "CLERK" && (data?.workflowState === "Draft" || data?.workflowState === "Returned");
-  const canReviewAsReportingOfficer = activeRoleCode === "REPORTING_OFFICER" && data?.workflowState === "Pending Reporting";
+    activeRoleCode === "CLERK" && (data?.workflowState === "Draft" || data?.workflowState === "Returned" || data?.workflowState === "Returned to Clerk");
+  const canReviewAsReportingOfficer =
+    activeRoleCode === "REPORTING_OFFICER" &&
+    (data?.workflowState === "Pending Reporting" || data?.workflowState === "Returned to Reporting Officer");
   const canReviewAsCountersigningOfficer =
-    activeRoleCode === "COUNTERSIGNING_OFFICER" && data?.workflowState === "Pending Countersigning";
-  const canReturnToClerk = canReviewAsReportingOfficer || canReviewAsCountersigningOfficer;
+    activeRoleCode === "COUNTERSIGNING_OFFICER" &&
+    (data?.workflowState === "Pending Countersigning" || data?.workflowState === "Returned to Countersigning Officer");
+  const canReviewAsSecretBranch =
+    activeRoleCode === "SECRET_BRANCH" &&
+    data?.workflowState === "Pending Secret Branch Review" &&
+    Boolean(user?.secretBranchProfile?.canVerify);
+  const canVerifyAsSecretBranch =
+    activeRoleCode === "SECRET_BRANCH" &&
+    data?.workflowState === "Pending Secret Branch Verification" &&
+    !user?.secretBranchProfile?.canVerify;
+  const canReturnToClerk = canReviewAsReportingOfficer || canReviewAsCountersigningOfficer || canReviewAsSecretBranch || canVerifyAsSecretBranch;
+  const canReturnToReporting = canReviewAsCountersigningOfficer || canReviewAsSecretBranch || canVerifyAsSecretBranch;
+  const canReturnToCountersigning = requiresCountersigning && (canReviewAsSecretBranch || canVerifyAsSecretBranch);
+  const reviewerContext: AcrReviewerContext | null = data
+    ? {
+        reporting: {
+          name: data.reportingOfficer,
+          designation: data.reportingOfficerDesignation,
+          signatureAsset: data.reviewerAssets?.reporting.signature ?? null,
+          stampAsset: data.reviewerAssets?.reporting.stamp ?? null,
+        },
+        countersigning: data.countersigningOfficer
+          ? {
+              name: data.countersigningOfficer,
+              designation: data.countersigningOfficerDesignation ?? "Countersigning Officer",
+              signatureAsset: data.reviewerAssets?.countersigning?.signature ?? null,
+              stampAsset: data.reviewerAssets?.countersigning?.stamp ?? null,
+            }
+          : null,
+      }
+    : null;
   const reportingSubmissionValidation =
-    canReviewAsReportingOfficer ? getReviewerSubmissionValidationMessage({ scope: "reporting", replicaState: replicaStateSnapshot }) : null;
+    canReviewAsReportingOfficer
+      ? getReviewerSubmissionValidationMessage({
+          scope: "reporting",
+          templateFamily: data.templateFamily,
+          replicaState: replicaStateSnapshot,
+          reviewerContext,
+        })
+      : null;
   const countersigningSubmissionValidation =
-    canReviewAsCountersigningOfficer ? getReviewerSubmissionValidationMessage({ scope: "countersigning", replicaState: replicaStateSnapshot }) : null;
+    canReviewAsCountersigningOfficer
+      ? getReviewerSubmissionValidationMessage({
+          scope: "countersigning",
+          templateFamily: data.templateFamily,
+          replicaState: replicaStateSnapshot,
+          reviewerContext,
+        })
+      : null;
   const stageValidationMessage =
     canSubmitDraft
-      ? getActionFormValidationMessage({
+        ? getActionFormValidationMessage({
           action: "submit_to_reporting",
           workflowState: data?.workflowState ?? "Draft",
           formData: data?.formData,
+          templateFamily: data.templateFamily,
           replicaState: replicaStateSnapshot,
+          reviewerContext,
         })
       : canReviewAsReportingOfficer
         ? reportingSubmissionValidation
@@ -229,41 +310,35 @@ export default function AcrDetailPage() {
   }
 
   const timeline = Array.isArray(data.timeline) ? data.timeline : [];
-  const isFinalizedRecord = data.workflowState === "Archived" || data.workflowState === "Submitted to Secret Branch";
+  const isEmployeeSafeView = activeRoleCode === "EMPLOYEE";
+  const isFinalizedRecord = data.workflowState === "Archived";
   const isSecretBranchView = activeRoleCode === "SECRET_BRANCH";
   const isExecutiveView = activeRoleCode === "DG" || activeRoleCode === "EXECUTIVE_VIEWER";
   const compactFinalView = isFinalizedRecord && (isSecretBranchView || isExecutiveView);
   const finalizedAt = data.completedDate ?? timeline.at(-1)?.timestamp ?? null;
-  const finalStateLabel =
-    data.workflowState === "Archived" ? "Archived in Secret Branch" : "Received by Secret Branch";
+  const finalStateLabel = data.workflowState === "Archived" ? "Archived in Secret Branch" : data.workflowState;
 
   const canEditForm =
     (activeRoleCode === "SUPER_ADMIN" || activeRoleCode === "IT_OPS") ||
-    (activeRoleCode === "CLERK" && (data.workflowState === "Draft" || data.workflowState === "Returned")) ||
-    (activeRoleCode === "REPORTING_OFFICER" && data.workflowState === "Pending Reporting") ||
-    (activeRoleCode === "COUNTERSIGNING_OFFICER" && data.workflowState === "Pending Countersigning");
+    (activeRoleCode === "CLERK" && (data.workflowState === "Draft" || data.workflowState === "Returned" || data.workflowState === "Returned to Clerk")) ||
+    (activeRoleCode === "REPORTING_OFFICER" && (data.workflowState === "Pending Reporting" || data.workflowState === "Returned to Reporting Officer")) ||
+    (activeRoleCode === "COUNTERSIGNING_OFFICER" && (data.workflowState === "Pending Countersigning" || data.workflowState === "Returned to Countersigning Officer"));
   const editableScopes =
     activeRoleCode === "SUPER_ADMIN" || activeRoleCode === "IT_OPS"
       ? ["clerk", "reporting", "countersigning"]
-      : activeRoleCode === "CLERK" && (data.workflowState === "Draft" || data.workflowState === "Returned")
+      : activeRoleCode === "CLERK" && (data.workflowState === "Draft" || data.workflowState === "Returned" || data.workflowState === "Returned to Clerk")
         ? ["clerk"]
-        : activeRoleCode === "REPORTING_OFFICER" && data.workflowState === "Pending Reporting"
+        : activeRoleCode === "REPORTING_OFFICER" && (data.workflowState === "Pending Reporting" || data.workflowState === "Returned to Reporting Officer")
           ? ["reporting"]
-        : activeRoleCode === "COUNTERSIGNING_OFFICER" && data.workflowState === "Pending Countersigning"
+        : activeRoleCode === "COUNTERSIGNING_OFFICER" && (data.workflowState === "Pending Countersigning" || data.workflowState === "Returned to Countersigning Officer")
           ? ["countersigning"]
           : [];
-  const reviewerContext: AcrReviewerContext = {
-    reporting: {
-      name: data.reportingOfficer,
-      designation: data.reportingOfficerDesignation,
-    },
-    countersigning: data.countersigningOfficer
-      ? {
-          name: data.countersigningOfficer,
-          designation: data.countersigningOfficerDesignation ?? "Countersigning Officer",
-        }
-      : null,
-  };
+  const inlineProfileAssetScope =
+    canReviewAsReportingOfficer
+      ? "reporting"
+      : canReviewAsCountersigningOfficer
+        ? "countersigning"
+        : null;
   const formBusy = mutation.isPending || saveFormMutation.isPending || workflowActionLocked;
   const workflowMeta = data?.formData?.workflowMeta;
   const currentOwnerLabel = data.currentHolderName
@@ -273,13 +348,73 @@ export default function AcrDetailPage() {
     : "Unassigned";
   const latestReturnEntry = [...timeline]
     .reverse()
-    .find((entry) => entry.status === "returned" || entry.action.toLowerCase().includes("return to clerk"));
+    .find((entry) => entry.status === "returned" || entry.action.toLowerCase().includes("returned to"));
+
+  if (isEmployeeSafeView) {
+    return (
+      <div className="mx-auto flex max-w-screen-xl flex-col gap-5 p-5">
+        <div className="flex items-start gap-3">
+          <Link href="/queue" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-[#6B7280] shadow-sm">
+            <ArrowLeft size={18} />
+          </Link>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-[1.6rem] font-semibold text-[#111827]">{data.acrNo}</h1>
+              <StatusChip status={data.status} />
+            </div>
+            <p className="mt-1 text-sm text-[#64748B]">{data.reportingPeriod}</p>
+          </div>
+        </div>
+
+        <section className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-[#111827]">ACR metadata</h2>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {[
+                { label: "Name", value: data.employee.name },
+                { label: "ACR number", value: data.acrNo },
+                { label: "Service Number", value: data.employee.serviceNumber ?? "Not available" },
+                { label: "Template family", value: data.templateFamily ?? "Not recorded" },
+                { label: "Service period", value: data.servicePeriodLabel ?? data.reportingPeriod },
+                { label: "Current stage", value: data.workflowState },
+                { label: "Reporting officer", value: data.reportingOfficer },
+                { label: "Countersigning officer", value: data.countersigningOfficer ?? "Not applicable" },
+                { label: "Secret Branch", value: data.secretBranch?.status ?? "Not yet submitted" },
+                { label: "Submitted to RO", value: data.submittedToReportingAt ? new Date(data.submittedToReportingAt).toLocaleDateString("en-PK") : "Pending" },
+                { label: "Submitted to Secret Branch", value: data.secretBranch?.submittedAt ? new Date(data.secretBranch.submittedAt).toLocaleDateString("en-PK") : "Not yet" },
+                { label: "Completed / archived", value: data.completedDate ?? data.archivedAt ?? "In progress" },
+                { label: "Restricted PDF retained", value: data.hasHistoricalPdf ? "Yes" : "No" },
+              ].map((item) => (
+                <div key={item.label} className="rounded-2xl bg-[#F8FAFC] px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">{item.label}</p>
+                  <p className="mt-2 text-sm font-medium text-[#111827]">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-[#111827]">Workflow history</h2>
+            <p className="mt-1 text-sm text-[#64748B]">Only non-confidential workflow metadata is visible here. Form contents, reporting remarks, and restricted internal comments remain hidden.</p>
+            <div className="mt-4">
+              <Timeline items={timeline} />
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   async function exportReplicaAsPdf(fileName: string) {
     const exportTarget = exportReplicaRef.current;
     if (!exportTarget) {
       throw new Error("The official form replica is not ready for PDF export.");
     }
+
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ]);
 
     const canvas = await html2canvas(exportTarget, {
       scale: Math.min(window.devicePixelRatio || 1.5, 2),
@@ -371,6 +506,7 @@ export default function AcrDetailPage() {
   function buildFormData(replicaState = replicaStateRef.current): AcrFormData {
     return {
       ...(data?.formData ?? {}),
+      employeeSnapshot: data?.formData?.employeeSnapshot ?? (data?.employeeMetadataSnapshot as unknown as AcrFormData["employeeSnapshot"]) ?? null,
       replicaState,
     };
   }
@@ -388,7 +524,7 @@ export default function AcrDetailPage() {
     await saveFormMutation.mutateAsync(buildFormData(normalizedReplicaState));
   }
 
-  async function handleWorkflowAction(payload: { action: string; remarks?: string }) {
+  async function handleWorkflowAction(payload: { action: string; remarks?: string; targetDeskCode?: SecretBranchDeskCode }) {
     try {
       if (workflowActionLocked) {
         return;
@@ -414,7 +550,9 @@ export default function AcrDetailPage() {
         action: payload.action,
         workflowState: data.workflowState,
         formData: nextFormData,
+        templateFamily: data.templateFamily,
         replicaState: nextReplicaState,
+        reviewerContext,
       });
 
       if (validationMessage) {
@@ -638,13 +776,58 @@ export default function AcrDetailPage() {
         </div>
       ) : null}
 
-      {data.workflowState === "Returned" && (latestReturnEntry?.remarks || data.remarks) ? (
+      {data.workflowState.startsWith("Returned") && (latestReturnEntry?.remarks || data.remarks) ? (
         <div className="rounded-[20px] border border-[#FCD34D] bg-[#FFFBEB] px-4 py-3.5 text-sm text-[#92400E]">
           <p className="font-semibold text-[#78350F]">Returned for correction</p>
           <p className="mt-1 leading-6">{latestReturnEntry?.remarks ?? data.remarks}</p>
           <p className="mt-2 text-xs text-[#A16207]">
             Returned by {latestReturnEntry?.actor ?? "Workflow reviewer"} · {latestReturnEntry?.role ?? "Reviewer"} · {latestReturnEntry?.timestamp ?? "Recorded in workflow history"}
           </p>
+        </div>
+      ) : null}
+
+      {data.hasAdverseRemarks || canReviewAsReportingOfficer ? (
+        <AdverseRemarksPanel
+          acrId={data.id}
+          activeRoleCode={activeRoleCode ?? "EMPLOYEE"}
+          workflowState={data.workflowState}
+        />
+      ) : null}
+
+      {/* Secret Branch Verification Card */}
+      {(data.secretBranch?.verifiedBy || data.secretBranch?.reviewedAt || canReviewAsSecretBranch || canVerifyAsSecretBranch) ? (
+        <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#FEF3C7] text-[#D97706]">
+              <ShieldCheck size={18} />
+            </div>
+            <h2 className="text-[1.15rem] font-semibold text-[#111827]">Secret Branch Verification</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              { label: "Desk Reviewer", value: data.secretBranch?.allocatedTo ?? "Pending" },
+              { label: "Desk Code", value: data.secretBranch?.deskCode ?? "—" },
+              { label: "Review Date", value: data.secretBranch?.reviewedAt ? new Date(data.secretBranch.reviewedAt).toLocaleDateString("en-PK", { year: "numeric", month: "short", day: "numeric" }) : "Pending" },
+              { label: "Verified by (AD)", value: data.secretBranch?.verifiedBy ?? "Awaiting" },
+              { label: "Verification Date", value: data.secretBranch?.verifiedAt ? new Date(data.secretBranch.verifiedAt).toLocaleDateString("en-PK", { year: "numeric", month: "short", day: "numeric" }) : "—" },
+              { label: "Status", value: data.secretBranch?.verifiedBy ? "Verified" : data.secretBranch?.reviewedAt ? "Pending AD Verification" : "Pending Review" },
+            ].map((field) => (
+              <div key={field.label}>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">{field.label}</p>
+                <p className={`mt-1.5 text-base font-medium ${
+                  field.label === "Status"
+                    ? data.secretBranch?.verifiedBy ? "text-emerald-600" : "text-amber-600"
+                    : "text-[#111827]"
+                }`}>{field.value}</p>
+              </div>
+            ))}
+          </div>
+          {data.secretBranch?.verificationNotes ? (
+            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Verification Remarks</p>
+              <p className="mt-1 text-sm text-[#374151]">{data.secretBranch.verificationNotes}</p>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -660,6 +843,7 @@ export default function AcrDetailPage() {
                   templateFamily={data.templateFamily}
                   editable={canEditForm}
                 editableScopes={editableScopes}
+                inlineProfileAssetScope={inlineProfileAssetScope}
                 acrRecordId={data.id}
                 reviewerContext={reviewerContext}
                   formData={buildFormData(replicaStateSeed)}
@@ -698,6 +882,7 @@ export default function AcrDetailPage() {
                 templateFamily={data.templateFamily}
                 editable={canEditForm}
               editableScopes={editableScopes}
+              inlineProfileAssetScope={inlineProfileAssetScope}
               acrRecordId={data.id}
               reviewerContext={reviewerContext}
                 formData={buildFormData(replicaStateSeed)}
@@ -755,7 +940,7 @@ export default function AcrDetailPage() {
                 className={actionButtonPrimary}
               >
                 <Send size={16} />
-                {data.workflowState === "Returned" ? "Resubmit to Reporting Officer" : "Submit to Reporting Officer"}
+                {data.workflowState === "Returned" || data.workflowState === "Returned to Clerk" ? "Resubmit to Reporting Officer" : "Submit to Reporting Officer"}
               </button>
             ) : null}
             {canReviewAsReportingOfficer ? (
@@ -784,6 +969,66 @@ export default function AcrDetailPage() {
                 Submit to Secret Branch
               </button>
             ) : null}
+            {canReviewAsSecretBranch ? (
+              showDeskSelector ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={selectedDeskCode}
+                    onChange={(e) => setSelectedDeskCode(e.target.value as SecretBranchDeskCode | "")}
+                    className="rounded-xl border border-[#D8DEE8] bg-white px-3 py-2 text-sm font-medium text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A1C6E]"
+                  >
+                    <option value="">Select DA Desk</option>
+                    <option value="DA1">DA1</option>
+                    <option value="DA2">DA2</option>
+                    <option value="DA3">DA3</option>
+                    <option value="DA4">DA4</option>
+                  </select>
+                  <button
+                    type="button"
+                    disabled={formBusy || !selectedDeskCode}
+                    onClick={() => {
+                      if (!selectedDeskCode) return;
+                      void handleWorkflowAction({
+                        action: "complete_secret_branch_review",
+                        targetDeskCode: selectedDeskCode,
+                      });
+                    }}
+                    className={actionButtonPrimary}
+                  >
+                    <Send size={16} />
+                    Verify & Assign
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowDeskSelector(false); setSelectedDeskCode(""); }}
+                    className={actionButtonSecondary}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={formBusy}
+                  onClick={() => setShowDeskSelector(true)}
+                  className={actionButtonPrimary}
+                >
+                  <Send size={16} />
+                  Complete Secret Branch Review
+                </button>
+              )
+            ) : null}
+            {canVerifyAsSecretBranch ? (
+              <button
+                type="button"
+                disabled={formBusy}
+                onClick={() => void handleWorkflowAction({ action: "verify_secret_branch" })}
+                className={actionButtonPrimary}
+              >
+                <Send size={16} />
+                Mark Complete & Archive
+              </button>
+            ) : null}
             {canReturnToClerk ? (
               <button
                 type="button"
@@ -797,6 +1042,36 @@ export default function AcrDetailPage() {
                 className={actionButtonDanger}
               >
                 Return to Clerk
+              </button>
+            ) : null}
+            {canReturnToReporting ? (
+              <button
+                type="button"
+                disabled={formBusy}
+                onClick={() =>
+                  void handleWorkflowAction({
+                    action: "return_to_reporting",
+                    remarks: "Please review and correct the reporting section before resubmission.",
+                  })
+                }
+                className={actionButtonDanger}
+              >
+                Return to Reporting Officer
+              </button>
+            ) : null}
+            {canReturnToCountersigning ? (
+              <button
+                type="button"
+                disabled={formBusy}
+                onClick={() =>
+                  void handleWorkflowAction({
+                    action: "return_to_countersigning",
+                    remarks: "Please review and correct the countersigning section before resubmission.",
+                  })
+                }
+                className={actionButtonDanger}
+              >
+                Return to Countersigning Officer
               </button>
             ) : null}
             </div>
