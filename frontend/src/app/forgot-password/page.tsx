@@ -25,11 +25,11 @@ export default function ForgotPasswordPage() {
     >
       <div className="mx-auto max-w-[420px]">
         <div className="mb-5 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#EEF6FC] text-[#0095D9]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#EEF6FC] dark:bg-blue-950/40 text-[#0095D9]">
             <KeyRound size={24} />
           </div>
-          <h1 className="mt-4 text-[1.8rem] font-semibold text-[#111827]">Forgot Password</h1>
-          <p className="mt-1.5 text-sm leading-6 text-[#6B7280]">
+          <h1 className="mt-4 text-[1.8rem] font-semibold text-[#111827] dark:text-slate-100">Forgot Password</h1>
+          <p className="mt-1.5 text-sm leading-6 text-[#6B7280] dark:text-slate-400">
             Enter your FIA email, username, or badge number. If self-service recovery is enabled, reset instructions will be issued.
           </p>
         </div>
@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
             <input
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
-              className="w-full rounded-2xl border border-[#D8DEE8] bg-[#EEF2F7] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10"
+              className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#EEF2F7] dark:bg-slate-800 px-4 py-3 text-sm text-[#111827] dark:text-slate-100 outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10"
             />
           </label>
 

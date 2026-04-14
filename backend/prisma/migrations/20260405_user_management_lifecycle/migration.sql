@@ -1,8 +1,14 @@
 -- AlterTable
 ALTER TABLE "User"
 ADD COLUMN     "departmentName" TEXT,
+ADD COLUMN     "passwordChangedAt" TIMESTAMP(3),
 ADD COLUMN     "mustChangePassword" BOOLEAN NOT NULL DEFAULT false,
 ADD COLUMN     "lastLoginAt" TIMESTAMP(3),
+ADD COLUMN     "avatarFileName" TEXT,
+ADD COLUMN     "avatarMimeType" TEXT,
+ADD COLUMN     "avatarStoragePath" TEXT,
+ADD COLUMN     "notificationPreferences" JSONB,
+ADD COLUMN     "displayPreferences" JSONB,
 ADD COLUMN     "createdById" TEXT,
 ADD COLUMN     "updatedById" TEXT;
 

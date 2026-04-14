@@ -60,6 +60,7 @@ function VerifyPageContent() {
   const searchParams = useSearchParams();
   const { setUser, setActiveRole } = useShell();
   const challengeId = searchParams.get("challenge");
+  const redirectAfterLogin = searchParams.get("redirect");
   const [storedChallenge, setStoredChallenge] = useState<StoredChallenge | null>(null);
   const [digits, setDigits] = useState(Array.from({ length: DIGIT_LENGTH }, () => ""));
   const [remainingSeconds, setRemainingSeconds] = useState(DEFAULT_EXPIRY_SECONDS);
@@ -99,9 +100,14 @@ function VerifyPageContent() {
         router.push("/settings?tab=security&forcePassword=1");
         return;
       }
-      router.push(
-        session.availableRoleCodes.length > 1 ? "/login/role" : getDefaultPortalRoute(session.activeRoleCode),
-      );
+      if (session.availableRoleCodes.length > 1) {
+        const roleUrl = redirectAfterLogin
+          ? `/login/role?redirect=${encodeURIComponent(redirectAfterLogin)}`
+          : "/login/role";
+        router.push(roleUrl);
+        return;
+      }
+      router.push(redirectAfterLogin ?? getDefaultPortalRoute(session.activeRoleCode));
     },
   });
 
@@ -138,13 +144,13 @@ function VerifyPageContent() {
       footer={<span>Restricted government system — unauthorized access is prohibited</span>}
     >
       <div className="mx-auto max-w-[360px] text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[20px] bg-[#EEF6FC] text-[#0095D9]">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[20px] bg-[#EEF6FC] dark:bg-blue-950/40 text-[#0095D9]">
           <Smartphone size={26} />
         </div>
-        <h1 className="mt-4 text-[1.65rem] font-semibold text-[#111827]">Two-Factor Verification</h1>
-        <p className="mt-1.5 text-sm leading-6 text-[#6B7280]">
+        <h1 className="mt-4 text-[1.65rem] font-semibold text-[#111827] dark:text-slate-100">Two-Factor Verification</h1>
+        <p className="mt-1.5 text-sm leading-6 text-[#6B7280] dark:text-slate-400">
           A 6-digit code was sent to your registered mobile <br />
-          <span className="font-semibold text-[#111827]">{storedChallenge?.maskedDestination ?? "ending in **23"}</span>
+          <span className="font-semibold text-[#111827] dark:text-slate-100">{storedChallenge?.maskedDestination ?? "ending in **23"}</span>
         </p>
 
         <div className="mt-6 flex justify-center gap-2">
@@ -155,7 +161,7 @@ function VerifyPageContent() {
               onChange={(event) => updateDigit(index, event.target.value)}
               inputMode="numeric"
               maxLength={1}
-              className="h-12 w-11 rounded-2xl border border-[#1A1C6E] bg-[#F8FAFC] text-center text-xl font-semibold text-[#111827] outline-none transition-all focus:border-[#0095D9] focus:ring-4 focus:ring-[#0095D9]/10"
+              className="h-12 w-11 rounded-2xl border border-[#1A1C6E] bg-[#F8FAFC] dark:bg-slate-800 text-center text-xl font-semibold text-[#111827] dark:text-slate-100 outline-none transition-all focus:border-[#0095D9] focus:ring-4 focus:ring-[#0095D9]/10"
             />
           ))}
         </div>
@@ -166,15 +172,15 @@ function VerifyPageContent() {
             style={{ width: `${(code.length / DIGIT_LENGTH) * 100}%` }}
           />
         </div>
-        <p className="mt-2 text-sm text-[#9CA3AF]">{code.length}/6 digits entered</p>
-        <p className="mt-3 text-sm text-[#6B7280]">
+        <p className="mt-2 text-sm text-[#9CA3AF] dark:text-slate-500">{code.length}/6 digits entered</p>
+        <p className="mt-3 text-sm text-[#6B7280] dark:text-slate-400">
           Code expires in{" "}
           <span className="font-semibold text-[#1A1C6E]">
             {String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:{String(remainingSeconds % 60).padStart(2, "0")}
           </span>
         </p>
         {storedChallenge?.demoCode ? (
-          <p className="mt-2 text-xs text-[#9CA3AF]">Development code: {storedChallenge.demoCode}</p>
+          <p className="mt-2 text-xs text-[#9CA3AF] dark:text-slate-500">Development code: {storedChallenge.demoCode}</p>
         ) : null}
 
         {verifyMutation.error ? (
@@ -197,13 +203,13 @@ function VerifyPageContent() {
           <button
             onClick={() => resendMutation.mutate()}
             disabled={remainingSeconds > 0 || resendMutation.isPending}
-            className="inline-flex items-center gap-2 text-[#9CA3AF] transition-colors enabled:hover:text-[#0095D9] disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 text-[#9CA3AF] dark:text-slate-500 transition-colors enabled:hover:text-[#0095D9] disabled:cursor-not-allowed"
           >
             <RefreshCw size={14} />
             Resend Code
           </button>
           <span className="text-[#D1D5DB]">|</span>
-          <Link href="/login" className="inline-flex items-center gap-2 text-[#6B7280] transition-colors hover:text-[#1A1C6E]">
+          <Link href="/login" className="inline-flex items-center gap-2 text-[#6B7280] dark:text-slate-400 transition-colors hover:text-[#1A1C6E]">
             <ArrowLeft size={14} />
             Back to Login
           </Link>

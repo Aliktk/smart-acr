@@ -310,13 +310,23 @@ export const PageBreak: React.FC = () => (
 export const FormPage: React.FC<{
   children: React.ReactNode;
   pageNumber?: number;
-}> = ({ children, pageNumber }) => (
-  <div className="form-page bg-white p-12 min-h-[297mm] relative">
+  className?: string;
+}> = ({ children, pageNumber, className = "" }) => (
+  <div className={`form-page bg-white p-12 min-h-[297mm] relative ${className}`.trim()}>
     {children}
     {pageNumber && (
       <div className="absolute bottom-8 left-0 right-0 text-center text-xs">
         {pageNumber}
       </div>
     )}
+  </div>
+);
+
+export const ScannedPage: React.FC<{
+  src: string;
+  alt: string;
+}> = ({ src, alt }) => (
+  <div className="form-page bg-white min-h-[297mm] relative overflow-hidden">
+    <img src={src} alt={alt} className="block h-auto w-full" />
   </div>
 );

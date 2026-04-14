@@ -18,6 +18,7 @@ import type {
   DashboardDatePreset,
   EmployeePortalProfile,
   EmployeePortalProfileInput,
+  EmployeeSearchResponse,
   EmployeeSummary,
   ManagedUserDetail,
   ManagedUserListResponse,
@@ -43,6 +44,7 @@ import type {
   UserSettings,
   UploadedFileAsset,
   SecretBranchDeskCode,
+  TemplateFamilyCode,
 } from "@/types/contracts";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
@@ -262,6 +264,7 @@ export function createAcr(payload: {
   reportingPeriodTo: string;
   isPriority?: boolean;
   formData?: AcrFormData;
+  templateFamilyOverride?: TemplateFamilyCode;
 }) {
   return apiFetch<AcrSummary>("/acrs", {
     method: "POST",
@@ -298,7 +301,7 @@ export function uploadAcrAsset(id: string, kind: AcrAssetKind, file: Blob, fileN
 
 export function getEmployees(query?: string) {
   const suffix = query ? `?query=${encodeURIComponent(query)}` : "";
-  return apiFetch<ApiListResponse<EmployeeSummary>>(`/employees${suffix}`);
+  return apiFetch<EmployeeSearchResponse>(`/employees${suffix}`);
 }
 
 export function getManualEmployeeOptions(officeId?: string) {

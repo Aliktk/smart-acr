@@ -13,11 +13,17 @@ const statusConfig: Record<string, { bg: string; text: string; dot: string }> = 
   "In Review":                { bg: "#EEF6FC", text: "#0369A1",  dot: "#0095D9" },
   "Pending Reporting Officer":{ bg: "#FFFBEB", text: "#B45309",  dot: "#D97706" },
   "Pending Countersigning":   { bg: "#F5F3FF", text: "#6D28D9",  dot: "#7C3AED" },
+  "Pending Countersigning Officer": { bg: "#F5F3FF", text: "#6D28D9",  dot: "#7C3AED" },
+  "Pending Secret Branch Review": { bg: "#EEF6FF", text: "#1D4ED8", dot: "#2563EB" },
+  "Pending Secret Branch Verification": { bg: "#E0F2FE", text: "#0369A1", dot: "#0284C7" },
   "Submitted to Secret Branch": { bg: "#EEF2FF", text: "#3730A3", dot: "#4F46E5" },
   Overdue:                    { bg: "#FEF2F2", text: "#B91C1C",  dot: "#DC2626" },
   Priority:                   { bg: "#FFF7ED", text: "#C2410C",  dot: "#EA580C" },
   Archived:                   { bg: "#F8FAFC", text: "#475569",  dot: "#94A3B8" },
   Returned:                   { bg: "#FFF1F2", text: "#BE123C",  dot: "#E11D48" },
+  "Returned to Clerk":        { bg: "#FFF1F2", text: "#BE123C",  dot: "#E11D48" },
+  "Returned to Reporting Officer": { bg: "#FFF1F2", text: "#BE123C", dot: "#E11D48" },
+  "Returned to Countersigning Officer": { bg: "#FFF1F2", text: "#BE123C", dot: "#E11D48" },
   Completed:                  { bg: "#F0FDF4", text: "#15803D",  dot: "#16A34A" },
   Active:                     { bg: "#F0FDF4", text: "#15803D",  dot: "#16A34A" },
   Inactive:                   { bg: "#F3F4F6", text: "#6B7280",  dot: "#9CA3AF" },
@@ -30,6 +36,7 @@ export function StatusChip({ status, size = "md" }: StatusChipProps) {
 
   return (
     <span
+      data-testid="status-chip"
       className={`inline-flex items-center gap-1.5 rounded-md font-medium text-xs ${padClass}`}
       style={{ background: config.bg, color: config.text }}
     >

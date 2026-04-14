@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Ip, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import type { Request, Response } from "express";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -13,9 +14,11 @@ import { VerifyAuthChallengeDto } from "./dto/verify-auth-challenge.dto";
 import { AuthService } from "./auth.service";
 
 @Controller("auth")
+@UseGuards(ThrottlerGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
   @Post("challenge")
   requestChallenge(
     @Body() dto: RequestAuthChallengeDto,
@@ -26,6 +29,7 @@ export class AuthController {
     return this.authService.requestChallenge(dto.username, dto.password, response, ipAddress, request.headers["user-agent"]);
   }
 
+  @Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
   @Post("verify")
   verifyChallenge(
     @Body() dto: VerifyAuthChallengeDto,
@@ -36,11 +40,13 @@ export class AuthController {
     return this.authService.verifyChallenge(dto.challengeId, dto.code, response, ipAddress, request.headers["user-agent"]);
   }
 
+  @Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
   @Post("challenge/resend")
   resendChallenge(@Body() dto: ResendAuthChallengeDto) {
     return this.authService.resendChallenge(dto.challengeId);
   }
 
+  @Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
   @Post("login")
   login(
     @Body() dto: LoginDto,
@@ -51,16 +57,19 @@ export class AuthController {
     return this.authService.login(dto.username, dto.password, response, ipAddress, request.headers["user-agent"]);
   }
 
+  @Throttle({ short: { ttl: 1000, limit: 2 }, medium: { ttl: 60000, limit: 5 } })
   @Post("forgot-password/request")
   requestPasswordReset(@Body() dto: RequestPasswordResetDto, @Ip() ipAddress: string) {
     return this.authService.requestPasswordReset(dto.identifier, ipAddress);
   }
 
+  @Throttle({ short: { ttl: 1000, limit: 2 }, medium: { ttl: 60000, limit: 5 } })
   @Post("forgot-password/reset")
   resetPasswordWithToken(@Body() dto: ResetPasswordWithTokenDto, @Ip() ipAddress: string) {
     return this.authService.completePasswordReset(dto.token, dto.nextPassword, ipAddress);
   }
 
+  @Throttle({ short: { ttl: 1000, limit: 5 }, medium: { ttl: 60000, limit: 20 } })
   @Post("refresh")
   refresh(@Res({ passthrough: true }) response: Response) {
     return this.authService.refreshSession(response);

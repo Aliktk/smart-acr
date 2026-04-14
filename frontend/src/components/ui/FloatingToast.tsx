@@ -14,22 +14,22 @@ type FloatingToastProps = {
 const toneStyles: Record<FloatingToastTone, { icon: typeof CheckCircle2; shell: string; iconColor: string }> = {
   success: {
     icon: CheckCircle2,
-    shell: "border-[#BBF7D0] bg-white/95 text-[#166534]",
+    shell: "border-[#BBF7D0] bg-white/95 text-[#166534] dark:border-[rgba(22,163,74,0.3)] dark:bg-[var(--card)]/95 dark:text-[#86EFAC]",
     iconColor: "text-[#16A34A]",
   },
   info: {
     icon: Info,
-    shell: "border-[#BAE6FD] bg-white/95 text-[#075985]",
+    shell: "border-[#BAE6FD] bg-white/95 text-[#075985] dark:border-[rgba(2,132,199,0.3)] dark:bg-[var(--card)]/95 dark:text-[#7DD3FC]",
     iconColor: "text-[#0284C7]",
   },
   warning: {
     icon: AlertTriangle,
-    shell: "border-[#FDE68A] bg-white/95 text-[#92400E]",
+    shell: "border-[#FDE68A] bg-white/95 text-[#92400E] dark:border-[rgba(217,119,6,0.3)] dark:bg-[var(--card)]/95 dark:text-[#FCD34D]",
     iconColor: "text-[#D97706]",
   },
   danger: {
     icon: XCircle,
-    shell: "border-[#FECACA] bg-white/95 text-[#991B1B]",
+    shell: "border-[#FECACA] bg-white/95 text-[#991B1B] dark:border-[rgba(220,38,38,0.3)] dark:bg-[var(--card)]/95 dark:text-[#FCA5A5]",
     iconColor: "text-[#DC2626]",
   },
 };

@@ -1,0 +1,499 @@
+
+<style>
+.aH{font-size:16px;font-weight:500;color:var(--color-text-primary);margin:0 0 3px}
+.aD{font-size:12px;color:var(--color-text-secondary);font-family:var(--font-mono);margin:0 0 12px}
+.aN{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:.5px solid var(--color-border-tertiary);padding-bottom:10px}
+.aB{background:transparent;border:.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:5px 14px;font-size:13px;color:var(--color-text-secondary);cursor:pointer;font-family:var(--font-sans)}
+.aB:hover{background:var(--color-background-secondary)}
+.aB.on{background:var(--color-background-info);border-color:var(--color-border-info);color:var(--color-text-info)}
+.aS{margin-bottom:1rem}
+.rG{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.rC{border:.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px}
+.rT{font-size:13px;font-weight:500;margin:0 0 6px;color:var(--color-text-primary)}
+.rL{font-size:11px;color:var(--color-text-secondary);margin:0 0 8px;line-height:1.5}
+.rX{font-size:11px;margin:2px 0;line-height:1.5}
+.ok{color:var(--color-text-success)}.no{color:var(--color-text-danger)}
+@media(max-width:520px){.rG{grid-template-columns:1fr 1fr}}
+</style>
+<h2 class="sr-only">FIA Smart ACR/PER system architecture diagrams — six panels: system overview, module dependencies, entity relationships, workflow state machine, data flow, and role interaction flows</h2>
+<div class="aN" id="aN"></div>
+
+<section class="aS" id="p0">
+<p class="aH">System architecture</p>
+<p class="aD">// Full-stack deployment topology · browser through data layer</p>
+<svg width="100%" viewBox="0 0 680 594" role="img">
+<title>FIA Smart ACR system architecture — six deployment layers</title>
+<desc>Structural diagram of six horizontal layers: client browser, Next.js frontend, NestJS API with guards, business services, cross-cutting concerns, and PostgreSQL data layer</desc>
+<defs><marker id="a0" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="c-amber"><rect x="6" y="6" width="668" height="88" rx="12" stroke-width=".5"/>
+<text class="ts" x="20" y="30" dominant-baseline="central">client layer</text></g>
+<g class="node c-amber" onclick="sendPrompt('How do FIA staff access the ACR system?')"><rect x="22" y="30" width="172" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="108" y="50" text-anchor="middle" dominant-baseline="central">FIA browser</text>
+<text class="ts" x="108" y="70" text-anchor="middle" dominant-baseline="central">React 19 · cookie auth</text></g>
+<g class="node c-amber" onclick="sendPrompt('What are the network access restrictions?')"><rect x="208" y="30" width="210" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="313" y="50" text-anchor="middle" dominant-baseline="central">FIA internal network</text>
+<text class="ts" x="313" y="70" text-anchor="middle" dominant-baseline="central">VPN / LAN · no public access</text></g>
+<g class="c-teal"><rect x="450" y="42" width="82" height="28" rx="14" stroke-width=".5"/>
+<text class="ts" x="491" y="56" text-anchor="middle" dominant-baseline="central">HTTPS / TLS</text></g>
+<line x1="340" y1="94" x2="340" y2="104" stroke="var(--color-border-secondary)" stroke-width="1.5" marker-end="url(#a0)"/>
+<g class="c-blue"><rect x="6" y="106" width="668" height="88" rx="12" stroke-width=".5"/>
+<text class="ts" x="20" y="130" dominant-baseline="central">frontend layer</text></g>
+<g class="node c-blue" onclick="sendPrompt('How does Nginx proxy requests?')"><rect x="22" y="130" width="125" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="85" y="150" text-anchor="middle" dominant-baseline="central">Nginx proxy</text>
+<text class="ts" x="85" y="170" text-anchor="middle" dominant-baseline="central">TLS termination</text></g>
+<g class="node c-blue" onclick="sendPrompt('Tell me about the Next.js 15 App Router frontend')"><rect x="161" y="130" width="184" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="253" y="150" text-anchor="middle" dominant-baseline="central">Next.js 15 App Router</text>
+<text class="ts" x="253" y="170" text-anchor="middle" dominant-baseline="central">React 19 · Tailwind v4 · Zod</text></g>
+<g class="node c-blue" onclick="sendPrompt('How does TanStack Query manage server state?')"><rect x="359" y="130" width="173" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="446" y="150" text-anchor="middle" dominant-baseline="central">TanStack Query v5</text>
+<text class="ts" x="446" y="170" text-anchor="middle" dominant-baseline="central">JWT middleware · cache</text></g>
+<line x1="340" y1="194" x2="340" y2="204" stroke="var(--color-border-secondary)" stroke-width="1.5" marker-end="url(#a0)"/>
+<g class="c-purple"><rect x="6" y="206" width="668" height="88" rx="12" stroke-width=".5"/>
+<text class="ts" x="20" y="230" dominant-baseline="central">api layer</text></g>
+<g class="node c-purple" onclick="sendPrompt('Explain the NestJS 18-module backend architecture')"><rect x="22" y="230" width="150" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="97" y="250" text-anchor="middle" dominant-baseline="central">NestJS 11 API</text>
+<text class="ts" x="97" y="270" text-anchor="middle" dominant-baseline="central">18 modules · TS 5.8</text></g>
+<g class="node c-purple" onclick="sendPrompt('How do the JWT and roles guards work together?')"><rect x="186" y="230" width="148" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="260" y="250" text-anchor="middle" dominant-baseline="central">JWT + roles guard</text>
+<text class="ts" x="260" y="270" text-anchor="middle" dominant-baseline="central">session · RBAC check</text></g>
+<g class="node c-purple" onclick="sendPrompt('How does global input validation work?')"><rect x="348" y="230" width="148" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="422" y="250" text-anchor="middle" dominant-baseline="central">ValidationPipe</text>
+<text class="ts" x="422" y="270" text-anchor="middle" dominant-baseline="central">whitelist enforced</text></g>
+<g class="node c-purple" onclick="sendPrompt('What security hardening is applied to the API?')"><rect x="510" y="230" width="152" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="586" y="250" text-anchor="middle" dominant-baseline="central">Throttler · Helmet</text>
+<text class="ts" x="586" y="270" text-anchor="middle" dominant-baseline="central">CORS · rate limiting</text></g>
+<line x1="340" y1="294" x2="340" y2="304" stroke="var(--color-border-secondary)" stroke-width="1.5" marker-end="url(#a0)"/>
+<g class="c-teal"><rect x="6" y="306" width="668" height="88" rx="12" stroke-width=".5"/>
+<text class="ts" x="20" y="330" dominant-baseline="central">business services</text></g>
+<g class="node c-teal" onclick="sendPrompt('Tell me about the ACR service in detail')"><rect x="22" y="330" width="117" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="81" y="350" text-anchor="middle" dominant-baseline="central">ACR service</text>
+<text class="ts" x="81" y="370" text-anchor="middle" dominant-baseline="central">lifecycle · forms</text></g>
+<g class="node c-teal" onclick="sendPrompt('How does the workflow state machine work?')"><rect x="153" y="330" width="117" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="212" y="350" text-anchor="middle" dominant-baseline="central">Workflow</text>
+<text class="ts" x="212" y="370" text-anchor="middle" dominant-baseline="central">state machine</text></g>
+<g class="node c-teal" onclick="sendPrompt('How does session and JWT authentication work?')"><rect x="284" y="330" width="117" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="343" y="350" text-anchor="middle" dominant-baseline="central">Auth service</text>
+<text class="ts" x="343" y="370" text-anchor="middle" dominant-baseline="central">sessions · JWT</text></g>
+<g class="node c-teal" onclick="sendPrompt('How are users provisioned with roles and scopes?')"><rect x="415" y="330" width="117" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="474" y="350" text-anchor="middle" dominant-baseline="central">Users</text>
+<text class="ts" x="474" y="370" text-anchor="middle" dominant-baseline="central">roles · org scope</text></g>
+<g class="node c-teal" onclick="sendPrompt('How do archive snapshots and file uploads work?')"><rect x="546" y="330" width="122" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="607" y="350" text-anchor="middle" dominant-baseline="central">Archive · Files</text>
+<text class="ts" x="607" y="370" text-anchor="middle" dominant-baseline="central">hash · MIME guard</text></g>
+<line x1="340" y1="394" x2="340" y2="404" stroke="var(--color-border-secondary)" stroke-width="1.5" marker-end="url(#a0)"/>
+<g class="c-coral"><rect x="6" y="406" width="668" height="88" rx="12" stroke-width=".5"/>
+<text class="ts" x="20" y="430" dominant-baseline="central">cross-cutting concerns</text></g>
+<g class="node c-coral" onclick="sendPrompt('What sensitive operations does the audit log capture?')"><rect x="22" y="430" width="155" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="100" y="450" text-anchor="middle" dominant-baseline="central">Audit log writer</text>
+<text class="ts" x="100" y="470" text-anchor="middle" dominant-baseline="central">actor · IP · metadata</text></g>
+<g class="node c-coral" onclick="sendPrompt('How do workflow notifications route to the next actor?')"><rect x="191" y="430" width="155" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="269" y="450" text-anchor="middle" dominant-baseline="central">Notifications</text>
+<text class="ts" x="269" y="470" text-anchor="middle" dominant-baseline="central">next-actor routing</text></g>
+<g class="node c-coral" onclick="sendPrompt('How are archive snapshots hashed and verified?')"><rect x="360" y="430" width="155" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="438" y="450" text-anchor="middle" dominant-baseline="central">Archive snapshot</text>
+<text class="ts" x="438" y="470" text-anchor="middle" dominant-baseline="central">SHA-256 hash verify</text></g>
+<g class="node c-coral" onclick="sendPrompt('How is the monitoring stack set up?')"><rect x="529" y="430" width="141" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="600" y="450" text-anchor="middle" dominant-baseline="central">Prometheus</text>
+<text class="ts" x="600" y="470" text-anchor="middle" dominant-baseline="central">Grafana · Loki</text></g>
+<line x1="340" y1="494" x2="340" y2="504" stroke="var(--color-border-secondary)" stroke-width="1.5" marker-end="url(#a0)"/>
+<g class="c-green"><rect x="6" y="506" width="668" height="82" rx="12" stroke-width=".5"/>
+<text class="ts" x="20" y="530" dominant-baseline="central">data layer</text></g>
+<g class="node c-green" onclick="sendPrompt('Tell me about the PostgreSQL and Prisma ORM setup')"><rect x="60" y="528" width="248" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="184" y="548" text-anchor="middle" dominant-baseline="central">PostgreSQL 16 / Prisma 6.5</text>
+<text class="ts" x="184" y="566" text-anchor="middle" dominant-baseline="central">$transaction · Docker port 5433</text></g>
+<g class="node c-green" onclick="sendPrompt('How does local file storage work for signatures and stamps?')"><rect x="354" y="528" width="262" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="485" y="548" text-anchor="middle" dominant-baseline="central">Local file storage</text>
+<text class="ts" x="485" y="566" text-anchor="middle" dominant-baseline="central">SIGNATURE / STAMP / DOCUMENT</text></g>
+</svg>
+</section>
+
+<section class="aS" id="p1">
+<p class="aH">Backend module map</p>
+<p class="aD">// NestJS module dependency graph · ACR module as central orchestrator</p>
+<svg width="100%" viewBox="0 0 680 520" role="img">
+<title>NestJS backend module dependency map</title>
+<desc>Hub-and-spoke diagram with ACR module at center, showing dependencies to Auth, Workflow, Users, Employees, Templates, Files, Archive, Audit, Notifications, and Dashboard modules</desc>
+<defs><marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="node c-purple" onclick="sendPrompt('Tell me about the ACR module in depth')">
+<rect x="250" y="210" width="180" height="60" rx="10" stroke-width="1.5"/>
+<text class="th" x="340" y="234" text-anchor="middle" dominant-baseline="central">ACR module</text>
+<text class="ts" x="340" y="254" text-anchor="middle" dominant-baseline="central">lifecycle · forms · transitions</text></g>
+<g class="node c-amber" onclick="sendPrompt('How does the Auth module handle login and sessions?')">
+<rect x="30" y="70" width="140" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="100" y="90" text-anchor="middle" dominant-baseline="central">Auth</text>
+<text class="ts" x="100" y="108" text-anchor="middle" dominant-baseline="central">login · sessions</text></g>
+<path d="M 170 96 L 250 220" fill="none" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a1)"/>
+<g class="node c-blue" onclick="sendPrompt('How does the Users module handle provisioning and roles?')">
+<rect x="30" y="210" width="140" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="100" y="230" text-anchor="middle" dominant-baseline="central">Users</text>
+<text class="ts" x="100" y="248" text-anchor="middle" dominant-baseline="central">roles · org scope</text></g>
+<line x1="170" y1="236" x2="250" y2="240" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a1)"/>
+<g class="node c-blue" onclick="sendPrompt('What does the Dashboard module provide?')">
+<rect x="30" y="360" width="140" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="100" y="380" text-anchor="middle" dominant-baseline="central">Dashboard</text>
+<text class="ts" x="100" y="398" text-anchor="middle" dominant-baseline="central">queue · metrics</text></g>
+<path d="M 170 386 L 250 258" fill="none" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a1)"/>
+<g class="node c-gray" onclick="sendPrompt('Tell me about the Employees module')">
+<rect x="270" y="64" width="140" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="340" y="84" text-anchor="middle" dominant-baseline="central">Employees</text>
+<text class="ts" x="340" y="102" text-anchor="middle" dominant-baseline="central">master data · search</text></g>
+<line x1="340" y1="116" x2="340" y2="210" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a1)"/>
+<g class="node c-amber" onclick="sendPrompt('How does the Templates module define form families?')">
+<rect x="510" y="64" width="148" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="584" y="84" text-anchor="middle" dominant-baseline="central">Templates</text>
+<text class="ts" x="584" y="102" text-anchor="middle" dominant-baseline="central">6 form families</text></g>
+<path d="M 510 90 L 430 220" fill="none" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a1)"/>
+<g class="node c-teal" onclick="sendPrompt('How does the Workflow module implement the state machine?')">
+<rect x="510" y="176" width="148" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="584" y="196" text-anchor="middle" dominant-baseline="central">Workflow</text>
+<text class="ts" x="584" y="214" text-anchor="middle" dominant-baseline="central">state machine · rules</text></g>
+<line x1="430" y1="240" x2="510" y2="210" stroke="var(--color-border-secondary)" stroke-width="1.5" marker-end="url(#a1)"/>
+<g class="node c-blue" onclick="sendPrompt('How does the Files module handle MIME validation and access control?')">
+<rect x="510" y="290" width="148" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="584" y="310" text-anchor="middle" dominant-baseline="central">Files</text>
+<text class="ts" x="584" y="328" text-anchor="middle" dominant-baseline="central">MIME · access control</text></g>
+<line x1="430" y1="252" x2="510" y2="316" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a1)"/>
+<g class="node c-teal" onclick="sendPrompt('How does the Archive module create and verify snapshots?')">
+<rect x="510" y="396" width="148" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="584" y="416" text-anchor="middle" dominant-baseline="central">Archive</text>
+<text class="ts" x="584" y="434" text-anchor="middle" dominant-baseline="central">snapshots · retrieval</text></g>
+<path d="M 430 265 L 510 422" fill="none" stroke="var(--color-border-secondary)" stroke-width="1.5" marker-end="url(#a1)"/>
+<g class="node c-coral" onclick="sendPrompt('What does the Audit module log and how is it queried?')">
+<rect x="234" y="430" width="130" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="299" y="450" text-anchor="middle" dominant-baseline="central">Audit</text>
+<text class="ts" x="299" y="468" text-anchor="middle" dominant-baseline="central">log writer · query</text></g>
+<line x1="316" y1="270" x2="296" y2="430" stroke="var(--color-border-secondary)" stroke-width="1.5" marker-end="url(#a1)"/>
+<g class="node c-coral" onclick="sendPrompt('How does the Notifications module route workflow alerts?')">
+<rect x="384" y="430" width="110" height="52" rx="8" stroke-width=".5"/>
+<text class="th" x="439" y="450" text-anchor="middle" dominant-baseline="central">Notifications</text>
+<text class="ts" x="439" y="468" text-anchor="middle" dominant-baseline="central">routing · read</text></g>
+<line x1="370" y1="270" x2="430" y2="430" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a1)"/>
+<line x1="30" y1="506" x2="68" y2="506" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a1)"/>
+<text class="ts" x="74" y="506" dominant-baseline="central">direct dependency</text>
+<text class="ts" x="240" y="506" dominant-baseline="central">all modules write to Audit on state change</text>
+</svg>
+</section>
+
+<section class="aS" id="p2">
+<p class="aH">Database entity relationships</p>
+<p class="aD">// PostgreSQL 16 · Prisma 6.5 · core entities and relationships</p>
+<div id="erd"></div>
+</section>
+
+<section class="aS" id="p3">
+<p class="aH">ACR workflow state machine</p>
+<p class="aD">// 9 states · forward transitions · return/correction cycles · APS template bypass</p>
+<svg width="100%" viewBox="0 0 680 382" role="img">
+<title>ACR workflow state machine</title>
+<desc>Finite state machine showing 9 states from DRAFT through ARCHIVED, including return states for correction cycles. APS_STENOTYPIST template bypasses the countersigning stage.</desc>
+<defs><marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<circle cx="14" cy="80" r="9" class="c-gray" stroke-width=".5"/>
+<line x1="23" y1="80" x2="36" y2="80" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a3)"/>
+<g class="node c-amber" onclick="sendPrompt('What can a Clerk do in the DRAFT state?')">
+<rect x="38" y="56" width="106" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="91" y="74" text-anchor="middle" dominant-baseline="central">Draft</text>
+<text class="ts" x="91" y="93" text-anchor="middle" dominant-baseline="central">clerk fills form</text></g>
+<line x1="144" y1="80" x2="164" y2="80" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a3)"/>
+<text class="ts" x="154" y="72" text-anchor="middle">submit</text>
+<g class="node c-blue" onclick="sendPrompt('What happens during the PENDING_REPORTING stage?')">
+<rect x="166" y="56" width="140" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="236" y="74" text-anchor="middle" dominant-baseline="central">Pending RO</text>
+<text class="ts" x="236" y="93" text-anchor="middle" dominant-baseline="central">RO assesses</text></g>
+<line x1="306" y1="80" x2="326" y2="80" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a3)"/>
+<text class="ts" x="316" y="72" text-anchor="middle">forward</text>
+<g class="node c-purple" onclick="sendPrompt('What happens at the countersigning stage?')">
+<rect x="328" y="56" width="140" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="398" y="74" text-anchor="middle" dominant-baseline="central">Pending CSO</text>
+<text class="ts" x="398" y="93" text-anchor="middle" dominant-baseline="central">CSO countersigns</text></g>
+<line x1="468" y1="80" x2="488" y2="80" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a3)"/>
+<text class="ts" x="478" y="72" text-anchor="middle">submit</text>
+<g class="node c-coral" onclick="sendPrompt('What happens during secret branch review?')">
+<rect x="490" y="56" width="142" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="561" y="74" text-anchor="middle" dominant-baseline="central">SB review</text>
+<text class="ts" x="561" y="93" text-anchor="middle" dominant-baseline="central">assign desk · complete</text></g>
+<path d="M 236 56 Q 398 26 490 56" fill="none" stroke="var(--color-text-warning)" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#a3)"/>
+<text class="ts" x="360" y="22" text-anchor="middle" fill="var(--color-text-warning)">APS: direct to SB (no CSO step)</text>
+<line x1="561" y1="104" x2="561" y2="162" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a3)"/>
+<text class="ts" x="577" y="138" dominant-baseline="central">complete</text>
+<g class="node c-coral" onclick="sendPrompt('What happens during secret branch verification?')">
+<rect x="490" y="164" width="142" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="561" y="182" text-anchor="middle" dominant-baseline="central">SB verify</text>
+<text class="ts" x="561" y="201" text-anchor="middle" dominant-baseline="central">final verification</text></g>
+<line x1="490" y1="188" x2="456" y2="188" stroke="var(--color-text-success)" stroke-width="2" marker-end="url(#a3)"/>
+<text class="ts" x="473" y="180" text-anchor="middle">verify</text>
+<g class="node c-green" onclick="sendPrompt('What does the ARCHIVED state mean? What is immutable?')">
+<rect x="334" y="164" width="120" height="48" rx="8" stroke-width="1.5"/>
+<text class="th" x="394" y="182" text-anchor="middle" dominant-baseline="central">Archived</text>
+<text class="ts" x="394" y="201" text-anchor="middle" dominant-baseline="central">immutable · final</text></g>
+<circle cx="394" cy="228" r="9" fill="none" stroke="var(--color-text-success)" stroke-width="2"/>
+<circle cx="394" cy="228" r="5" class="c-green" stroke-width="0"/>
+<line x1="394" y1="212" x2="394" y2="219" stroke="var(--color-text-success)" stroke-width="1.5"/>
+<g class="node c-red" onclick="sendPrompt('What happens when an ACR is returned to the Clerk?')">
+<rect x="30" y="290" width="148" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="104" y="308" text-anchor="middle" dominant-baseline="central">Returned — clerk</text>
+<text class="ts" x="104" y="327" text-anchor="middle" dominant-baseline="central">corrects and resubmits</text></g>
+<g class="node c-red" onclick="sendPrompt('What happens when returned to the Reporting Officer?')">
+<rect x="196" y="290" width="148" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="270" y="308" text-anchor="middle" dominant-baseline="central">Returned — RO</text>
+<text class="ts" x="270" y="327" text-anchor="middle" dominant-baseline="central">re-assesses</text></g>
+<g class="node c-red" onclick="sendPrompt('What happens when returned to the Countersigning Officer?')">
+<rect x="362" y="290" width="148" height="48" rx="8" stroke-width=".5"/>
+<text class="th" x="436" y="308" text-anchor="middle" dominant-baseline="central">Returned — CSO</text>
+<text class="ts" x="436" y="327" text-anchor="middle" dominant-baseline="central">re-countersigns</text></g>
+<path d="M 236 104 L 236 248 L 104 248 L 104 290" fill="none" stroke="var(--color-text-danger)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#a3)"/>
+<path d="M 398 104 L 398 260 L 270 260 L 270 290" fill="none" stroke="var(--color-text-danger)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#a3)"/>
+<path d="M 561 212 L 561 272 L 436 272 L 436 290" fill="none" stroke="var(--color-text-danger)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#a3)"/>
+<path d="M 178 290 L 178 234 L 196 234 L 196 104" fill="none" stroke="var(--color-text-info)" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#a3)"/>
+<path d="M 510 290 L 510 282 L 638 282 L 638 104" fill="none" stroke="var(--color-text-info)" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#a3)"/>
+<rect x="30" y="354" width="620" height="22" rx="4" fill="var(--color-background-secondary)" stroke="var(--color-border-tertiary)" stroke-width=".5"/>
+<line x1="44" y1="365" x2="68" y2="365" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a3)"/>
+<text class="ts" x="74" y="365" dominant-baseline="central">forward</text>
+<line x1="140" y1="365" x2="164" y2="365" stroke="var(--color-text-danger)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#a3)"/>
+<text class="ts" x="170" y="365" dominant-baseline="central">return</text>
+<line x1="226" y1="365" x2="250" y2="365" stroke="var(--color-text-info)" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#a3)"/>
+<text class="ts" x="256" y="365" dominant-baseline="central">resubmit</text>
+<line x1="318" y1="365" x2="342" y2="365" stroke="var(--color-text-warning)" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#a3)"/>
+<text class="ts" x="348" y="365" dominant-baseline="central">APS shortcut (skip CSO)</text>
+<line x1="530" y1="365" x2="554" y2="365" stroke="var(--color-text-success)" stroke-width="2" marker-end="url(#a3)"/>
+<text class="ts" x="560" y="365" dominant-baseline="central">archive</text>
+</svg>
+</section>
+
+<section class="aS" id="p4">
+<p class="aH">End-to-end data flow</p>
+<p class="aD">// Request lifecycle · auth pipeline · ACR creation through archive</p>
+<svg width="100%" viewBox="0 0 680 418" role="img">
+<title>FIA Smart ACR end-to-end data flow</title>
+<desc>Three-column swimlane diagram showing four operations: login, create ACR, submit/transition, and archive. Shows flow from client/frontend through API/services to database/audit layer.</desc>
+<defs><marker id="a4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<rect x="6" y="46" width="215" height="358" rx="8" fill="var(--color-background-secondary)" stroke="var(--color-border-tertiary)" stroke-width=".5"/>
+<rect x="233" y="46" width="215" height="358" rx="8" fill="var(--color-background-secondary)" stroke="var(--color-border-tertiary)" stroke-width=".5"/>
+<rect x="460" y="46" width="214" height="358" rx="8" fill="var(--color-background-secondary)" stroke="var(--color-border-tertiary)" stroke-width=".5"/>
+<text class="th" x="114" y="26" text-anchor="middle" dominant-baseline="central">Client / Frontend</text>
+<text class="th" x="341" y="26" text-anchor="middle" dominant-baseline="central">API / Services</text>
+<text class="th" x="567" y="26" text-anchor="middle" dominant-baseline="central">Database / Audit</text>
+<text class="ts" x="14" y="90" fill="var(--color-text-tertiary)">① login</text>
+<g class="c-amber"><rect x="14" y="66" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="114" y="85" text-anchor="middle" dominant-baseline="central">Enter credentials</text>
+<text class="ts" x="114" y="103" text-anchor="middle" dominant-baseline="central">POST /auth/login</text></g>
+<line x1="213" y1="90" x2="249" y2="90" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a4)"/>
+<g class="c-purple"><rect x="241" y="66" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="341" y="85" text-anchor="middle" dominant-baseline="central">Throttler · bcrypt compare</text>
+<text class="ts" x="341" y="103" text-anchor="middle" dominant-baseline="central">JWT + roles guard</text></g>
+<line x1="440" y1="90" x2="476" y2="90" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a4)"/>
+<g class="c-coral"><rect x="468" y="66" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="568" y="85" text-anchor="middle" dominant-baseline="central">Session.create()</text>
+<text class="ts" x="568" y="103" text-anchor="middle" dominant-baseline="central">AuditLog: LOGIN_SUCCESS</text></g>
+<text class="ts" x="14" y="168" fill="var(--color-text-tertiary)">② create</text>
+<g class="c-blue"><rect x="14" y="148" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="114" y="167" text-anchor="middle" dominant-baseline="central">Select employee + template</text>
+<text class="ts" x="114" y="185" text-anchor="middle" dominant-baseline="central">POST /api/v1/acr</text></g>
+<line x1="213" y1="172" x2="249" y2="172" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a4)"/>
+<g class="c-purple"><rect x="241" y="148" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="341" y="167" text-anchor="middle" dominant-baseline="central">DTO validate · CLERK check</text>
+<text class="ts" x="341" y="185" text-anchor="middle" dominant-baseline="central">canAccessEmployee()</text></g>
+<line x1="440" y1="172" x2="476" y2="172" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a4)"/>
+<g class="c-teal"><rect x="468" y="148" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="568" y="167" text-anchor="middle" dominant-baseline="central">$tx: AcrRecord (DRAFT)</text>
+<text class="ts" x="568" y="185" text-anchor="middle" dominant-baseline="central">TimelineEntry + AuditLog</text></g>
+<text class="ts" x="14" y="252" fill="var(--color-text-tertiary)">③ transition</text>
+<g class="c-blue"><rect x="14" y="232" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="114" y="251" text-anchor="middle" dominant-baseline="central">Fill section · click submit</text>
+<text class="ts" x="114" y="269" text-anchor="middle" dominant-baseline="central">POST /acr/:id/transition</text></g>
+<line x1="213" y1="256" x2="249" y2="256" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a4)"/>
+<g class="c-purple"><rect x="241" y="232" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="341" y="251" text-anchor="middle" dominant-baseline="central">canTransitionAcr()</text>
+<text class="ts" x="341" y="269" text-anchor="middle" dominant-baseline="central">validateFormForStage()</text></g>
+<line x1="440" y1="256" x2="476" y2="256" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a4)"/>
+<g class="c-teal"><rect x="468" y="232" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="568" y="251" text-anchor="middle" dominant-baseline="central">$tx: state + holder</text>
+<text class="ts" x="568" y="269" text-anchor="middle" dominant-baseline="central">Timeline · Audit · Notify</text></g>
+<text class="ts" x="14" y="336" fill="var(--color-text-tertiary)">④ archive</text>
+<g class="c-blue"><rect x="14" y="316" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="114" y="335" text-anchor="middle" dominant-baseline="central">SB verifies + archives</text>
+<text class="ts" x="114" y="353" text-anchor="middle" dominant-baseline="central">POST verify_secret_branch</text></g>
+<line x1="213" y1="340" x2="249" y2="340" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a4)"/>
+<g class="c-purple"><rect x="241" y="316" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="341" y="335" text-anchor="middle" dominant-baseline="central">archive.service.createSnapshot</text>
+<text class="ts" x="341" y="353" text-anchor="middle" dominant-baseline="central">SHA-256 hash computed</text></g>
+<line x1="440" y1="340" x2="476" y2="340" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a4)"/>
+<g class="c-green"><rect x="468" y="316" width="199" height="48" rx="6" stroke-width=".5"/>
+<text class="th" x="568" y="335" text-anchor="middle" dominant-baseline="central">$tx: ARCHIVED state</text>
+<text class="ts" x="568" y="353" text-anchor="middle" dominant-baseline="central">ArchiveRecord + Snapshot</text></g>
+<rect x="14" y="396" width="652" height="16" rx="4" fill="var(--color-background-info)" stroke="var(--color-border-info)" stroke-width=".5"/>
+<text class="ts" x="340" y="404" text-anchor="middle" dominant-baseline="central">access token 15 min (HttpOnly) · refresh token 7 days (path=/api/v1/auth/refresh) · all DB writes in $transaction</text>
+</svg>
+</section>
+
+<section class="aS" id="p5">
+<p class="aH">Role-based interaction flows</p>
+<p class="aD">// Who does what · workflow chain · access boundaries per role</p>
+<svg width="100%" viewBox="0 0 680 104" role="img" style="margin-bottom:14px">
+<title>ACR workflow role chain</title>
+<desc>Sequential chain showing Clerk, Reporting Officer, CSO, and Secret Branch roles in workflow order, with Admin and DG as cross-cutting roles</desc>
+<defs><marker id="a5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<g class="node c-amber" onclick="sendPrompt('Walk me through the Clerk role permissions in detail')">
+<rect x="10" y="30" width="100" height="44" rx="8" stroke-width=".5"/>
+<text class="th" x="60" y="48" text-anchor="middle" dominant-baseline="central">Clerk</text>
+<text class="ts" x="60" y="66" text-anchor="middle" dominant-baseline="central">initiates ACR</text></g>
+<line x1="110" y1="52" x2="128" y2="52" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a5)"/>
+<g class="node c-blue" onclick="sendPrompt('Walk me through the Reporting Officer role in detail')">
+<rect x="130" y="30" width="110" height="44" rx="8" stroke-width=".5"/>
+<text class="th" x="185" y="48" text-anchor="middle" dominant-baseline="central">Reporting officer</text>
+<text class="ts" x="185" y="66" text-anchor="middle" dominant-baseline="central">assesses</text></g>
+<line x1="240" y1="52" x2="258" y2="52" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a5)"/>
+<g class="node c-purple" onclick="sendPrompt('Walk me through the Countersigning Officer role in detail')">
+<rect x="260" y="30" width="110" height="44" rx="8" stroke-width=".5"/>
+<text class="th" x="315" y="48" text-anchor="middle" dominant-baseline="central">CSO</text>
+<text class="ts" x="315" y="66" text-anchor="middle" dominant-baseline="central">countersigns</text></g>
+<line x1="370" y1="52" x2="388" y2="52" stroke="var(--color-text-secondary)" stroke-width="1.5" marker-end="url(#a5)"/>
+<g class="node c-coral" onclick="sendPrompt('Walk me through the Secret Branch role in detail')">
+<rect x="390" y="30" width="118" height="44" rx="8" stroke-width=".5"/>
+<text class="th" x="449" y="48" text-anchor="middle" dominant-baseline="central">Secret branch</text>
+<text class="ts" x="449" y="66" text-anchor="middle" dominant-baseline="central">reviews · archives</text></g>
+<path d="M 185 30 Q 315 8 390 30" fill="none" stroke="var(--color-text-warning)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#a5)"/>
+<text class="ts" x="290" y="8" text-anchor="middle" fill="var(--color-text-warning)">APS: skips CSO</text>
+<g class="c-red"><rect x="528" y="14" width="64" height="22" rx="4" stroke-width=".5"/>
+<text class="ts" x="560" y="25" text-anchor="middle" dominant-baseline="central">Admin</text></g>
+<g class="c-teal"><rect x="600" y="14" width="72" height="22" rx="4" stroke-width=".5"/>
+<text class="ts" x="636" y="25" text-anchor="middle" dominant-baseline="central">DG / exec</text></g>
+<text class="ts" x="560" y="62" text-anchor="middle" fill="var(--color-text-secondary)">manages all</text>
+<text class="ts" x="636" y="62" text-anchor="middle" fill="var(--color-text-secondary)">read-only</text>
+</svg>
+<div class="rG">
+<div class="rC">
+<p class="rT">Clerk</p>
+<p class="rL">Initiates ACR packets, fills reporting period dates, submits to Reporting Officer. Can correct and resubmit when returned.</p>
+<p class="rX ok">✓ Create / fill / submit ACR</p>
+<p class="rX ok">✓ Own ACRs + queue view</p>
+<p class="rX ok">✓ Upload signature/stamp</p>
+<p class="rX ok">✓ Correct on return</p>
+<p class="rX no">✗ Edit RO/CSO sections</p>
+<p class="rX no">✗ Access other clerks' ACRs</p>
+<p class="rX no">✗ User management / audit logs</p>
+</div>
+<div class="rC">
+<p class="rT">Reporting officer</p>
+<p class="rL">Receives ACR, fills assessment, forwards to CSO or (APS only) directly to Secret Branch. Can return with remarks.</p>
+<p class="rX ok">✓ View assigned ACRs</p>
+<p class="rX ok">✓ Fill RO section + upload</p>
+<p class="rX ok">✓ Forward to CSO or SB</p>
+<p class="rX ok">✓ Return to clerk</p>
+<p class="rX no">✗ Edit clerk section</p>
+<p class="rX no">✗ Act on another RO's ACRs</p>
+<p class="rX no">✗ Archive / audit access</p>
+</div>
+<div class="rC">
+<p class="rT">Countersigning officer</p>
+<p class="rL">Countersigns where required — not APS_STENOTYPIST. Reviews prior sections (read-only), fills CSO section, submits to SB.</p>
+<p class="rX ok">✓ View all sections (read)</p>
+<p class="rX ok">✓ Fill CSO section + upload</p>
+<p class="rX ok">✓ Submit to Secret Branch</p>
+<p class="rX ok">✓ Return to RO or clerk</p>
+<p class="rX no">✗ APS_STENOTYPIST ACRs</p>
+<p class="rX no">✗ Edit clerk / RO sections</p>
+<p class="rX no">✗ Act on another CSO's ACRs</p>
+</div>
+<div class="rC">
+<p class="rT">Secret branch</p>
+<p class="rL">Two-stage process: desk assignment + review completion, then final verification and archive. Can return to any prior stage.</p>
+<p class="rX ok">✓ Assign desk (AD/DA1–DA4)</p>
+<p class="rX ok">✓ Complete SB review stage</p>
+<p class="rX ok">✓ Verify and create archive</p>
+<p class="rX ok">✓ Return to clerk/RO/CSO</p>
+<p class="rX no">✗ Edit any officer section</p>
+<p class="rX no">✗ User provisioning</p>
+</div>
+<div class="rC">
+<p class="rT">Super admin / IT ops</p>
+<p class="rL">Full platform management. Provisions accounts, assigns roles and org scope, manages hierarchy. Read-only on all ACRs.</p>
+<p class="rX ok">✓ Create/deactivate users</p>
+<p class="rX ok">✓ Assign roles + org scope</p>
+<p class="rX ok">✓ Read all ACRs (no edit)</p>
+<p class="rX ok">✓ Full audit log access</p>
+<p class="rX no">✗ Workflow transitions</p>
+<p class="rX no">✗ IT_OPS cannot modify SUPER_ADMIN</p>
+</div>
+<div class="rC">
+<p class="rT">DG / Executive viewer</p>
+<p class="rL">Read-only oversight. DG + EXEC_VIEWER see all records. WING_OVERSIGHT and ZONAL_OVERSIGHT are scope-limited.</p>
+<p class="rX ok">✓ DG: all ACRs + analytics</p>
+<p class="rX ok">✓ WING_OVERSIGHT: wing-scoped</p>
+<p class="rX ok">✓ ZONAL_OVERSIGHT: zone-scoped</p>
+<p class="rX ok">✓ Dashboard + archive browse</p>
+<p class="rX no">✗ No form editing</p>
+<p class="rX no">✗ No workflow transitions</p>
+</div>
+</div>
+</section>
+
+<script>
+const tabs=['System architecture','Module map','Entity relationships','State machine','Data flow','Role flows'];
+const nav=document.getElementById('aN');
+const panels=document.querySelectorAll('.aS');
+tabs.forEach((t,i)=>{
+const b=document.createElement('button');
+b.className='aB'+(i===0?' on':'');
+b.textContent=(i+1)+'. '+t;
+b.onclick=()=>{panels.forEach(p=>p.style.display='none');document.querySelectorAll('.aB').forEach(x=>x.classList.remove('on'));panels[i].style.display='';b.classList.add('on');};
+nav.appendChild(b);
+});
+panels.forEach((p,i)=>{if(i!==0)p.style.display='none';});
+</script>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark=matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({startOnLoad:false,theme:'base',fontFamily:'"Anthropic Sans",sans-serif',themeVariables:{darkMode:dark,fontSize:'13px',fontFamily:'"Anthropic Sans",sans-serif',lineColor:dark?'#9c9a92':'#73726c',textColor:dark?'#c2c0b6':'#3d3d3a'}});
+const src=`erDiagram
+    User ||--o{ UserRoleAssignment : "has roles"
+    User ||--o{ Session : "owns"
+    Employee ||--o{ AcrRecord : "subject of"
+    User ||--o{ AcrRecord : "clerk creates"
+    TemplateVersion ||--o{ AcrRecord : "form type"
+    AcrRecord ||--o{ AcrTimelineEntry : "history"
+    AcrRecord ||--o{ FileAsset : "files"
+    AcrRecord ||--|| ArchiveRecord : "archived as"
+    ArchiveRecord ||--|| ArchiveSnapshot : "snapshot"
+    AcrRecord ||--o{ AuditLog : "generates"
+    AcrRecord ||--o{ Notification : "notifies"
+    AcrRecord {
+        uuid id PK
+        string state
+        json formData
+        datetime reportingPeriodFrom
+        datetime reportingPeriodTo
+    }
+    User {
+        uuid id PK
+        string username
+        string email
+        boolean isActive
+        boolean mustChangePassword
+    }
+    Employee {
+        uuid id PK
+        string serviceNumber
+        string name
+        int bpsGrade
+    }
+    ArchiveRecord {
+        uuid id PK
+        string contentHash
+        string documentPath
+        datetime archivedAt
+    }
+    TemplateVersion {
+        uuid id PK
+        string familyCode
+        boolean requiresCountersigning
+        boolean requiresOfficialStamp
+    }`;
+try{
+const{svg}=await mermaid.render('erdsvg',src);
+const el=document.getElementById('erd');
+if(el){el.innerHTML=svg;
+el.querySelectorAll('svg .node').forEach(n=>{const p=n.querySelector('path[d]');if(!p)return;const d=p.getAttribute('d');const nums=d.match(/-?[\d.]+/g)?.map(Number);if(!nums||nums.length<8)return;const xs=[nums[0],nums[2],nums[4],nums[6]],ys=[nums[1],nums[3],nums[5],nums[7]];const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;const r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);r.setAttribute('rx','8');['fill','stroke','stroke-width','class','style'].forEach(a=>{if(p.hasAttribute(a))r.setAttribute(a,p.getAttribute(a));});p.replaceWith(r);});
+el.querySelectorAll('.row-rect-odd path,.row-rect-even path').forEach(p=>p.setAttribute('stroke','none'));}
+}catch(e){const el=document.getElementById('erd');if(el)el.innerHTML='<p style="font-size:13px;color:var(--color-text-secondary);padding:1rem">ERD rendering requires an active network connection to load mermaid.js.</p>';}
+</script>

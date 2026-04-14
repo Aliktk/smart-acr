@@ -1,4 +1,5 @@
-import { AcrWorkflowState } from "@prisma/client";
+import { AcrWorkflowState, TemplateFamilyCode } from "@prisma/client";
+import { getTemplateCatalogEntry, templateFamilyRequiresOfficialStamp } from "../../common/template-catalog";
 import type { AcrAction } from "../workflow/workflow.service";
 
 type ReplicaStateLike = {
@@ -83,6 +84,7 @@ export function getClerkSubmissionValidationMessage(formData: Record<string, unk
 
 export function getReviewerSubmissionValidationMessage(
   scope: "reporting" | "countersigning",
+  templateFamily: TemplateFamilyCode,
   formData: Record<string, unknown> | null | undefined,
 ) {
   const replicaState = readReplicaState(formData);
@@ -100,7 +102,7 @@ export function getReviewerSubmissionValidationMessage(
     missing.push("signature");
   }
 
-  if (!hasReplicaAssetValue(replicaState, scope, "official-stamp")) {
+  if (templateFamilyRequiresOfficialStamp(templateFamily, scope) && !hasReplicaAssetValue(replicaState, scope, "official-stamp")) {
     missing.push("official stamp");
   }
 
@@ -115,20 +117,30 @@ export function getReviewerSubmissionValidationMessage(
 export function getActionFormValidationMessage(params: {
   action: AcrAction;
   workflowState: AcrWorkflowState;
+  templateFamily: TemplateFamilyCode;
   formData: Record<string, unknown> | null | undefined;
 }) {
+  const template = getTemplateCatalogEntry(params.templateFamily);
+
+  if (!template) {
+    return "No active template configuration was found for this ACR form family.";
+  }
+
   if (params.action === "submit_to_reporting") {
     return getClerkSubmissionValidationMessage(params.formData);
   }
 
   if (params.action === "forward_to_countersigning") {
-    return getReviewerSubmissionValidationMessage("reporting", params.formData);
+    return getReviewerSubmissionValidationMessage("reporting", params.templateFamily, params.formData);
   }
 
   if (params.action === "submit_to_secret_branch") {
     const scope =
-      params.workflowState === AcrWorkflowState.PENDING_COUNTERSIGNING ? "countersigning" : "reporting";
-    return getReviewerSubmissionValidationMessage(scope, params.formData);
+      params.workflowState === AcrWorkflowState.PENDING_COUNTERSIGNING ||
+      params.workflowState === AcrWorkflowState.RETURNED_TO_COUNTERSIGNING
+        ? "countersigning"
+        : "reporting";
+    return getReviewerSubmissionValidationMessage(scope, params.templateFamily, params.formData);
   }
 
   return null;

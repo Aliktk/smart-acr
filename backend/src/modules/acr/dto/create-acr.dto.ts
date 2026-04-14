@@ -1,4 +1,5 @@
-import { IsBoolean, IsDateString, IsObject, IsOptional, IsString } from "class-validator";
+import { TemplateFamilyCode } from "@prisma/client";
+import { IsBoolean, IsDateString, IsEnum, IsObject, IsOptional, IsString } from "class-validator";
 
 export class CreateAcrDto {
   @IsString()
@@ -17,4 +18,8 @@ export class CreateAcrDto {
   @IsOptional()
   @IsObject()
   formData?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsEnum(TemplateFamilyCode)
+  templateFamilyOverride?: TemplateFamilyCode;
 }

@@ -23,7 +23,7 @@ function FIAShield({ size = 40, theme = "color" }: { size?: number; theme?: "dar
   const shellClass =
     theme === "dark"
       ? "bg-white/10 ring-white/10"
-      : "bg-[#F8FBFF] ring-[#DCE6F5]";
+      : "bg-[#F8FBFF] ring-[#DCE6F5] dark:bg-white/10 dark:ring-white/10";
 
   return (
     <div
@@ -65,20 +65,20 @@ export function FIALogo({ variant = "full", size = "md", theme = "dark", classNa
             className={`truncate font-semibold leading-none tracking-[0.01em] ${cfg.title}`}
             style={{ color: titleColor }}
           >
-            FIA Smart
+            Federal Investigation Authority
           </p>
           <p
             className={`truncate font-medium leading-none tracking-[0.08em] ${cfg.subtitle}`}
             style={{ color: subtitleColor }}
           >
-            ACR / PER SYSTEM
+            Smart ACR / PER System
           </p>
         </div>
       </div>
     );
   }
 
-  // full — stacked
+  // full — stacked, centered
   return (
     <div className={`flex flex-col items-center gap-3 ${className}`}>
       <FIAShield size={cfg.icon} theme={theme} />
@@ -90,19 +90,13 @@ export function FIALogo({ variant = "full", size = "md", theme = "dark", classNa
             fontSize: size === "xl" ? "1.5rem" : size === "lg" ? "1.25rem" : "1.125rem",
           }}
         >
-          FIA Smart
+          Federal Investigation Authority
         </p>
         <p
           className="mt-1 text-sm font-semibold tracking-[0.12em]"
           style={{ color: subtitleColor }}
         >
-          ACR / PER SYSTEM
-        </p>
-        <p
-          className="mt-1 text-xs"
-          style={{ color: metaColor }}
-        >
-          Federal Investigation Agency · Pakistan
+          Smart ACR / PER System
         </p>
       </div>
     </div>

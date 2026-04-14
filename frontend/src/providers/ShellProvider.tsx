@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, useState } from "react";
 import type { UserRole, UserSession } from "@/types/contracts";
 
 interface ShellContextValue {
-  activeRole: UserRole;
+  activeRole: UserRole | null;
   setActiveRole: (role: UserRole) => void;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (value: boolean) => void;
@@ -17,7 +17,7 @@ interface ShellContextValue {
 const ShellContext = createContext<ShellContextValue | undefined>(undefined);
 
 export function AppShellProvider({ children }: { children: React.ReactNode }) {
-  const [activeRole, setActiveRole] = useState<UserRole>("Clerk");
+  const [activeRole, setActiveRole] = useState<UserRole | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const [user, setUser] = useState<UserSession | null>(null);

@@ -29,11 +29,11 @@ function ResetPasswordPageContent() {
     >
       <div className="mx-auto max-w-[420px]">
         <div className="mb-5 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#EEF6FC] text-[#0095D9]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#EEF6FC] dark:bg-blue-950/40 text-[#0095D9]">
             <KeyRound size={24} />
           </div>
-          <h1 className="mt-4 text-[1.8rem] font-semibold text-[#111827]">Set New Password</h1>
-          <p className="mt-1.5 text-sm leading-6 text-[#6B7280]">Enter the reset token and a new password for your account.</p>
+          <h1 className="mt-4 text-[1.8rem] font-semibold text-[#111827] dark:text-slate-100">Set New Password</h1>
+          <p className="mt-1.5 text-sm leading-6 text-[#6B7280] dark:text-slate-400">Enter the reset token and a new password for your account.</p>
         </div>
 
         {mutation.error ? (
@@ -59,15 +59,15 @@ function ResetPasswordPageContent() {
           <div className="space-y-4">
             <label className="block space-y-2">
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Reset Token</span>
-              <input value={token} onChange={(event) => setToken(event.target.value)} className="w-full rounded-2xl border border-[#D8DEE8] bg-[#EEF2F7] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10" />
+              <input value={token} onChange={(event) => setToken(event.target.value)} className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#EEF2F7] dark:bg-slate-800 px-4 py-3 text-sm text-[#111827] dark:text-slate-100 outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10" />
             </label>
             <label className="block space-y-2">
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">New Password</span>
-              <input type="password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} className="w-full rounded-2xl border border-[#D8DEE8] bg-[#EEF2F7] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10" />
+              <input type="password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#EEF2F7] dark:bg-slate-800 px-4 py-3 text-sm text-[#111827] dark:text-slate-100 outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10" />
             </label>
             <label className="block space-y-2">
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Confirm Password</span>
-              <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full rounded-2xl border border-[#D8DEE8] bg-[#EEF2F7] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10" />
+              <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#EEF2F7] dark:bg-slate-800 px-4 py-3 text-sm text-[#111827] dark:text-slate-100 outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10" />
             </label>
             {mismatch ? <p className="text-sm text-[#DC2626]">The password and confirmation do not match.</p> : null}
             <button

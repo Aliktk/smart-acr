@@ -7,7 +7,7 @@ export const roleMetadata: Record<UserRoleCode, { label: string; description: st
   },
   IT_OPS: {
     label: "IT Ops",
-    description: "Infrastructure oversight, platform health, and technical administration.",
+    description: "Infrastructure oversight, platform health, and technical administration without delegated user provisioning.",
   },
   CLERK: {
     label: "Clerk",
@@ -23,7 +23,7 @@ export const roleMetadata: Record<UserRoleCode, { label: string; description: st
   },
   SECRET_BRANCH: {
     label: "Secret Branch",
-    description: "Central archive management and super-admin authority.",
+    description: "Central archive management, verification, and delegated user administration when enabled on the Secret Branch profile.",
   },
   WING_OVERSIGHT: {
     label: "Wing Oversight",
@@ -38,7 +38,7 @@ export const roleMetadata: Record<UserRoleCode, { label: string; description: st
     description: "Executive analytics, leadership dashboards and reports.",
   },
   EXECUTIVE_VIEWER: {
-    label: "Executive Viewer",
+    label: "DG Viewer",
     description: "Read-only leadership visibility into ACR progress and archive trends.",
   },
   EMPLOYEE: {

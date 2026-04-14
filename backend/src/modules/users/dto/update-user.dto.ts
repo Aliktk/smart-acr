@@ -1,7 +1,8 @@
-import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from "class-validator";
+import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { UserRole } from "@prisma/client";
 import { UserScopeDto } from "./user-scope.dto";
+import { SecretBranchProfileDto } from "./secret-branch-profile.dto";
 
 export class UpdateUserDto {
   @IsOptional()
@@ -33,6 +34,16 @@ export class UpdateUserDto {
   mobileNumber?: string;
 
   @IsOptional()
+  @IsString()
+  @Matches(/^\d{5}-\d{7}-\d$/, { message: "CNIC must be in 12345-1234567-1 format." })
+  cnic?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  positionTitle?: string;
+
+  @IsOptional()
   @IsArray()
   @ArrayUnique()
   @IsEnum(UserRole, { each: true })
@@ -50,4 +61,9 @@ export class UpdateUserDto {
   @ValidateNested()
   @Type(() => UserScopeDto)
   scope?: UserScopeDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SecretBranchProfileDto)
+  secretBranchProfile?: SecretBranchProfileDto;
 }

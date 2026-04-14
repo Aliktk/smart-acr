@@ -33,7 +33,7 @@ function ShellGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!canAccessPortalPath(sessionQuery.data.activeRoleCode, pathname)) {
+    if (!canAccessPortalPath(sessionQuery.data, pathname)) {
       router.replace(getDefaultPortalRoute(sessionQuery.data.activeRoleCode));
     }
   }, [pathname, router, sessionQuery.data, setActiveRole, setUser]);
@@ -49,10 +49,10 @@ function ShellGate({ children }: { children: React.ReactNode }) {
 
   if (sessionQuery.isPending) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,#E8EEF9_0%,#F4F6FB_45%,#EFF3F9_100%)] px-6">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,#E8EEF9_0%,#F4F6FB_45%,#EFF3F9_100%)] dark:bg-[radial-gradient(circle_at_top,#161830_0%,#0F1117_45%,#12141E_100%)] px-6">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(26,28,110,0.04),transparent_42%,rgba(0,149,217,0.06))]" />
-        <div className="relative w-full max-w-lg overflow-hidden rounded-[30px] border border-white/70 bg-white/92 px-8 py-9 text-center shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-[#DCE6F5] bg-[#F8FBFF] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5B6B8B]">
+        <div className="relative w-full max-w-lg overflow-hidden rounded-[30px] border border-white/70 bg-white/92 px-8 py-9 text-center shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur dark:border-white/10 dark:bg-[var(--card)]/95 dark:shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-600)]">
             FIA Smart ACR / PER
           </div>
           <div className="mx-auto mt-6 flex h-14 w-14 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#1A1C6E_0%,#0095D9_100%)] shadow-[0_14px_30px_rgba(26,28,110,0.28)]">
@@ -71,7 +71,7 @@ function ShellGate({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  if (!canAccessPortalPath(sessionQuery.data.activeRoleCode, pathname)) {
+  if (!canAccessPortalPath(sessionQuery.data, pathname)) {
     return null;
   }
 
@@ -84,14 +84,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ShellGate>
       <div
-        className="relative isolate grid h-screen w-full grid-cols-[auto_minmax(0,1fr)] overflow-hidden"
+        className="relative isolate grid h-screen w-full grid-cols-[auto_minmax(0,1fr)] overflow-hidden transition-[grid-template-columns] duration-300"
         style={{
-          background: "#F4F6FB",
+          background: "var(--background)",
           ["--active-sidebar-width" as string]: sidebarCollapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-width)",
         }}
       >
         <Sidebar />
-        <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden transition-all duration-300">
           <TopHeader />
           <main className="flex-1 overflow-x-hidden overflow-y-auto">{children}</main>
           <NotificationPanel />

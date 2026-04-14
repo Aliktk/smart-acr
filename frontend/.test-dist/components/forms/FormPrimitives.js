@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FormPage = exports.PageBreak = exports.RuledLines = exports.SignatureBlock = exports.PenPictureSection = exports.PromotionCheckboxes = exports.AssessmentTable = exports.RatingTable = exports.UnderlinedField = void 0;
+exports.ScannedPage = exports.FormPage = exports.PageBreak = exports.RuledLines = exports.SignatureBlock = exports.PenPictureSection = exports.PromotionCheckboxes = exports.AssessmentTable = exports.RatingTable = exports.UnderlinedField = void 0;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = __importDefault(require("react"));
 // Reusable form primitives for government document forms
@@ -34,5 +34,7 @@ const RuledLines = ({ count = 5 }) => ((0, jsx_runtime_1.jsx)("div", { className
 exports.RuledLines = RuledLines;
 const PageBreak = () => ((0, jsx_runtime_1.jsx)("div", { className: "page-break" }));
 exports.PageBreak = PageBreak;
-const FormPage = ({ children, pageNumber }) => ((0, jsx_runtime_1.jsxs)("div", { className: "form-page bg-white p-12 min-h-[297mm] relative", children: [children, pageNumber && ((0, jsx_runtime_1.jsx)("div", { className: "absolute bottom-8 left-0 right-0 text-center text-xs", children: pageNumber }))] }));
+const FormPage = ({ children, pageNumber, className = "" }) => ((0, jsx_runtime_1.jsxs)("div", { className: `form-page bg-white p-12 min-h-[297mm] relative ${className}`.trim(), children: [children, pageNumber && ((0, jsx_runtime_1.jsx)("div", { className: "absolute bottom-8 left-0 right-0 text-center text-xs", children: pageNumber }))] }));
 exports.FormPage = FormPage;
+const ScannedPage = ({ src, alt }) => ((0, jsx_runtime_1.jsx)("div", { className: "form-page bg-white min-h-[297mm] relative overflow-hidden", children: (0, jsx_runtime_1.jsx)("img", { src: src, alt: alt, className: "block h-auto w-full" }) }));
+exports.ScannedPage = ScannedPage;

@@ -1,779 +1,1032 @@
 # FIA Smart ACR / PER Management System
 
-Production-oriented internal workflow platform for the Federal Investigation Agency (FIA), Pakistan, to digitize ACR / PER processing for BPS 1-16 employees.
+A production-grade internal workflow platform for the Federal Investigation Agency (FIA), Pakistan. The system digitizes the Annual Confidential Report (ACR) and Performance Evaluation Report (PER) lifecycle for BPS 1-18 employees, replacing paper-based form routing with a controlled, role-gated digital workflow.
 
-This repository contains the full stack application used to:
-- initiate and process ACRs through role-based workflow
-- preserve form data across workflow stages
-- manage employee master data and template selection
-- archive finalized records
-- generate audit trails and notifications
-- provision real internal users through admin-managed onboarding
+This is an internal controlled system. There is no public signup. All user accounts are provisioned by authorized administrators.
 
-This is an internal controlled system. It is not a public signup product.
+---
 
 ## Table of Contents
-- [System Overview](#system-overview)
-- [Business Scope](#business-scope)
+
+- [Business Problem](#business-problem)
+- [Key Features](#key-features)
 - [Core Roles](#core-roles)
-- [Workflow Model](#workflow-model)
 - [System Architecture](#system-architecture)
+- [Frontend Architecture](#frontend-architecture)
+- [Backend Architecture](#backend-architecture)
+- [Database and Data Model](#database-and-data-model)
+- [Workflow and Data Flow](#workflow-and-data-flow)
+- [Business Rules and Rulebook Logic](#business-rules-and-rulebook-logic)
+- [API Overview](#api-overview)
+- [Authentication and Session Management](#authentication-and-session-management)
+- [Security and Hardening](#security-and-hardening)
+- [Setup and Local Development](#setup-and-local-development)
+- [Environment and Configuration](#environment-and-configuration)
+- [Testing Strategy](#testing-strategy)
+- [Deployment Architecture](#deployment-architecture)
+- [CI/CD and Release Readiness](#cicd-and-release-readiness)
+- [Production Readiness](#production-readiness)
 - [Repository Structure](#repository-structure)
-- [Application Modules](#application-modules)
-- [Data Model](#data-model)
-- [Security Model](#security-model)
-- [Admin and User Management](#admin-and-user-management)
-- [Authentication and Password Lifecycle](#authentication-and-password-lifecycle)
-- [Notifications, Audit, and Archive](#notifications-audit-and-archive)
-- [PDF and Document Handling](#pdf-and-document-handling)
-- [Local Development Setup](#local-development-setup)
-- [Environment Variables](#environment-variables)
-- [Seeded Accounts for Development](#seeded-accounts-for-development)
-- [Testing and Validation](#testing-and-validation)
-- [Production Readiness Review](#production-readiness-review)
-- [Known Constraints and Follow-Up](#known-constraints-and-follow-up)
+- [Known Limitations and Future Enhancements](#known-limitations-and-future-enhancements)
 - [Additional Documentation](#additional-documentation)
+- [Engineering Notes](#engineering-notes)
 
-## System Overview
+---
 
-The FIA Smart ACR / PER Management System digitizes the annual confidential reporting process for FIA staff. Instead of passing paper forms manually between clerical, reporting, countersigning, and archival stakeholders, the system preserves the official form layout digitally and applies controlled editing rights as the ACR moves through workflow.
+## Business Problem
 
-The platform currently includes:
-- Next.js frontend portal
-- NestJS backend API
-- Prisma + PostgreSQL data layer
-- role-based workflow and visibility rules
-- official FIA form variants
-- admin-managed internal user provisioning
-- archive snapshots and audit logs
-- notifications and dashboard views
+FIA's ACR/PER process is a mandatory annual evaluation involving multiple stakeholders across geographically distributed offices. The paper-based process suffers from:
 
-## Business Scope
+- **Lost or delayed forms** moving between Clerk, Reporting Officer, Countersigning Officer, and Secret Branch
+- **No visibility** into where an ACR currently sits in the workflow
+- **No audit trail** for who accessed or modified a form
+- **Manual tracking** of overdue, returned, or incomplete reports
+- **No centralized archive** for historical records and retrieval
 
-The application supports:
-- Clerk initiation of ACR packets
-- Reporting Officer review and assessment
-- Countersigning Officer review where applicable
-- Secret Branch receipt, archival, and retrieval
-- DG / executive read-only oversight
-- Super Admin / IT operations management
+This system replaces the manual chain with a digital, role-enforced workflow that preserves the official FIA form layouts while adding controlled editing rights, real-time status tracking, audit logging, and archival.
 
-Supported official form families:
-- `ASSISTANT_UDC_LDC`
-- `APS_STENOTYPIST`
-- `INSPECTOR_SI_ASI`
-- `SUPERINTENDENT_AINCHARGE`
+---
+
+## Key Features
+
+| Module | Description |
+|--------|-------------|
+| **ACR Workflow Engine** | State-machine-driven lifecycle from draft through archive with return/correction cycles |
+| **6 Official Form Families** | Digital replicas of FIA forms for BPS 1-18 staff with template-specific validation |
+| **Role-Based Routing** | Automatic routing between Clerk, Reporting Officer, Countersigning Officer, and Secret Branch |
+| **User Management** | Admin-provisioned accounts with role assignment, scope binding, and lifecycle controls |
+| **Dashboard and Queue** | Per-role views showing pending, overdue, priority, and recently acted-on ACRs |
+| **Search and Filter** | By employee, service number, designation, state, date range, template, and org scope |
+| **Archive and History** | Immutable archive snapshots with hash verification for finalized records |
+| **Audit Logging** | Comprehensive trail of all sensitive operations with actor, role, IP, and metadata |
+| **Notifications** | Workflow-driven notifications routed to the next actor in the chain |
+| **Analytics** | Reporting metrics, completion rates, overdue tracking, and organizational breakdowns |
+| **File Uploads** | Signature, stamp, and document attachments with MIME validation and access control |
+| **PDF Export** | Client-side form rendering to PDF preserving official layout with signatures/stamps |
+| **Organization Hierarchy** | Multi-level structure: Wing > Directorate > Region > Zone > Circle > Station > Branch > Cell > Office > Department |
+| **Secret Branch Desk Routing** | Template-to-desk allocation (AD Secret Branch, DA1-DA4) with review/verification stages |
+
+---
 
 ## Core Roles
 
-Primary supported roles:
-- `SUPER_ADMIN`
-- `IT_OPS`
-- `CLERK`
-- `REPORTING_OFFICER`
-- `COUNTERSIGNING_OFFICER`
-- `SECRET_BRANCH`
-- `DG`
-- `EXECUTIVE_VIEWER`
-- `WING_OVERSIGHT`
-- `ZONAL_OVERSIGHT`
-- `EMPLOYEE`
+| Role | Responsibility |
+|------|----------------|
+| `SUPER_ADMIN` | Full platform administration, user provisioning, system configuration |
+| `IT_OPS` | Technical operations, user management, system health |
+| `CLERK` | Initiate ACR packets, fill clerk sections, submit to Reporting Officer |
+| `REPORTING_OFFICER` | Fill assessment sections, forward or return ACRs |
+| `COUNTERSIGNING_OFFICER` | Countersign where required, forward to Secret Branch or return |
+| `SECRET_BRANCH` | Receive, review, verify, and archive finalized records |
+| `DG` | Executive read-only oversight across all records |
+| `EXECUTIVE_VIEWER` | Read-only access to records and dashboards |
+| `WING_OVERSIGHT` | Read-only oversight scoped to a specific wing |
+| `ZONAL_OVERSIGHT` | Read-only oversight scoped to a specific zone |
+| `EMPLOYEE` | View own metadata and ACR status (no form content access) |
 
-Business intent by role:
-- Clerk: initiate and maintain the clerk-owned portion of the ACR
-- Reporting Officer: fill assessment sections and either return or forward
-- Countersigning Officer: countersign where required and submit to Secret Branch
-- Secret Branch: receive, archive, retrieve, and inspect final records
-- DG / executive roles: read-only oversight and search/archive access
-- Super Admin / IT Ops: manage users, organization settings, configuration, and platform operations
-
-## Workflow Model
-
-### Standard workflow
-
-`Clerk -> Reporting Officer -> Countersigning Officer -> Secret Branch -> Archive`
-
-### Non-countersigning workflow
-
-`Clerk -> Reporting Officer -> Secret Branch -> Archive`
-
-### Workflow states
-
-- `DRAFT`
-- `PENDING_REPORTING`
-- `PENDING_COUNTERSIGNING`
-- `SUBMITTED_TO_SECRET_BRANCH`
-- `ARCHIVED`
-- `RETURNED`
-
-`Overdue` and `priority` are operational indicators derived from record state and due dates.
-
-### Workflow sequence
-
-```mermaid
-flowchart LR
-    A[Clerk Initiates ACR] --> B[Reporting Officer Review]
-    B -->|Return| A
-    B -->|Forward| C[Countersigning Officer]
-    B -->|No countersigning required| D[Secret Branch]
-    C -->|Return| A
-    C -->|Submit| D
-    D --> E[Archive Snapshot / Final Record]
-```
-
-### Returned flow
-
-Returned records are not dead-end records. If an ACR is returned:
-- Clerk can reopen it
-- Clerk can edit clerk-owned fields again
-- Clerk can resubmit it
-- return remarks remain visible
-- timeline and audit history preserve the return and correction chain
+---
 
 ## System Architecture
 
-### High-level context
-
-```mermaid
-flowchart LR
-    User[FIA Internal User] --> Frontend[Next.js Portal]
-    Frontend --> API[NestJS API]
-    API --> DB[(PostgreSQL via Prisma)]
-    API --> Storage[File Storage]
-    API --> Audit[Audit Logs]
-    API --> Notify[Notifications]
-    API --> Archive[Archive Snapshots]
-```
-
-### Request architecture
-
-```mermaid
-flowchart LR
-    Browser --> Routes[App Router Pages]
-    Routes --> Client[API Client Layer]
-    Client --> Backend[REST API]
-    Backend --> Guards[Auth and Role Guards]
-    Guards --> Services[Business Services]
-    Services --> Prisma[Prisma Service]
-    Prisma --> Postgres[PostgreSQL]
-    Services --> AuditTrail[Audit Logging]
-    Services --> Timeline[Workflow Timeline]
-    Services --> Notifications[Notification Routing]
-```
-
-### Production deployment view
+### High-Level Overview
 
 ```mermaid
 flowchart TB
-    subgraph Client
-      A[Browser]
+    subgraph Clients
+        Browser[Browser / FIA Internal Network]
     end
 
-    subgraph App
-      B[Frontend Next.js]
-      C[Backend NestJS]
+    subgraph Application Layer
+        Frontend["Next.js 15 Frontend\n(App Router, React 19, TanStack Query)"]
+        Backend["NestJS 11 Backend API\n(REST, JWT, Role Guards)"]
     end
 
-    subgraph Data
-      D[(PostgreSQL)]
-      E[Object/File Storage]
+    subgraph Data Layer
+        DB[(PostgreSQL 16\nvia Prisma 6.5)]
+        Storage[Local File Storage\nSignatures / Stamps / Documents]
     end
 
-    subgraph Ops
-      F[Audit Logs]
-      G[Archive Snapshots]
+    subgraph Cross-Cutting
+        Audit[Audit Log Writer]
+        Notify[Notification Service]
+        Archive[Archive Snapshot Service]
+        Metrics[Prometheus Metrics]
     end
 
-    A --> B
-    B --> C
-    C --> D
-    C --> E
-    C --> F
-    C --> G
+    Browser --> Frontend
+    Frontend -->|REST API /api/v1/*| Backend
+    Backend --> DB
+    Backend --> Storage
+    Backend --> Audit
+    Backend --> Notify
+    Backend --> Archive
+    Backend --> Metrics
 ```
+
+### Request Flow
+
+```mermaid
+flowchart LR
+    Browser --> AppRouter["Next.js App Router\n(Middleware: JWT check)"]
+    AppRouter --> APIClient["API Client\n(TanStack Query + fetch)"]
+    APIClient -->|Cookie: acr_access_token| REST["NestJS Controllers"]
+    REST --> JWTGuard["JWT Auth Guard\n(Session validation)"]
+    JWTGuard --> RolesGuard["Roles Guard\n(RBAC check)"]
+    RolesGuard --> Services["Business Services"]
+    Services --> Prisma["Prisma Client"]
+    Prisma --> PostgreSQL[(PostgreSQL)]
+    Services --> AuditWriter["Audit Writer"]
+    Services --> Timeline["Timeline Entries"]
+    Services --> Notifications["Notification Router"]
+```
+
+### Backend Module Interaction
+
+```mermaid
+flowchart TB
+    AuthModule["Auth Module\n(login, challenge, sessions, password)"]
+    AcrModule["ACR Module\n(lifecycle, form data, transitions)"]
+    WorkflowModule["Workflow Module\n(state machine, validations)"]
+    UsersModule["Users Module\n(provisioning, roles, scope)"]
+    EmployeesModule["Employees Module\n(master data, search)"]
+    OrgModule["Organization Module\n(wings, zones, offices)"]
+    ArchiveModule["Archive Module\n(snapshots, retrieval)"]
+    AuditModule["Audit Module\n(log writer, query)"]
+    FilesModule["Files Module\n(upload, access control)"]
+    DashboardModule["Dashboard Module\n(metrics, queue views)"]
+    AnalyticsModule["Analytics Module\n(reports, aggregations)"]
+    NotifyModule["Notifications Module\n(routing, read tracking)"]
+    TemplatesModule["Templates Module\n(form catalog, versions)"]
+    SettingsModule["Settings Module\n(admin config, user prefs)"]
+
+    AcrModule --> WorkflowModule
+    AcrModule --> AuditModule
+    AcrModule --> NotifyModule
+    AcrModule --> FilesModule
+    AcrModule --> TemplatesModule
+    ArchiveModule --> AuditModule
+    UsersModule --> AuditModule
+    AuthModule --> AuditModule
+    DashboardModule --> AcrModule
+    AnalyticsModule --> AcrModule
+```
+
+---
+
+## Frontend Architecture
+
+**Stack:** Next.js 15 (App Router), React 19, TypeScript 5.8, TanStack Query v5, Tailwind CSS v4, Zod, html2canvas + jsPDF
+
+### Page Structure
+
+All authenticated pages live under the `(portal)` route group with shared shell layout (sidebar, header, notification panel).
+
+| Route | Purpose |
+|-------|---------|
+| `/login` | Authentication |
+| `/forgot-password`, `/reset-password` | Password recovery |
+| `/dashboard` | Role-aware summary with ACR counts and status |
+| `/acr/new` | ACR initiation (Clerk) |
+| `/acr/[id]` | ACR detail with interactive form and workflow actions |
+| `/queue` | Current user's pending tasks |
+| `/priority`, `/overdue` | Filtered ACR views |
+| `/search` | Advanced search and filtering |
+| `/archive` | Historical record browsing |
+| `/analytics` | Business intelligence dashboards |
+| `/audit-logs` | Audit trail viewer |
+| `/organization` | Org hierarchy management |
+| `/user-management` | Admin user provisioning |
+| `/settings`, `/profile` | User preferences and security |
+| `/notifications` | Notification center |
+
+### Form Rendering
+
+Six template-specific form components render the official FIA form layouts:
+
+| Component | Template Family | Notes |
+|-----------|----------------|-------|
+| `FormA_S121C` | ASSISTANT_UDC_LDC | 4 pages, English, countersigning required |
+| `FormB_S121E` | APS_STENOTYPIST | 8 pages, bilingual, no countersigning |
+| `FormC_Inspector` | INSPECTOR_SI_ASI | 6 pages, English, countersigning required |
+| `FormD_Superintendent` | SUPERINTENDENT_AINCHARGE | 4 pages, bilingual, countersigning required |
+| `FormE_CarDriversDespatchRiders` | CAR_DRIVERS_DESPATCH_RIDERS | 7 pages, bilingual, countersigning required |
+| `FormF_Per1718Officers` | PER_17_18_OFFICERS | 11 pages, bilingual, countersigning required |
+
+`InteractiveForm.tsx` handles the main form rendering, section-based editing rights, and form data persistence via the backend API. `FormPrimitives.tsx` provides the base elements (text inputs, checkboxes, signature pads, date pickers).
+
+### State Management
+
+| Concern | Approach |
+|---------|----------|
+| Server state | TanStack Query (React Query v5) |
+| URL state | Next.js App Router search params |
+| Form state | Controlled components with Zod validation |
+| Auth state | Cookie-based (managed by backend) |
+
+### Middleware
+
+Next.js middleware (`middleware.ts`) checks JWT token expiry on each request and redirects to `/login` when the access token is expired, preserving the intended destination for post-login redirect.
+
+---
+
+## Backend Architecture
+
+**Stack:** NestJS 11, TypeScript, Prisma 6.5, PostgreSQL 16, JWT (cookie-based), class-validator, Helmet, @nestjs/throttler, Multer
+
+### Module Organization
+
+The backend follows NestJS conventions: each domain area is a module containing a controller, service, and DTOs.
+
+```
+backend/src/
+├── common/           # Shared constants, middleware, template catalog
+├── config/           # Configuration loading
+├── helpers/          # Security utils, view mappers, shared logic
+└── modules/
+    ├── acr/          # Core ACR lifecycle (create, update, transition, query)
+    ├── analytics/    # Business intelligence queries
+    ├── archive/      # Record finalization and snapshot creation
+    ├── audit/        # Audit log writing and querying
+    ├── auth/         # Authentication, sessions, password management
+    ├── dashboard/    # Dashboard metrics and queue views
+    ├── employees/    # Employee master data
+    ├── files/        # File upload, storage, and access control
+    ├── health/       # Health check and Prometheus metrics
+    ├── notifications/# Workflow notifications
+    ├── organization/ # Org hierarchy CRUD
+    ├── settings/     # Admin and user settings
+    ├── storage/      # File storage abstraction
+    ├── templates/    # Form template catalog
+    ├── user-assets/  # Signature and stamp management
+    ├── users/        # User provisioning and lifecycle
+    └── workflow/     # State machine and transition validation
+```
+
+### Key Helpers
+
+- **`security.utils.ts`** - Core authorization logic: `canAccessAcr()`, `canEditAcrForm()`, `canTransitionAcr()`, `canAccessEmployee()`, `buildAcrAccessPreFilter()`, `effectiveScope()`
+- **`view-mappers.ts`** - Response shaping: `mapAcr()`, `mapEmployee()`, `mapTimeline()`, `deriveAuditModule()`, `deriveAuditEventType()`
+- **`acr-form-validation.ts`** - Template-aware form validation for each workflow stage
+
+### Validation Strategy
+
+- Global `ValidationPipe` with whitelist mode (`forbidNonWhitelisted: true`)
+- DTOs decorated with `class-validator` constraints
+- Template-specific form validation in `acr-form-validation.ts`
+- Zod schemas on the frontend for client-side pre-validation
+
+---
+
+## Database and Data Model
+
+### Entity-Relationship Diagram
+
+```mermaid
+erDiagram
+    Wing ||--o{ Directorate : contains
+    Directorate ||--o{ Region : contains
+    Region ||--o{ Zone : contains
+    Zone ||--o{ Circle : contains
+    Circle ||--o{ Station : contains
+    Station ||--o{ Branch : contains
+    Branch ||--o{ Cell : contains
+    Zone ||--o{ Office : contains
+    Office ||--o{ Department : contains
+
+    User ||--o{ UserRoleAssignment : has
+    User ||--o{ Session : owns
+    User ||--o{ AuthChallenge : attempts
+    User ||--o{ PasswordResetToken : requests
+    User ||--o{ UserAsset : uploads
+    User ||--o{ SecretBranchStaffProfile : "may have"
+
+    Employee ||--o{ AcrRecord : "subject of"
+    User ||--o{ AcrRecord : "initiates (clerk)"
+    User ||--o{ AcrRecord : "reports on"
+    User ||--o{ AcrRecord : "countersigns"
+    User ||--o{ AcrRecord : "currently holds"
+    TemplateVersion ||--o{ AcrRecord : "rendered by"
+
+    AcrRecord ||--o{ AcrTimelineEntry : "has history"
+    AcrRecord ||--o{ FileAsset : "has attachments"
+    AcrRecord ||--o{ Notification : triggers
+    AcrRecord ||--o{ AuditLog : generates
+    AcrRecord ||--o| ArchiveRecord : "archived as"
+    ArchiveRecord ||--o| ArchiveSnapshot : "snapshot of"
+    ArchiveRecord ||--o{ FileAsset : "has files"
+
+    SecretBranchRoutingRule ||--|| TemplateVersion : "routes"
+```
+
+### Core Tables
+
+| Table | Purpose |
+|-------|---------|
+| `User` | System accounts with username, email, badge number, password hash, lifecycle flags |
+| `UserRoleAssignment` | Maps users to roles with optional wing/zone/office scope |
+| `Employee` | Employee master records (name, service number, designation, posting) |
+| `AcrRecord` | Central ACR document: state, form data (JSON), period, due date, officer assignments |
+| `AcrTimelineEntry` | Immutable workflow history: action, actor, status, remarks, timestamp |
+| `TemplateVersion` | Form template definitions with family code, version, page count, language |
+| `FileAsset` | Uploaded files (signatures, stamps, documents) linked to ACR or archive records |
+| `ArchiveRecord` / `ArchiveSnapshot` | Finalized records with immutable hash and document path |
+| `AuditLog` | Action, actor, role, IP, record reference, metadata JSON, timestamp |
+| `Notification` | Workflow notifications with type, message, read tracking |
+| `Session` | Active sessions with refresh tokens and expiry |
+| `AdminSetting` | System-wide configuration as key-value JSON |
+
+### Enums
+
+| Enum | Values |
+|------|--------|
+| `UserRole` | SUPER_ADMIN, IT_OPS, CLERK, REPORTING_OFFICER, COUNTERSIGNING_OFFICER, SECRET_BRANCH, WING_OVERSIGHT, ZONAL_OVERSIGHT, DG, EXECUTIVE_VIEWER, EMPLOYEE |
+| `AcrWorkflowState` | DRAFT, PENDING_REPORTING, PENDING_COUNTERSIGNING, PENDING_SECRET_BRANCH_REVIEW, PENDING_SECRET_BRANCH_VERIFICATION, RETURNED_TO_CLERK, RETURNED_TO_REPORTING, RETURNED_TO_COUNTERSIGNING, ARCHIVED |
+| `TemplateFamilyCode` | ASSISTANT_UDC_LDC, APS_STENOTYPIST, INSPECTOR_SI_ASI, SUPERINTENDENT_AINCHARGE, CAR_DRIVERS_DESPATCH_RIDERS, PER_17_18_OFFICERS |
+| `FileAssetKind` | SIGNATURE, STAMP, DOCUMENT |
+| `SecretBranchDeskCode` | AD_SECRET_BRANCH, DA1, DA2, DA3, DA4 |
+| `OrgScopeTrack` | REGIONAL, WING |
+
+---
+
+## Workflow and Data Flow
+
+### Standard Workflow
+
+```
+Clerk --> Reporting Officer --> Countersigning Officer --> Secret Branch Review --> Secret Branch Verification --> Archive
+```
+
+### Non-Countersigning Workflow
+
+```
+Clerk --> Reporting Officer --> Secret Branch Review --> Secret Branch Verification --> Archive
+```
+
+### State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT: Clerk creates ACR
+
+    DRAFT --> DRAFT: save_draft
+    DRAFT --> PENDING_REPORTING: submit_to_reporting
+
+    PENDING_REPORTING --> PENDING_COUNTERSIGNING: forward_to_countersigning
+    PENDING_REPORTING --> PENDING_SECRET_BRANCH_REVIEW: submit_to_secret_branch
+    PENDING_REPORTING --> RETURNED_TO_CLERK: return_to_clerk
+
+    PENDING_COUNTERSIGNING --> PENDING_SECRET_BRANCH_REVIEW: submit_to_secret_branch
+    PENDING_COUNTERSIGNING --> RETURNED_TO_REPORTING: return_to_reporting
+    PENDING_COUNTERSIGNING --> RETURNED_TO_CLERK: return_to_clerk
+
+    PENDING_SECRET_BRANCH_REVIEW --> PENDING_SECRET_BRANCH_VERIFICATION: complete_secret_branch_review
+    PENDING_SECRET_BRANCH_REVIEW --> RETURNED_TO_CLERK: return_to_clerk
+    PENDING_SECRET_BRANCH_REVIEW --> RETURNED_TO_REPORTING: return_to_reporting
+    PENDING_SECRET_BRANCH_REVIEW --> RETURNED_TO_COUNTERSIGNING: return_to_countersigning
+
+    PENDING_SECRET_BRANCH_VERIFICATION --> ARCHIVED: verify_secret_branch
+    PENDING_SECRET_BRANCH_VERIFICATION --> RETURNED_TO_CLERK: return_to_clerk
+
+    RETURNED_TO_CLERK --> PENDING_REPORTING: submit_to_reporting
+    RETURNED_TO_REPORTING --> PENDING_COUNTERSIGNING: forward_to_countersigning
+    RETURNED_TO_REPORTING --> PENDING_SECRET_BRANCH_REVIEW: submit_to_secret_branch
+    RETURNED_TO_COUNTERSIGNING --> PENDING_SECRET_BRANCH_REVIEW: submit_to_secret_branch
+
+    ARCHIVED --> [*]
+```
+
+### End-to-End Data Flow
+
+```mermaid
+sequenceDiagram
+    participant CL as Clerk
+    participant FE as Frontend
+    participant API as Backend API
+    participant DB as PostgreSQL
+    participant SB as Secret Branch
+
+    CL->>FE: Initiate ACR (select employee + template)
+    FE->>API: POST /acr (create draft)
+    API->>DB: Insert AcrRecord (DRAFT)
+    API->>DB: Write AuditLog + TimelineEntry
+
+    CL->>FE: Fill clerk section + submit
+    FE->>API: PATCH /acr/:id (form data)
+    FE->>API: POST /acr/:id/transition (submit_to_reporting)
+    API->>DB: Validate form -> Update state
+    API->>DB: Create Notification for Reporting Officer
+
+    Note over API: Reporting Officer reviews form
+    API->>DB: POST transition (forward_to_countersigning)
+    API->>DB: Notify Countersigning Officer
+
+    Note over API: Countersigning Officer reviews
+    API->>DB: POST transition (submit_to_secret_branch)
+    API->>DB: Notify Secret Branch
+
+    SB->>FE: Review and complete
+    FE->>API: POST transition (complete_secret_branch_review)
+    FE->>API: POST transition (verify_secret_branch)
+    API->>DB: Create ArchiveRecord + ArchiveSnapshot
+    API->>DB: Set state = ARCHIVED
+```
+
+### Return and Correction Flow
+
+Returned records are not dead-end states. When an ACR is returned:
+
+1. Return remarks are preserved in the timeline
+2. The ACR moves to `RETURNED_TO_CLERK`, `RETURNED_TO_REPORTING`, or `RETURNED_TO_COUNTERSIGNING`
+3. The responsible party can edit their sections and resubmit
+4. The full return and correction chain is preserved in audit history
+5. Returned states follow the same transition rules as their originating states
+
+---
+
+## Business Rules and Rulebook Logic
+
+### Template Requirements
+
+| Rule | Implementation |
+|------|----------------|
+| **Countersigning requirement** | Template catalog (`template-catalog.ts`) defines `requiresCountersigning` per family. APS_STENOTYPIST does not require countersigning; all others do. |
+| **Official stamp requirement** | Templates define `requiresOfficialStamp` for reporting and countersigning sections. PER_17_18_OFFICERS exempts stamp requirement. |
+| **Reporting period validation** | Clerk section requires `reportingPeriodFrom` and `reportingPeriodTo` dates. Validated in `getClerkSubmissionValidationMessage()`. |
+
+### Form Validation Rules
+
+Validation is enforced server-side in `acr-form-validation.ts` before each transition:
+
+| Stage | Required Fields |
+|-------|-----------------|
+| **Clerk submission** | Reporting period dates (from/to) |
+| **Reporting Officer submission** | Assessment/remarks text, signature date, signature image, official stamp (if template requires) |
+| **Countersigning Officer submission** | Countersigning remarks, signature date, signature image, official stamp (if template requires) |
+| **Secret Branch review** | Desk code assignment, review completion |
+| **Secret Branch verification** | Verification confirmation, archive snapshot creation |
+
+### Authorization Rules
+
+Implemented in `security.utils.ts`:
+
+| Rule | Logic |
+|------|-------|
+| **ACR access** | Administrative bypass (SUPER_ADMIN, IT_OPS), Secret Branch access, executive read-only (DG, EXECUTIVE_VIEWER), oversight roles (scoped), employee self-access (metadata only), workflow participation check |
+| **Form editing** | Only the current holder in the active workflow stage can edit their section |
+| **Transition authorization** | Only the current holder with the correct role for the current state can trigger transitions |
+| **Employee access** | EMPLOYEE role can see own ACR metadata but not form content |
+| **Scope filtering** | Wing/zone/office scope applied via `buildAcrAccessPreFilter()` |
+
+### Secret Branch Desk Routing
+
+- `SecretBranchRoutingRule` maps template families to desk codes (AD_SECRET_BRANCH, DA1-DA4)
+- ACRs are allocated to specific desk officers upon reaching Secret Branch
+- Two-stage process: review completion followed by verification/archival
+
+### Archive Rules
+
+- Archive creates an immutable `ArchiveSnapshot` with content hash
+- Archived records cannot be transitioned further
+- Archive access respects the same role-based visibility rules
+
+---
+
+## API Overview
+
+All endpoints are prefixed with `/api/v1/`. Authentication is cookie-based (HttpOnly JWT tokens).
+
+### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/challenge` | Request login challenge code |
+| POST | `/auth/verify` | Verify challenge and establish session |
+| POST | `/auth/login` | Direct username/password login |
+| POST | `/auth/logout` | End session and clear cookies |
+| POST | `/auth/refresh` | Refresh access token |
+| POST | `/auth/switch-role` | Switch active role within session |
+| POST | `/auth/forgot-password/request` | Request password reset token |
+| POST | `/auth/forgot-password/reset` | Reset password with token |
+
+### ACR Lifecycle
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/acr` | Create new ACR (Clerk) |
+| GET | `/acr` | List ACRs (filtered by role/scope) |
+| GET | `/acr/:id` | Get ACR detail with form data |
+| PATCH | `/acr/:id` | Update form data |
+| POST | `/acr/:id/transition` | Execute workflow transition |
+| GET | `/acr/:id/timeline` | Get workflow history |
+
+### User Management (Admin)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users` | List users (paginated, filtered) |
+| GET | `/users/options` | User options for dropdowns |
+| GET | `/users/:id` | User detail |
+| POST | `/users` | Create user |
+| PATCH | `/users/:id` | Update user |
+| POST | `/users/:id/reset-password` | Admin password reset |
+| POST | `/users/:id/deactivate` | Deactivate account |
+| POST | `/users/:id/reactivate` | Reactivate account |
+
+### Other API Groups
+
+| Group | Base Path | Purpose |
+|-------|-----------|---------|
+| Employees | `/employees` | Employee search, CRUD, assignment |
+| Organization | `/organization` | Wings, zones, offices, departments |
+| Archive | `/archive` | Historical record retrieval |
+| Dashboard | `/dashboard` | ACR counts, queue metrics |
+| Analytics | `/analytics` | Reporting and business intelligence |
+| Files | `/files` | Upload, download, access control |
+| Audit | `/audit` | Audit log query with filtering |
+| Notifications | `/notifications` | List, mark read, count |
+| Settings | `/settings` | Admin config, user preferences |
+| Templates | `/templates` | Form template catalog |
+| Health | `/health` | Liveness, readiness, metrics |
+
+---
+
+## Authentication and Session Management
+
+### Login Flows
+
+**Challenge-based login (two-step):**
+1. `POST /auth/challenge` returns a `challengeId` and masked destination
+2. `POST /auth/verify` with the challenge code establishes the session
+
+**Direct login:**
+- `POST /auth/login` with username and password
+
+### Session Tokens
+
+| Token | Cookie Name | TTL | Purpose |
+|-------|-------------|-----|---------|
+| Access token | `acr_access_token` | 15 min (configurable) | Request authentication |
+| Refresh token | `acr_refresh_token` | 7 days (configurable) | Token renewal |
+
+Both cookies are `HttpOnly`, `SameSite`, and `Secure` in production.
+
+### Token Payload
+
+```typescript
+{
+  sub: string;   // userId
+  sid: string;   // sessionId
+  role: UserRole; // active role
+}
+```
+
+### Password Lifecycle
+
+- **Admin reset:** Set temporary password + force change on next login (`mustChangePassword`)
+- **Self-service change:** User provides current password and new password via settings
+- **Forgot password:** Token-based reset (delivery integration is a deployment concern)
+
+---
+
+## Security and Hardening
+
+### Access Control
+
+- **Deny-by-default:** No public endpoints except auth and health
+- **JWT Auth Guard:** Validates cookie token and session state on every protected request
+- **Roles Guard:** Enforces role requirements per endpoint
+- **Record-level authorization:** `canAccessAcr()`, `canAccessEmployee()` check workflow participation and scope
+- **Scope-based filtering:** Database queries are pre-filtered by user's wing/zone/office scope
+
+### Rate Limiting
+
+Rate limiting is enforced via `@nestjs/throttler` on sensitive endpoints:
+
+| Endpoint Group | Short Window (1s) | Medium Window (60s) | Rationale |
+|---------------|-------------------|---------------------|-----------|
+| `/auth/challenge` | 3 requests | 10 requests | Prevent brute-force login attempts |
+| `/auth/verify` | 3 requests | 10 requests | Prevent challenge code guessing |
+| `/auth/login` | 3 requests | 10 requests | Prevent credential stuffing |
+| `/auth/forgot-password/request` | 2 requests | 5 requests | Prevent token flooding |
+| `/auth/forgot-password/reset` | 2 requests | 5 requests | Prevent reset brute-force |
+
+Rate limiting is applied per-IP. Auth endpoints are the highest risk and have the strictest limits.
+
+### Security Headers
+
+- **Helmet** middleware enabled (CSP disabled for form rendering; all other protections active)
+- **CORS:** Restricted to `WEB_ORIGIN` with credentials
+- **Cookie flags:** HttpOnly, SameSite, Secure (production)
+
+### Validation
+
+- Global `ValidationPipe` with whitelist and `forbidNonWhitelisted`
+- DTO validation via `class-validator` decorators
+- File upload MIME type verification via `file-type` library
+- Template-specific form validation before workflow transitions
+
+### Audit Trail
+
+All sensitive operations are logged to the `AuditLog` table:
+- Login/logout, role switches
+- ACR creation, transitions, returns
+- Form data updates, file uploads
+- User provisioning, deactivation, password resets
+- Archive operations, settings changes
+
+Each entry captures: action, actorId, actorRole, ipAddress, recordType, recordId, details, metadata, timestamp.
+
+### File Upload Security
+
+- MIME type whitelist enforcement
+- File size limits
+- Access control: ACR-linked files require `canAccessAcr()`, archive files require `canAccessEmployee()`, user assets are owner-only
+- EMPLOYEE role cannot access document files (metadata only)
+
+---
+
+## Setup and Local Development
+
+### Prerequisites
+
+- Node.js 22+ (LTS)
+- pnpm 10+
+- PostgreSQL 16 (or use Docker)
+- Git
+
+### Quick Start
+
+```bash
+# Clone and install
+git clone <repository-url>
+cd smart-acr
+pnpm install
+
+# Start infrastructure (PostgreSQL, Redis, MinIO)
+pnpm docker:up
+
+# Backend setup
+cd backend
+cp .env.example .env
+pnpm prisma:generate
+pnpm prisma:push
+pnpm prisma:seed        # Seeds development accounts
+cd ..
+
+# Frontend setup
+cd frontend
+cp .env.example .env
+cd ..
+
+# Run both services
+pnpm dev
+```
+
+Frontend runs on `http://localhost:3000`, backend on `http://localhost:4000`.
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start frontend + backend concurrently |
+| `pnpm build` | Production build (all packages) |
+| `pnpm test` | Run all tests |
+| `pnpm typecheck` | TypeScript check (all packages) |
+| `pnpm lint` | Lint all packages |
+| `pnpm seed` | Seed development data |
+| `pnpm db:generate` | Generate Prisma client |
+| `pnpm db:push` | Push schema to database (no migration) |
+| `pnpm db:migrate` | Create and apply migrations |
+| `pnpm docker:up` | Start Docker infrastructure |
+| `pnpm docker:down` | Stop Docker infrastructure |
+| `pnpm deploy:onprem` | Deploy on-premises |
+| `pnpm rollback:onprem` | Rollback on-premises deployment |
+| `pnpm backup:onprem` | Backup PostgreSQL database |
+
+### Seeded Development Accounts
+
+Seed data provides bootstrap accounts for local development. In production, all users are provisioned through the admin user management interface.
+
+**Shared development password:** `ChangeMe@123`
+
+| Name | Role | Username / Email |
+|------|------|-----------------|
+| Hamza Qureshi | SUPER_ADMIN, IT_OPS | `it.ops` / `it.ops@fia.gov.pk` |
+| Zahid Ullah | CLERK | `zahid.ullah@fia.gov.pk` |
+| Muhammad Sarmad | REPORTING_OFFICER | `muhammad.sarmad@fia.gov.pk` |
+| Afzal Khan SSP | COUNTERSIGNING_OFFICER | `afzal.khan@fia.gov.pk` |
+| Nazia Ambreen | SECRET_BRANCH | `nazia.ambreen@fia.gov.pk` |
+| Dr Anwar Saleem | DG | `dr.anwar.saleem@fia.gov.pk` |
+
+---
+
+## Environment and Configuration
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `NODE_ENV` | Yes | `development` | Environment mode |
+| `PORT` | Yes | `4000` | API server port |
+| `DATABASE_URL` | Yes | - | PostgreSQL connection string |
+| `POSTGRES_DB` | No | `smart_acr` | Database name (Docker) |
+| `POSTGRES_USER` | No | `postgres` | Database user (Docker) |
+| `POSTGRES_PASSWORD` | No | `postgres` | Database password (Docker) |
+| `JWT_ACCESS_SECRET` | Yes | - | Access token signing secret |
+| `JWT_REFRESH_SECRET` | Yes | - | Refresh token signing secret |
+| `ACCESS_TOKEN_TTL` | No | `15m` | Access token lifetime |
+| `REFRESH_TOKEN_TTL_DAYS` | No | `7` | Refresh token lifetime in days |
+| `WEB_ORIGIN` | Yes | - | Frontend origin for CORS |
+| `STORAGE_PATH` | Yes | `storage` | Local file storage directory |
+| `FORGOT_PASSWORD_ENABLED` | No | `false` | Enable forgot-password flow |
+| `FORGOT_PASSWORD_TOKEN_TTL_MINUTES` | No | `30` | Reset token expiry |
+
+### Frontend (`frontend/.env`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | Yes | Backend API base URL (`http://localhost:4000/api/v1` for dev, `/api/v1` for reverse proxy) |
+
+---
+
+## Testing Strategy
+
+### Test Suite
+
+| Category | Framework | Location | Command |
+|----------|-----------|----------|---------|
+| Backend unit tests | Jest + ts-jest | `backend/src/**/*.spec.ts` | `pnpm --filter @smart-acr/backend test` |
+| Frontend component tests | Jest | `frontend/src/**/*.spec.tsx` | `pnpm --filter @smart-acr/frontend test` |
+| Type checking | TypeScript | All packages | `pnpm -r typecheck` |
+| Build verification | Next.js / NestJS | All packages | `pnpm build` |
+
+### Test Coverage Areas
+
+| Area | Tests |
+|------|-------|
+| Authentication | `auth.service.spec.ts` - Login, sessions, token management |
+| Password reset | `auth.password-reset.spec.ts` - Reset flow, token validation |
+| ACR lifecycle | `acr.service.spec.ts` - Creation, updates, queries |
+| Form validation | `acr-form-validation.spec.ts` - Template-specific validation rules |
+| Workflow transitions | `workflow.service.spec.ts` - State machine, valid/invalid transitions |
+| Authorization | `security.utils.spec.ts` - Role checks, scope filtering, access control |
+| File uploads | `upload.constants.spec.ts` - MIME validation, size limits |
+| Form components | `form-templates.spec.tsx` - Frontend form rendering |
+
+### Pre-Release Validation
+
+```bash
+# Run all quality gates
+pnpm -r typecheck              # Type safety
+pnpm --filter @smart-acr/backend test   # Backend tests
+pnpm --filter @smart-acr/frontend test  # Frontend tests
+pnpm build                     # Production build
+```
+
+### Recommended Additional Testing
+
+- **Playwright E2E:** Full workflow automation (login -> initiate ACR -> route through all stages -> archive)
+- **Role-based access:** Verify each role can only access authorized endpoints and UI areas
+- **Workflow edge cases:** Return cycles, concurrent access, state transition validation
+- **Security:** Authentication bypass attempts, authorization escalation, input injection
+
+---
+
+## Deployment Architecture
+
+### On-Premises Deployment (Primary)
+
+```mermaid
+flowchart TB
+    subgraph FIA Internal Network
+        subgraph Reverse Proxy
+            Nginx["Nginx\n(TLS termination, routing)"]
+        end
+
+        subgraph Application Servers
+            FE["Frontend Container\n(Next.js standalone)"]
+            BE["Backend Container\n(NestJS)"]
+        end
+
+        subgraph Data Tier
+            PG[(PostgreSQL 16)]
+            FS[File Storage Volume]
+        end
+
+        subgraph Monitoring
+            Prometheus["Prometheus"]
+            Grafana["Grafana"]
+            Loki["Loki + Promtail"]
+        end
+    end
+
+    Users[FIA Users via VPN/LAN] --> Nginx
+    Nginx -->|"/ (frontend)"| FE
+    Nginx -->|"/api/* (backend)"| BE
+    BE --> PG
+    BE --> FS
+    BE --> Prometheus
+    Loki --> Grafana
+    Prometheus --> Grafana
+```
+
+### Docker Compose Stack
+
+**Development:** `infra/docker/docker-compose.yml` - PostgreSQL, Redis, MinIO, backend, frontend
+
+**Production:** `infra/docker/docker-compose.onprem.yml` - Full stack with Nginx reverse proxy, monitoring
+
+**Monitoring:** `infra/docker/docker-compose.monitoring.yml` - Prometheus, Grafana, Loki, Promtail
+
+### Deployment Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `infra/scripts/deploy-onprem.sh` | Deploy or update the on-premises stack |
+| `infra/scripts/rollback-onprem.sh` | Rollback to previous version |
+| `infra/scripts/backup-onprem.sh` | PostgreSQL backup |
+| `infra/scripts/restore-onprem.sh` | Restore from backup |
+| `infra/scripts/post-deploy-smoke.sh` | Health check verification |
+
+### Container Images
+
+Both backend and frontend use multi-stage Docker builds on Node 22 bookworm-slim with a non-root user (`smartacr`, UID 1001). Health checks are built into the container definitions.
+
+---
+
+## CI/CD and Release Readiness
+
+### Quality Gates (Pre-Merge)
+
+```bash
+pnpm lint                      # Linting
+pnpm -r typecheck              # Type checking
+pnpm --filter @smart-acr/backend test   # Backend tests
+pnpm --filter @smart-acr/frontend test  # Frontend tests
+pnpm build                     # Build verification
+```
+
+### Release Flow
+
+1. **Feature branch** -> develop on branch, run all quality gates
+2. **Migration check** -> `pnpm db:migrate` if schema changed
+3. **Build** -> `pnpm build` for both packages
+4. **Deploy** -> `pnpm deploy:onprem` or manual Docker Compose
+5. **Smoke test** -> `infra/scripts/post-deploy-smoke.sh`
+6. **Rollback** -> `pnpm rollback:onprem` if issues detected
+
+### Migration Strategy
+
+- Prisma migrations live in `backend/prisma/migrations/`
+- `pnpm db:migrate` creates new migration files
+- `prisma migrate deploy` applies pending migrations in production
+- Always test migrations against a staging database before production
+
+---
+
+## Production Readiness
+
+### Completed
+
+- Full-stack role-based workflow with 6 official form families
+- Admin-driven user provisioning (no seed dependency in production)
+- Cookie-based JWT authentication with session management
+- Rate limiting on authentication and password endpoints
+- Helmet security headers
+- Global input validation with whitelist enforcement
+- Comprehensive audit logging
+- Archive snapshots with hash verification
+- File upload MIME validation and access control
+- On-premises Docker deployment with Nginx reverse proxy
+- Monitoring stack (Prometheus, Grafana, Loki)
+- Database backup and restore scripts
+- Deployment and rollback automation
+
+### Changes from Prototype
+
+| Area | Before | Now |
+|------|--------|-----|
+| User creation | Seed-only | Admin UI provisioning with lifecycle management |
+| Form families | 4 templates | 6 templates covering BPS 1-18 |
+| Workflow states | Simplified | Full state machine with Secret Branch review/verification |
+| Security | Basic guards | Rate limiting, Helmet, CORS, scope-based filtering |
+| Deployment | Manual | Automated Docker with monitoring and rollback |
+| Testing | Minimal | Unit tests across auth, workflow, validation, security |
+
+---
 
 ## Repository Structure
 
 ```text
 smart-acr/
-  backend/
-    prisma/
-    src/
-      @types/
-      common/
-      config/
-      helpers/
-      modules/
-  frontend/
-    public/
-    src/
-      @types/
-      api/
-      app/
-      components/
-      templates/
-      utils/
-  docs/
-    architecture/
-    forms/
-    testing/
-  infra/
-    docker/
-  scripts/
-  package.json
-  pnpm-workspace.yaml
-  README.md
+├── backend/
+│   ├── prisma/
+│   │   ├── schema.prisma          # Database schema
+│   │   ├── migrations/            # Migration history
+│   │   └── seed.ts                # Development seed data
+│   └── src/
+│       ├── common/                # Shared constants, middleware, catalog
+│       ├── config/                # Configuration module
+│       ├── helpers/               # Security utils, view mappers
+│       ├── modules/               # NestJS feature modules (18 modules)
+│       ├── app.module.ts          # Root module
+│       └── main.ts                # Application bootstrap
+├── frontend/
+│   └── src/
+│       ├── api/                   # API client layer
+│       ├── app/                   # Next.js App Router pages
+│       │   ├── (auth)/            # Login, password reset
+│       │   └── (portal)/          # Authenticated portal pages
+│       ├── components/            # UI components
+│       │   ├── forms/             # 6 template form components
+│       │   ├── dashboard/         # Dashboard widgets
+│       │   ├── users/             # User management UI
+│       │   └── ui/                # Shared UI primitives
+│       ├── providers/             # App and shell providers
+│       ├── templates/             # Template definitions
+│       └── utils/                 # Utility functions
+├── docs/
+│   ├── architecture/              # System architecture docs
+│   ├── deployment/                # Deployment guides and checklists
+│   ├── forms/                     # Official form references
+│   └── testing/                   # Validation reports
+├── infra/
+│   ├── docker/                    # Docker Compose, Dockerfiles, Nginx
+│   │   ├── monitoring/            # Prometheus, Grafana, Loki config
+│   │   └── nginx/                 # Reverse proxy configuration
+│   └── scripts/                   # Deploy, rollback, backup scripts
+├── scripts/                       # Utility scripts
+├── package.json                   # Workspace root
+├── pnpm-workspace.yaml            # pnpm workspace config
+└── tsconfig.base.json             # Shared TypeScript config
 ```
 
-## Application Modules
+---
 
-### Backend modules
+## Known Limitations and Future Enhancements
 
-Backend lives in [backend](backend/). Major modules:
-- `auth`
-- `acr`
-- `workflow`
-- `dashboard`
-- `employees`
-- `organization`
-- `templates`
-- `archive`
-- `notifications`
-- `audit`
-- `analytics`
-- `settings`
-- `users`
-- `files`
-- `health`
+### Current Limitations
 
-### Frontend areas
+- **Email/SMS delivery** for forgot-password is not integrated (structure exists, delivery is a deployment concern)
+- **Server-side PDF export** may require Chromium availability in the deployment environment; client-side fallback is available
+- **Directory integration** (LDAP/Active Directory) is not yet implemented
+- **Real-time notifications** use polling; WebSocket upgrade is planned
 
-Frontend lives in [frontend](frontend/). Major pages and portal areas:
-- login
-- role verification / sign-in challenge
-- dashboard
-- queue
-- search
-- archive
-- notifications
-- audit logs
-- analytics
-- organization
-- settings
-- user management
-- ACR initiation
-- ACR detail / workflow review
-- printable ACR view
+### Future Enhancements
 
-## Data Model
+- Playwright E2E test suite for full workflow automation
+- LDAP/Active Directory integration for user provisioning
+- Email/SMS notification delivery
+- Adverse remarks and representation window workflow
+- Enhanced analytics with exportable reports
+- Mobile-responsive improvements
+- Cloud deployment path (Azure/AWS)
+- Formalize department/branch as master tables
 
-The Prisma schema in [backend/prisma/schema.prisma](backend/prisma/schema.prisma) models:
-
-- `Wing`
-- `Zone`
-- `Office`
-- `User`
-- `UserRoleAssignment`
-- `Session`
-- `AuthChallenge`
-- `Employee`
-- `TemplateVersion`
-- `AcrRecord`
-- `AcrTimelineEntry`
-- `Notification`
-- `AuditLog`
-- `PasswordResetToken`
-- `FileAsset`
-- `ArchiveSnapshot`
-- `AdminSetting`
-
-### Key domain relationships
-
-```mermaid
-erDiagram
-    User ||--o{ UserRoleAssignment : has
-    Wing ||--o{ Zone : contains
-    Zone ||--o{ Office : contains
-    User ||--o{ Session : owns
-    User ||--o{ AcrRecord : initiates
-    User ||--o{ AcrRecord : reports_on
-    User ||--o{ AcrRecord : countersigns
-    Employee ||--o{ AcrRecord : receives
-    TemplateVersion ||--o{ AcrRecord : renders
-    AcrRecord ||--o{ AcrTimelineEntry : has
-    AcrRecord ||--o{ Notification : triggers
-    AcrRecord ||--o{ AuditLog : generates
-    AcrRecord ||--|| ArchiveSnapshot : archives
-```
-
-### User-management fields now supported
-
-The `User` model includes the lifecycle and provisioning fields required for controlled internal onboarding:
-- `id`
-- `displayName`
-- `username`
-- `email`
-- `badgeNo`
-- `passwordHash`
-- `departmentName`
-- `wingId`
-- `zoneId`
-- `officeId`
-- `mustChangePassword`
-- `lastLoginAt`
-- `isActive`
-- `createdById`
-- `updatedById`
-- `createdAt`
-- `updatedAt`
-
-## Security Model
-
-This is a deny-by-default internal platform.
-
-Implemented security principles:
-- no public privileged self-signup
-- server-side role enforcement
-- session cookies for authenticated requests
-- record visibility based on active responsibility plus historical legitimacy
-- read-only restrictions for oversight roles
-- audit logging for sensitive operations
-- forced password update option for newly provisioned users
-- reset-token flow structure for future production delivery integration
-
-### Access control model
-
-- `SUPER_ADMIN` and `IT_OPS` manage users
-- Clerk cannot manage users
-- Reporting and Countersigning Officers cannot manage users
-- DG remains read-only
-- Secret Branch handles archival operations but is not a default user-admin role
-
-## Admin and User Management
-
-User management is now implemented as the real long-term provisioning path, not just a seed-only development helper.
-
-### What admins can do
-
-From the `User Management` screen, admin roles can:
-- create a new user
-- edit user details
-- assign one or more roles
-- assign wing / zone / office scope
-- assign department / branch text
-- activate or deactivate an account
-- reset passwords
-- require password change at next sign-in
-- review recent audit activity linked to a user
-
-### How to open the User Management panel
-
-The admin panel route is:
-
-- `/user-management`
-
-Important:
-- this route is protected
-- only `SUPER_ADMIN` and `IT_OPS` can access it
-- if you are not logged in, the app will redirect you to `/login`
-- if you are logged in with a non-admin role such as `CLERK`, `REPORTING_OFFICER`, `COUNTERSIGNING_OFFICER`, `SECRET_BRANCH`, or `DG`, the app will not allow access to `/user-management`
-
-Recommended way to navigate:
-
-1. Open `http://localhost:3000/login`
-2. Sign in with an admin-capable account such as:
-   - `it.ops`
-   - `![1775403300138](image/README/1775403300138.png)`
-3. Use the shared development password:
-   - `ChangeMe@123`
-4. After login, open:
-   - `http://localhost:3000/user-management`
-5. Or use the left sidebar:
-   - `Administration -> User Management`
-
-If you are redirected back to login, check these items:
-
-1. Confirm the backend is running on `http://localhost:4000`
-2. Confirm the frontend is running on `http://localhost:3000`
-3. Confirm you signed in with `SUPER_ADMIN` or `IT_OPS`, not a non-admin role
-4. Confirm your browser accepted the auth cookies
-5. If needed, sign out and sign in again, then open `/user-management`
-
-If you want to verify your admin access quickly, use the seeded admin account:
-
-| Name | Role | Login |
-|---|---|---|
-| Hamza Qureshi | `SUPER_ADMIN` and `IT_OPS` | `it.ops` or `it.ops@fia.gov.pk` |
-
-### Admin-driven provisioning flow
-
-```mermaid
-sequenceDiagram
-    participant Admin as Super Admin / IT Ops
-    participant UI as User Management UI
-    participant API as Backend Users API
-    participant DB as Database
-
-    Admin->>UI: Open User Management
-    Admin->>UI: Create User
-    UI->>API: POST /users
-    API->>DB: Save user + roles + scope
-    API->>DB: Write audit entry
-    API-->>UI: Managed user payload
-    UI-->>Admin: User created successfully
-```
-
-### How to create a new profile
-
-1. Sign in as `SUPER_ADMIN` or `IT_OPS`
-2. Open `/user-management`
-3. Click `Create User`
-4. Fill:
-   - full name
-   - badge number
-   - username
-   - email
-   - mobile
-   - department / branch
-   - roles
-   - wing / zone / office
-   - temporary password
-5. Choose:
-   - `Account starts as active`
-   - `Force password change on first login`
-6. Save the user
-7. Provide the internal credentials to the new account holder
-
-### User management APIs
-
-- `GET /users`
-- `GET /users/options`
-- `GET /users/:id`
-- `POST /users`
-- `PATCH /users/:id`
-- `POST /users/:id/reset-password`
-- `POST /users/:id/deactivate`
-- `POST /users/:id/reactivate`
-
-### UI implementation
-
-Main UI files:
-- [frontend/src/app/(portal)/user-management/page.tsx](frontend/src/app/(portal)/user-management/page.tsx)
-- [frontend/src/components/users/UserManagementPage.tsx](frontend/src/components/users/UserManagementPage.tsx)
-
-## Authentication and Password Lifecycle
-
-### Supported auth flows
-
-- direct login
-- login challenge / verification flow
-- logout
-- session refresh
-- role switching
-- self password change
-- admin password reset
-- forgot-password request / token reset structure
-
-### Password lifecycle
-
-Admin reset flow:
-1. admin opens a user
-2. admin sets a temporary password
-3. admin can force password change
-4. user signs in
-5. user is redirected to security settings if `mustChangePassword=true`
-
-Self-service password change:
-1. user signs in
-2. opens settings security tab
-3. provides current password and new password
-4. password is updated
-5. force-change requirement is cleared
-
-Forgot-password endpoints:
-- `POST /auth/forgot-password/request`
-- `POST /auth/forgot-password/reset`
-
-Important note:
-- the structure is implemented safely
-- actual email/SMS delivery integration is still a deployment concern
-
-## Notifications, Audit, and Archive
-
-### Notifications
-
-Workflow notifications are routed to the correct next actor:
-- Clerk to Reporting Officer
-- Reporting Officer to Countersigning Officer
-- Countersigning Officer to Secret Branch
-- return notifications back to Clerk
-
-### Audit logs
-
-The audit screen is driven by real backend data and supports:
-- action
-- actor
-- actor role
-- record reference
-- module / type
-- timestamp
-- IP address
-- filtering and pagination
-
-### Archive
-
-Final records are preserved through archive snapshots for Secret Branch and authorized read-only access.
-
-## PDF and Document Handling
-
-The system includes:
-- printable official form rendering
-- PDF export path
-- archive snapshot tracking
-- signature and stamp asset support
-
-Current implementation note:
-- a server-side PDF exporter exists
-- a client fallback was added for environments where local Chromium launch is restricted
-
-In a normal unrestricted deployment environment, the expected behavior is:
-- export current form data
-- preserve the official form layout
-- include saved signatures / stamps where available
-
-## Local Development Setup
-
-### Prerequisites
-
-- Node.js 20+
-- pnpm 10+
-- PostgreSQL
-- optional Docker for local infra orchestration
-
-### Install dependencies
-
-```bash
-pnpm install
-```
-
-### Backend setup
-
-```bash
-cd backend
-pnpm prisma:generate
-pnpm prisma:push
-pnpm prisma:seed
-pnpm start:dev
-```
-
-### Frontend setup
-
-```bash
-cd frontend
-pnpm dev
-```
-
-### Run both from the repo root
-
-```bash
-pnpm dev
-```
-
-### Root commands
-
-```bash
-pnpm dev
-pnpm build
-pnpm test
-pnpm typecheck
-pnpm db:generate
-pnpm db:push
-pnpm db:migrate
-pnpm seed
-pnpm docker:up
-pnpm docker:down
-```
-
-## Environment Variables
-
-### Root
-
-[.env.example](.env.example)
-
-```env
-PNPM_HOME=.pnpm
-```
-
-### Backend
-
-[backend/.env.example](backend/.env.example)
-
-```env
-NODE_ENV=development
-PORT=4000
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/smart_acr?schema=public
-JWT_ACCESS_SECRET=replace-with-a-long-access-secret
-JWT_REFRESH_SECRET=replace-with-a-long-refresh-secret
-ACCESS_TOKEN_TTL=15m
-REFRESH_TOKEN_TTL_DAYS=7
-WEB_ORIGIN=http://localhost:3000
-STORAGE_PATH=storage
-```
-
-### Frontend
-
-[frontend/.env.example](frontend/.env.example)
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
-```
-
-## Seeded Accounts for Development
-
-Seed data remains useful for local testing and demos, but it is no longer the only supported user creation path.
-
-### Seed commands
-
-```bash
-pnpm seed
-```
-
-or:
-
-```bash
-cd backend
-pnpm prisma:seed
-```
-
-### Shared development password
-
-`ChangeMe@123`
-
-### Seeded workflow accounts
-
-| Name | Role | Email / Username | Purpose |
-|---|---|---|---|
-| Zahid Ullah | Clerk | `zahid.ullah@fia.gov.pk` | Clerk initiation flow |
-| Muhammad Sarmad | Reporting Officer | `muhammad.sarmad@fia.gov.pk` | Reporting review |
-| Afzal Khan SSP | Countersigning Officer | `afzal.khan@fia.gov.pk` | Countersigning review |
-| Nazia Ambreen | Secret Branch | `nazia.ambreen@fia.gov.pk` | Archive / final receipt |
-| Dr Anwar Saleem | DG | `dr.anwar.saleem@fia.gov.pk` | Executive read-only access |
-| Hamza Qureshi | Super Admin / IT Ops | `it.ops@fia.gov.pk` and `it.ops` | Admin provisioning and technical operations |
-
-### Internal onboarding rule
-
-- privileged roles are not self-registered
-- real user creation is handled through admin provisioning
-- seeded users are bootstrap accounts for development and controlled setup
-
-## Testing and Validation
-
-### Current quality gates
-
-The repository currently supports:
-- backend Jest tests
-- frontend component/form assertions
-- workspace typecheck
-- frontend build
-- backend build
-- API-driven live validation against real seeded data
-
-### Core commands
-
-```bash
-pnpm --filter @smart-acr/backend test
-pnpm --filter @smart-acr/frontend test
-pnpm -r typecheck
-pnpm --filter @smart-acr/frontend build
-pnpm --filter @smart-acr/backend build
-```
-
-### Latest validation report
-
-See:
-- [docs/testing/system-validation-2026-04-05.md](docs/testing/system-validation-2026-04-05.md)
-
-That report includes:
-- complete scenario matrix
-- pass / fail / blocked summary
-- defects found and fixed
-- live API revalidation notes
-
-### Validation coverage already documented
-
-The current test report covers:
-- auth
-- RBAC
-- employee search
-- full ACR workflow
-- returned flow
-- notifications
-- audit logs
-- admin / user management
-- password lifecycle
-- builds / typechecks
-
-## Production Readiness Review
-
-### Completed and in place
-
-- full-stack role-based workflow application
-- real backend-driven ACR lifecycle
-- multiple official FIA template families
-- historical visibility for acted-on records
-- admin-driven internal user provisioning
-- audit logging for sensitive operations
-- archive and final-record handling
-- notification routing
-- dashboard / queue / search / archive experiences
-- security-focused deny-by-default admin access
-
-### Production-oriented strengths
-
-- clear separation of frontend and backend concerns
-- Prisma-backed relational model
-- controller/service/helper structure on the backend
-- App Router portal architecture on the frontend
-- explicit role and workflow rules
-- non-public privileged onboarding
-- account lifecycle fields and admin change tracking
-
-### Recommended production hardening
-
-- connect forgot-password to real email/SMS delivery
-- add stronger password policy if FIA policy requires it
-- add dedicated CI integration tests for admin lifecycle and notification flows
-- add stable browser-based end-to-end automation for the full ACR chain
-- validate server-side PDF export in the target deployment environment
-- move file storage to a managed object store where required
-- formalize department/branch as a master table if governance needs expand
-
-## Known Constraints and Follow-Up
-
-Current follow-up items:
-- server-side PDF generation can be environment-sensitive where local Chromium launch is restricted
-- browser-level end-to-end coverage should be expanded further in CI or staging
-- directory integration such as LDAP / Active Directory is still an optional future adapter
-
-These are follow-up items, not blockers for the implemented admin/user-management foundation.
+---
 
 ## Additional Documentation
 
-- [Architecture Overview](docs/architecture/overview.md)
-- [Reuse and Migration Notes](docs/architecture/reuse-and-migration.md)
-- [Workflow Rules](docs/architecture/workflow.md)
-- [Testing Validation Report](docs/testing/system-validation-2026-04-05.md)
-- [Official Form References](docs/forms/)
-- [Project Proposal](docs/FIA_ACR_Project_Proposal_Revised_April_2026.pdf)
-- [Software Requirements Specification](docs/FIA_ACR_SRS_Revised_April_2026.pdf)
+| Document | Path |
+|----------|------|
+| Architecture Overview | [docs/architecture/overview.md](docs/architecture/overview.md) |
+| Workflow Rules | [docs/architecture/workflow.md](docs/architecture/workflow.md) |
+| Reuse and Migration Notes | [docs/architecture/reuse-and-migration.md](docs/architecture/reuse-and-migration.md) |
+| Deployment Strategy | [docs/deployment/FIA-Smart-ACR-Deployment-Strategy.md](docs/deployment/FIA-Smart-ACR-Deployment-Strategy.md) |
+| On-Prem Operations | [docs/deployment/OnPrem-Operations.md](docs/deployment/OnPrem-Operations.md) |
+| Release Checklist | [docs/deployment/Release-Checklist.md](docs/deployment/Release-Checklist.md) |
+| System Validation Report | [docs/testing/system-validation-2026-04-05.md](docs/testing/system-validation-2026-04-05.md) |
+| Official Form References | [docs/forms/](docs/forms/) |
+| Project Proposal | [docs/FIA_ACR_Project_Proposal_Revised_April_2026.pdf](docs/FIA_ACR_Project_Proposal_Revised_April_2026.pdf) |
+| Software Requirements Specification | [docs/FIA_ACR_SRS_Revised_April_2026.pdf](docs/FIA_ACR_SRS_Revised_April_2026.pdf) |
 
-## Maintainer Note
+---
 
-If you are onboarding this project for internal deployment, the recommended reading order is:
+## Engineering Notes
 
-1. this root README
-2. [docs/architecture/workflow.md](docs/architecture/workflow.md)
-3. [docs/testing/system-validation-2026-04-05.md](docs/testing/system-validation-2026-04-05.md)
-4. [backend/prisma/schema.prisma](backend/prisma/schema.prisma)
-5. [frontend/src/components/users/UserManagementPage.tsx](frontend/src/components/users/UserManagementPage.tsx)
-6. [backend/src/modules/users/users.service.ts](backend/src/modules/users/users.service.ts)
+### Adding Features
+
+1. Create a feature branch from `main`
+2. Add Prisma schema changes -> run `pnpm db:migrate`
+3. Implement backend module (controller, service, DTOs)
+4. Add corresponding frontend pages/components
+5. Write tests covering the new functionality
+6. Run all quality gates: `pnpm typecheck && pnpm test && pnpm build`
+7. Submit PR with clear description of changes
+
+### Business Rule Alignment
+
+When modifying workflow logic or form validation:
+- Review `backend/src/modules/workflow/workflow.service.ts` for state transitions
+- Review `backend/src/modules/acr/acr-form-validation.ts` for form rules
+- Review `backend/src/common/template-catalog.ts` for template requirements
+- Review `backend/src/helpers/security.utils.ts` for authorization rules
+- Ensure changes are reflected in both backend validation and frontend UI
+
+### Commit Convention
+
+```
+<type>: <description>
+
+Types: feat, fix, refactor, docs, test, chore, perf, ci
+```

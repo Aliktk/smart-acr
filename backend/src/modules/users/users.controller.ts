@@ -13,7 +13,7 @@ import { AdminResetPasswordDto } from "./dto/admin-reset-password.dto";
 
 @Controller("users")
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.SUPER_ADMIN, UserRole.IT_OPS)
+@Roles(UserRole.SUPER_ADMIN, UserRole.SECRET_BRANCH)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

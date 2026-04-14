@@ -6,20 +6,27 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Archive,
+  ArrowRight,
   BarChart3,
   ClipboardCheck,
   Clock3,
   FileArchive,
   Filter,
   Gauge,
+  ChevronDown,
   Landmark,
   Layers3,
   RefreshCw,
   ShieldAlert,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { getDashboardAnalytics } from "@/api/client";
 import { PortalPageHeader, PortalSurface, EmptyState, SegmentedTabs } from "@/components/portal/PortalPrimitives";
 import { OverdueBadge, PriorityBadge, StatCard, StatusChip } from "@/components/ui";
+import { InsightsPanel } from "./InsightsPanel";
+import { WorkflowPipeline } from "./WorkflowPipeline";
+import { StatusPieChart, TrendAreaChart, PerformanceBarChart, TurnaroundLollipop, HeatmapTable } from "./charts";
 import type {
   AcrSummary,
   DashboardAnalyticsResponse,
@@ -31,6 +38,7 @@ import type {
   DashboardTone,
   DashboardTrendCard,
   DashboardTrendPoint,
+  OrgScopeTrack,
   UserSession,
 } from "@/types/contracts";
 import { getCurrentOwnerLabel, getCurrentStageLabel } from "@/utils/acr";
@@ -41,7 +49,9 @@ type LeadershipDashboardProps = {
 
 type DashboardFilterState = {
   datePreset: DashboardDatePreset;
+  scopeTrack: OrgScopeTrack | "";
   wingId: string;
+  regionId: string;
   zoneId: string;
   officeId: string;
   status: string;
@@ -88,12 +98,14 @@ function formatNumber(value: string | number) {
   return new Intl.NumberFormat("en-PK").format(value);
 }
 
-function buildInitialFilters(session: UserSession): DashboardFilterState {
+function buildInitialFilters(_session: UserSession): DashboardFilterState {
   return {
-    datePreset: "180d",
-    wingId: session.scope.wingId ?? "",
-    zoneId: session.scope.zoneId ?? "",
-    officeId: session.scope.officeId ?? "",
+    datePreset: "all",
+    scopeTrack: "",
+    wingId: "",
+    regionId: "",
+    zoneId: "",
+    officeId: "",
     status: "",
     templateFamily: "",
   };
@@ -132,6 +144,47 @@ function chartLegendColor(color: DashboardTone | string) {
   return color;
 }
 
+function InlineFilter({ value, options, onChange, allLabel = "All" }: {
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+  allLabel?: string;
+}) {
+  const isActive = Boolean(value);
+
+  return (
+    <div className="relative shrink-0">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`appearance-none cursor-pointer whitespace-nowrap rounded-full border py-[5px] pl-2.5 pr-6 text-xs font-medium outline-none transition-all ${
+          isActive
+            ? "border-[var(--fia-cyan)] bg-[var(--fia-cyan-bg,rgba(0,149,217,0.08))] text-[var(--fia-cyan)]"
+            : "border-[var(--fia-gray-200)] bg-transparent text-[var(--fia-gray-600)] hover:border-[var(--fia-gray-300)] hover:bg-[var(--fia-gray-50)]"
+        }`}
+      >
+        <option value="">{allLabel}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </select>
+      <ChevronDown size={10} className={`pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 ${isActive ? "text-[var(--fia-cyan)]" : "text-[var(--fia-gray-400)]"}`} />
+    </div>
+  );
+}
+
+function ActiveChip({ label, value, onClear }: { label: string; value: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--fia-cyan)] pl-2 pr-1 py-0.5 text-[10px] font-semibold text-white">
+      <span className="opacity-70">{label}:</span>
+      <span className="max-w-[120px] truncate">{value}</span>
+      <button type="button" onClick={onClear} className="rounded-full p-0.5 hover:bg-white/20 transition" aria-label={`Clear ${label}`}>
+        <X size={9} />
+      </button>
+    </span>
+  );
+}
+
 function LeadershipFilters({
   filters,
   analytics,
@@ -146,100 +199,124 @@ function LeadershipFilters({
   pending: boolean;
 }) {
   const zones = useMemo(() => {
-    return filters.wingId
-      ? analytics.filterOptions.zones.filter((zone) => zone.wingId === filters.wingId)
+    return filters.regionId
+      ? analytics.filterOptions.zones.filter((zone) => zone.regionId === filters.regionId)
       : analytics.filterOptions.zones;
-  }, [analytics.filterOptions.zones, filters.wingId]);
+  }, [analytics.filterOptions.zones, filters.regionId]);
 
   const offices = useMemo(() => {
     return analytics.filterOptions.offices.filter((office) => {
-      if (filters.zoneId) {
-        return office.zoneId === filters.zoneId;
-      }
-      if (filters.wingId) {
-        return office.wingId === filters.wingId;
-      }
+      if (filters.scopeTrack && office.scopeTrack !== filters.scopeTrack) return false;
+      if (filters.zoneId) return office.zoneId === filters.zoneId;
+      if (filters.regionId) return office.regionId === filters.regionId;
+      if (filters.wingId) return office.wingId === filters.wingId;
       return true;
     });
-  }, [analytics.filterOptions.offices, filters.zoneId, filters.wingId]);
+  }, [analytics.filterOptions.offices, filters.regionId, filters.scopeTrack, filters.wingId, filters.zoneId]);
 
-  const selectClassName = "w-full rounded-[18px] border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-3.5 py-2.5 text-sm text-[var(--fia-gray-800)] outline-none transition focus:border-[var(--fia-cyan)] focus:bg-white focus:ring-4 focus:ring-[rgba(0,149,217,0.10)]";
+  const activeFilters: Array<{ key: keyof DashboardFilterState; label: string; value: string }> = [];
+  if (filters.scopeTrack) activeFilters.push({ key: "scopeTrack", label: "Track", value: analytics.filterOptions.scopeTracks.find((o) => o.value === filters.scopeTrack)?.label ?? filters.scopeTrack });
+  if (filters.wingId) activeFilters.push({ key: "wingId", label: "Wing", value: analytics.filterOptions.wings.find((o) => o.id === filters.wingId)?.label ?? "Selected" });
+  if (filters.regionId) activeFilters.push({ key: "regionId", label: "Region", value: analytics.filterOptions.regions.find((o) => o.id === filters.regionId)?.label ?? "Selected" });
+  if (filters.zoneId) activeFilters.push({ key: "zoneId", label: "Zone", value: zones.find((o) => o.id === filters.zoneId)?.label ?? "Selected" });
+  if (filters.officeId) activeFilters.push({ key: "officeId", label: "Office", value: offices.find((o) => o.id === filters.officeId)?.label ?? "Selected" });
+  if (filters.status) activeFilters.push({ key: "status", label: "Status", value: analytics.filterOptions.statuses.find((o) => o.value === filters.status)?.label ?? filters.status });
+  if (filters.templateFamily) activeFilters.push({ key: "templateFamily", label: "Template", value: analytics.filterOptions.templateFamilies.find((o) => o.value === filters.templateFamily)?.label ?? filters.templateFamily });
 
   return (
-    <PortalSurface
-      title="Dashboard filters"
-      subtitle={`Applied window: ${analytics.appliedFilters.dateLabel}`}
-      action={(
-        <button
-          type="button"
-          onClick={onReset}
-          className="inline-flex items-center gap-2 rounded-full border border-[var(--fia-gray-200)] px-3.5 py-2 text-sm font-semibold text-[var(--fia-gray-700)] transition hover:bg-[var(--fia-gray-50)]"
-        >
-          <RefreshCw size={14} className={pending ? "animate-spin" : ""} />
-          Reset filters
-        </button>
-      )}
-    >
-      <div className="grid gap-3 xl:grid-cols-[160px_repeat(5,minmax(0,1fr))]">
-        <label className="space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Date range</span>
-          <select value={filters.datePreset} onChange={(event) => onChange("datePreset", event.target.value)} className={selectClassName}>
-            {analytics.filterOptions.datePresets.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Wing</span>
-          <select value={filters.wingId} onChange={(event) => onChange("wingId", event.target.value)} className={selectClassName}>
-            <option value="">All wings</option>
-            {analytics.filterOptions.wings.map((option) => (
-              <option key={option.id} value={option.id}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Zone</span>
-          <select value={filters.zoneId} onChange={(event) => onChange("zoneId", event.target.value)} className={selectClassName}>
-            <option value="">All zones</option>
-            {zones.map((option) => (
-              <option key={option.id} value={option.id}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Office</span>
-          <select value={filters.officeId} onChange={(event) => onChange("officeId", event.target.value)} className={selectClassName}>
-            <option value="">All offices</option>
-            {offices.map((option) => (
-              <option key={option.id} value={option.id}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Status</span>
-          <select value={filters.status} onChange={(event) => onChange("status", event.target.value)} className={selectClassName}>
-            <option value="">All statuses</option>
-            {analytics.filterOptions.statuses.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Template</span>
-          <select value={filters.templateFamily} onChange={(event) => onChange("templateFamily", event.target.value)} className={selectClassName}>
-            <option value="">All templates</option>
-            {analytics.filterOptions.templateFamilies.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
+    <div className="rounded-2xl border border-[var(--fia-gray-200)] bg-[var(--card)] shadow-sm">
+      {/* Single-row scrollable filter bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto px-3 py-2 scrollbar-none" style={{ scrollbarWidth: "none" }}>
+        <div className="flex shrink-0 items-center gap-1 mr-0.5">
+          <SlidersHorizontal size={12} className="text-[var(--fia-gray-400)]" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--fia-gray-400)]">Filters</span>
+        </div>
+
+        <InlineFilter
+          value={filters.datePreset === "all" ? "" : filters.datePreset}
+          options={analytics.filterOptions.datePresets.filter((o) => o.value !== "all").map((o) => ({ value: o.value, label: o.label }))}
+          onChange={(value) => onChange("datePreset", value || "all")}
+          allLabel="All time"
+        />
+        <InlineFilter
+          value={filters.scopeTrack}
+          options={analytics.filterOptions.scopeTracks.map((o) => ({ value: o.value, label: o.label }))}
+          onChange={(value) => onChange("scopeTrack", value)}
+          allLabel="Track"
+        />
+        <InlineFilter
+          value={filters.wingId}
+          options={analytics.filterOptions.wings.map((o) => ({ value: o.id, label: o.label }))}
+          onChange={(value) => onChange("wingId", value)}
+          allLabel="Wing"
+        />
+        <InlineFilter
+          value={filters.regionId}
+          options={analytics.filterOptions.regions.map((o) => ({ value: o.id, label: o.label }))}
+          onChange={(value) => onChange("regionId", value)}
+          allLabel="Region"
+        />
+        <InlineFilter
+          value={filters.zoneId}
+          options={zones.map((o) => ({ value: o.id, label: o.label }))}
+          onChange={(value) => onChange("zoneId", value)}
+          allLabel="Zone"
+        />
+        <InlineFilter
+          value={filters.officeId}
+          options={offices.map((o) => ({ value: o.id, label: o.label }))}
+          onChange={(value) => onChange("officeId", value)}
+          allLabel="Office"
+        />
+        <InlineFilter
+          value={filters.status}
+          options={analytics.filterOptions.statuses.map((o) => ({ value: o.value, label: o.label }))}
+          onChange={(value) => onChange("status", value)}
+          allLabel="Status"
+        />
+        <InlineFilter
+          value={filters.templateFamily}
+          options={analytics.filterOptions.templateFamilies.map((o) => ({ value: o.value, label: o.label }))}
+          onChange={(value) => onChange("templateFamily", value)}
+          allLabel="Form"
+        />
+
+        {activeFilters.length > 0 ? (
+          <button
+            type="button"
+            onClick={onReset}
+            className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-[5px] text-[10px] font-semibold text-[var(--fia-gray-500)] transition hover:bg-[var(--fia-gray-100)] hover:text-[var(--fia-gray-700)]"
+          >
+            <RefreshCw size={9} className={pending ? "animate-spin" : ""} />
+            Clear
+          </button>
+        ) : null}
       </div>
-    </PortalSurface>
+
+      {/* Active chips — only appears when filters are applied */}
+      {activeFilters.length > 0 ? (
+        <div className="flex items-center gap-1.5 overflow-x-auto border-t border-[var(--fia-gray-200)] px-3 py-1.5 scrollbar-none" style={{ scrollbarWidth: "none" }}>
+          {activeFilters.map((chip) => (
+            <ActiveChip key={chip.key} label={chip.label} value={chip.value} onClear={() => onChange(chip.key, "")} />
+          ))}
+          <span className="ml-auto shrink-0 text-[10px] text-[var(--fia-gray-400)]">
+            {analytics.appliedFilters.dateLabel}
+          </span>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
-function LeadershipKpiGrid({ kpis }: { kpis: DashboardKpi[] }) {
+function LeadershipKpiGrid({ kpis, trendCard }: { kpis: DashboardKpi[]; trendCard?: DashboardTrendCard }) {
+  // Build per-kpi sparkline from trend points when available
+  function sparklineFor(key: string): number[] | undefined {
+    if (!trendCard || trendCard.points.length < 2) return undefined;
+    const seriesKey = trendCard.series.find((s) => s.key === key)?.key;
+    if (!seriesKey) return undefined;
+    return trendCard.points.map((p) => Number(p[seriesKey as keyof DashboardTrendPoint] ?? 0));
+  }
+
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {kpis.map((kpi) => {
@@ -252,6 +329,7 @@ function LeadershipKpiGrid({ kpis }: { kpis: DashboardKpi[] }) {
             subtitle={kpi.helper}
             icon={<Icon size={18} />}
             accent={metricTone(kpi.key)}
+            sparkline={sparklineFor(kpi.key)}
           />
         );
       })}
@@ -708,7 +786,16 @@ function LeadershipFocusTable({
   items: AcrSummary[];
   mode: DashboardAnalyticsResponse["mode"];
 }) {
-  if (!items.length) {
+  // Sort: overdue first, then priority, then rest
+  const sorted = [...items].sort((a, b) => {
+    if (a.isOverdue && !b.isOverdue) return -1;
+    if (!a.isOverdue && b.isOverdue) return 1;
+    if (a.isPriority && !b.isPriority) return -1;
+    if (!a.isPriority && b.isPriority) return 1;
+    return (b.overdueDays ?? 0) - (a.overdueDays ?? 0);
+  });
+
+  if (!sorted.length) {
     return (
       <PortalSurface title={title} subtitle={subtitle}>
         <EmptyState title="No records to highlight" description="The current filter combination does not surface any high-priority records." />
@@ -722,18 +809,18 @@ function LeadershipFocusTable({
         <table className="min-w-full text-sm">
           <thead className="border-b border-[var(--fia-gray-100)] bg-[var(--fia-gray-50)] text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
             <tr>
-              <th className="px-3.5 py-3">Record</th>
+              <th className="px-3.5 py-3">ACR No</th>
               <th className="px-3.5 py-3">Employee</th>
-              <th className="px-3.5 py-3">Current Stage</th>
+              <th className="px-3.5 py-3">Stage</th>
               <th className="px-3.5 py-3">Status</th>
-              <th className="px-3.5 py-3">Due Date</th>
-              <th className="px-3.5 py-3">Current Owner</th>
+              <th className="px-3.5 py-3">Days Overdue</th>
+              <th className="px-3.5 py-3">Owner</th>
               <th className="px-3.5 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className="border-b border-[var(--fia-gray-100)] last:border-b-0">
+            {sorted.map((item) => (
+              <tr key={item.id} className={`border-b border-[var(--fia-gray-100)] last:border-b-0 ${item.isOverdue ? "bg-[rgba(239,68,68,0.02)]" : ""}`}>
                 <td className="px-3.5 py-3.5">
                   <Link href={`/acr/${item.id}`} className="font-semibold text-[var(--fia-navy)] hover:text-[var(--fia-cyan)]">
                     {item.acrNo}
@@ -748,22 +835,28 @@ function LeadershipFocusTable({
                 </td>
                 <td className="px-3.5 py-3.5 text-[var(--fia-gray-700)]">{getCurrentStageLabel(item)}</td>
                 <td className="px-3.5 py-3.5">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     <StatusChip status={item.status} />
                     {item.isPriority ? <PriorityBadge priority /> : null}
-                    {item.isOverdue ? <OverdueBadge days={item.overdueDays} /> : null}
                   </div>
                 </td>
-                <td className={`px-3.5 py-3.5 ${item.isOverdue ? "font-semibold text-[var(--fia-danger)]" : "text-[var(--fia-gray-700)]"}`}>
-                  {item.dueDate}
+                <td className="px-3.5 py-3.5">
+                  {item.isOverdue ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--fia-danger-bg,rgba(239,68,68,0.1))] px-2.5 py-0.5 text-xs font-bold text-[var(--fia-danger)]">
+                      +{item.overdueDays ?? 0}d
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[var(--fia-gray-400)]">—</span>
+                  )}
                 </td>
-                <td className="px-3.5 py-3.5 text-[var(--fia-gray-700)]">{getCurrentOwnerLabel(item)}</td>
+                <td className="px-3.5 py-3.5 text-[var(--fia-gray-700)] text-xs">{getCurrentOwnerLabel(item)}</td>
                 <td className="px-3.5 py-3.5 text-right">
                   <Link
                     href={`/acr/${item.id}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-[var(--fia-cyan-100)] px-3.5 py-1.5 font-semibold text-[var(--fia-cyan)] transition-colors hover:bg-[#D7EFFB]"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--fia-cyan-100)] px-3.5 py-1.5 text-xs font-semibold text-[var(--fia-cyan)] transition-colors hover:bg-[#D7EFFB]"
                   >
-                    {mode === "secret-branch" ? "Open archive file" : "View brief"}
+                    {mode === "secret-branch" ? "Open file" : "View brief"}
+                    <ArrowRight size={11} />
                   </Link>
                 </td>
               </tr>
@@ -780,7 +873,7 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
   const [filters, setFilters] = useState<DashboardFilterState>(() => buildInitialFilters(session));
   const [trendView, setTrendView] = useState<"workload" | "archive">("workload");
   const [distributionView, setDistributionView] = useState<"status" | "template" | "exceptions">("status");
-  const [comparisonView, setComparisonView] = useState<"wing" | "zone" | "offices">("wing");
+  const [comparisonView, setComparisonView] = useState<"wing" | "region" | "zone" | "offices">("wing");
   const deferredFilters = useDeferredValue(filters);
 
   useEffect(() => {
@@ -791,7 +884,9 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
     queryKey: ["dashboard-analytics", session.activeRoleCode, deferredFilters],
     queryFn: () => getDashboardAnalytics({
       datePreset: deferredFilters.datePreset,
+      scopeTrack: deferredFilters.scopeTrack || undefined,
       wingId: deferredFilters.wingId || undefined,
+      regionId: deferredFilters.regionId || undefined,
       zoneId: deferredFilters.zoneId || undefined,
       officeId: deferredFilters.officeId || undefined,
       status: deferredFilters.status || undefined,
@@ -805,8 +900,14 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
   function updateFilter(key: keyof DashboardFilterState, value: string) {
     startTransition(() => {
       setFilters((current) => {
+        if (key === "scopeTrack") {
+          return { ...current, scopeTrack: value as OrgScopeTrack | "", wingId: "", regionId: "", zoneId: "", officeId: "" };
+        }
         if (key === "wingId") {
-          return { ...current, wingId: value, zoneId: "", officeId: "" };
+          return { ...current, wingId: value, officeId: "" };
+        }
+        if (key === "regionId") {
+          return { ...current, regionId: value, zoneId: "", officeId: "" };
         }
         if (key === "zoneId") {
           return { ...current, zoneId: value, officeId: "" };
@@ -842,6 +943,8 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
   const trendCard = analytics.trends[trendView];
   const comparisonEntries = comparisonView === "wing"
     ? analytics.performance.wing
+    : comparisonView === "region"
+      ? analytics.performance.region
     : comparisonView === "zone"
       ? analytics.performance.zone
       : analytics.performance.offices;
@@ -878,10 +981,28 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
         description={analytics.heading.description}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--fia-gray-200)] bg-white px-3.5 py-2 text-sm text-[var(--fia-gray-600)]">
-              <Filter size={15} />
-              {analytics.appliedFilters.dateLabel}
-            </span>
+            {/* Quick date preset tabs */}
+            <div className="flex items-center gap-0.5 rounded-full border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] p-0.5">
+              {[
+                { value: "all", label: "All time" },
+                { value: "ytd", label: "YTD" },
+                { value: "last90", label: "90d" },
+                { value: "last30", label: "30d" },
+              ].map((preset) => (
+                <button
+                  key={preset.value}
+                  type="button"
+                  onClick={() => updateFilter("datePreset", preset.value)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                    filters.datePreset === preset.value
+                      ? "bg-[var(--fia-navy)] text-white shadow-sm"
+                      : "text-[var(--fia-gray-600)] hover:bg-[var(--fia-gray-100)] hover:text-[var(--fia-gray-900)]"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
             <Link href="/archive" className="fia-btn-primary">
               <Archive size={16} />
               {analytics.mode === "secret-branch" ? "Open archive register" : "Review archive"}
@@ -898,7 +1019,74 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
         pending={isPending || analyticsQuery.isFetching}
       />
 
-      <LeadershipKpiGrid kpis={analytics.kpis} />
+      <LeadershipKpiGrid kpis={analytics.kpis} trendCard={analytics.trends.workload} />
+
+      {/* Pipeline + Insights row */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
+        <WorkflowPipeline
+          stages={(() => {
+            const kv = (key: string) => Number(analytics.kpis.find((k) => k.key === key)?.value ?? 0);
+            const sv = (match: string) => analytics.distributions.status.find((d) => d.label.includes(match))?.value ?? 0;
+            return [
+              { label: "Draft", count: kv("draft") || sv("Draft"), color: "#94A3B8" },
+              { label: "Admin Office", count: kv("adminForwarding") || sv("Admin"), color: "#8B5CF6" },
+              { label: "Reporting", count: kv("pendingRO") || sv("Reporting"), color: "#F59E0B" },
+              { label: "Countersigning", count: kv("pendingCSO") || sv("Countersigning"), color: "#3B82F6" },
+              { label: "Secret Branch", count: kv("pendingSB") || sv("Secret"), color: "#0EA5E9" },
+              { label: "Archived", count: kv("archived") || sv("Archived") || sv("Completed"), color: "#10B981" },
+            ];
+          })()}
+        />
+        <InsightsPanel kpis={analytics.kpis} mode={analytics.mode} />
+      </div>
+
+      {/* Charts Row: Area Trend + Pie + Lollipop */}
+      <div className="grid gap-4 xl:grid-cols-3">
+        <TrendAreaChart
+          title="ACR Activity Trend"
+          subtitle={trendCard.subtitle}
+          data={trendCard.points as unknown as Array<{ label: string; [key: string]: string | number | null | undefined }>}
+          series={trendCard.series.map((s) => ({ key: s.key, label: s.label, color: s.color }))}
+        />
+        <StatusPieChart
+          title="Status Distribution"
+          data={analytics.distributions.status.map((d) => ({ label: d.label, value: d.value }))}
+        />
+        <TurnaroundLollipop
+          title="Avg Turnaround by Stage"
+          data={analytics.performance.turnaroundByStage}
+        />
+      </div>
+
+      {/* Performance Bar Charts Row */}
+      <div className="grid gap-4 xl:grid-cols-2">
+        <PerformanceBarChart
+          title="Wing-wise Performance"
+          subtitle="Completed vs Pending vs Overdue by Wing"
+          data={analytics.performance.wing.map((w) => ({
+            label: w.label,
+            total: w.total,
+            completed: w.completed ?? 0,
+            pending: w.pending ?? 0,
+            overdue: w.overdue ?? 0,
+          }))}
+        />
+        <PerformanceBarChart
+          title="Zone-wise Performance"
+          subtitle="Stacked breakdown by Zone"
+          data={analytics.performance.zone.slice(0, 8).map((z) => ({
+            label: z.label,
+            total: z.total,
+            completed: z.completed ?? 0,
+            pending: z.pending ?? 0,
+            overdue: z.overdue ?? 0,
+          }))}
+          layout="horizontal"
+        />
+      </div>
+
+      {/* Heatmap */}
+      {analytics.heatmap ? <HeatmapTable heatmap={analytics.heatmap} /> : null}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]">
         <PortalSurface
@@ -960,7 +1148,13 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
 
       <div className={`grid gap-4 ${analytics.mode === "executive" ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]" : "xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]"}`}>
         <PortalSurface
-          title={comparisonView === "wing" ? `${analytics.mode === "secret-branch" ? "Wing contribution" : "Wing performance"}` : comparisonView === "zone" ? `${analytics.mode === "secret-branch" ? "Zone contribution" : "Zone performance"}` : analytics.mode === "secret-branch" ? "Top contributing units" : "Office backlog"}
+          title={comparisonView === "wing"
+            ? `${analytics.mode === "secret-branch" ? "Wing contribution" : "Wing performance"}`
+            : comparisonView === "region"
+              ? `${analytics.mode === "secret-branch" ? "Region contribution" : "Region performance"}`
+              : comparisonView === "zone"
+                ? `${analytics.mode === "secret-branch" ? "Zone contribution" : "Zone performance"}`
+                : analytics.mode === "secret-branch" ? "Top contributing units" : "Office backlog"}
           subtitle={comparisonView === "offices"
             ? analytics.mode === "secret-branch"
               ? "Offices contributing the highest final archive volume."
@@ -969,9 +1163,10 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
           action={(
             <SegmentedTabs
               value={comparisonView}
-              onChange={(next) => setComparisonView(next as "wing" | "zone" | "offices")}
+              onChange={(next) => setComparisonView(next as "wing" | "region" | "zone" | "offices")}
               tabs={[
                 { key: "wing", label: "Wing" },
+                { key: "region", label: "Region" },
                 { key: "zone", label: "Zone" },
                 { key: "offices", label: analytics.mode === "secret-branch" ? "Top units" : "Offices" },
               ]}
@@ -990,8 +1185,8 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
                   { key: "completed", label: "Completed", color: "green" },
                   { key: "overdue", label: "Overdue", color: "red" },
                 ]}
-            selectedId={comparisonView === "wing" ? filters.wingId : comparisonView === "zone" ? filters.zoneId : filters.officeId}
-            onSelect={(id) => updateFilter(comparisonView === "wing" ? "wingId" : comparisonView === "zone" ? "zoneId" : "officeId", id ?? "")}
+            selectedId={comparisonView === "wing" ? filters.wingId : comparisonView === "region" ? filters.regionId : comparisonView === "zone" ? filters.zoneId : filters.officeId}
+            onSelect={(id) => updateFilter(comparisonView === "wing" ? "wingId" : comparisonView === "region" ? "regionId" : comparisonView === "zone" ? "zoneId" : "officeId", id ?? "")}
             valueFormatter={(entry) => analytics.mode === "secret-branch"
               ? `${entry.archived ?? 0} archived · ${entry.anomalies ?? 0} pending receipt`
               : `${entry.completionRate ?? 0}% completion · ${entry.avgTurnaroundDays ?? 0}d turnaround`}

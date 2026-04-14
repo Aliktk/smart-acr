@@ -409,37 +409,33 @@ const FormC_Page4: React.FC = () => (
 
 const FormC_Page5: React.FC = () => (
   <FormPage pageNumber={5}>
-    <h2 className="font-bold text-sm mb-4">A. INSTRUCTIONS FOR MINISTRIES, DEPARTMENTS, ETC.</h2>
-    <div className="text-sm space-y-3 mb-8">
-      <p>1. The report will be initiated by the branch officer and countersigned by the next higher officer.</p>
-      <p>2. The reporting officer should apply his mind carefully to the assessment of the subordinate's character and working. The assessment should be objective and impartial.</p>
-      <p>3. If any adverse remarks are recorded, they should be communicated to the official concerned to give him an opportunity to improve.</p>
+    <h2 className="font-bold text-[11px] mb-2">A. INSTRUCTIONS FOR MINISTRIES, DEPARTMENTS, ETC.</h2>
+    <div className="text-[10px] space-y-1.5 text-justify mb-3">
+      <p><span className="mr-2 font-semibold">1.</span>The report will be initiated by the branch officer and countersigned by the next higher officer.</p>
+      <p><span className="mr-2 font-semibold">2.</span>The reporting officer should apply his mind carefully to the assessment of the subordinate's character and working. The assessment should be objective and impartial.</p>
+      <p><span className="mr-2 font-semibold">3.</span>If any adverse remarks are recorded, they should be communicated to the official concerned to give him an opportunity to improve.</p>
     </div>
 
-    <h2 className="font-bold text-sm mb-4">B. INSTRUCTIONS FOR THE OFFICERS RESPONSIBLE FOR THE CUSTODY OF CHARACTER ROLLS</h2>
-    <div className="text-sm space-y-3">
-      <p>1. The Character Roll is a highly confidential document and must be kept in safe custody.</p>
-      <p>2. When an official is transferred from one office to another, his Character Roll should be sent to his new office under sealed cover.</p>
+    <h2 className="font-bold text-[11px] mt-3 mb-2">B. INSTRUCTIONS FOR THE OFFICERS RESPONSIBLE FOR THE CUSTODY OF CHARACTER ROLLS</h2>
+    <div className="text-[10px] space-y-1.5 text-justify mb-3">
+      <p><span className="mr-2 font-semibold">1.</span>The Character Roll is a highly confidential document and must be kept in safe custody.</p>
+      <p><span className="mr-2 font-semibold">2.</span>When an official is transferred from one office to another, his Character Roll should be sent to his new office under sealed cover.</p>
     </div>
-  </FormPage>
-);
 
-const FormC_Page6: React.FC = () => (
-  <FormPage pageNumber={6}>
-    <h2 className="font-bold text-sm mb-4">C. INSTRUCTIONS FOR THE REPORTING OFFICER</h2>
-    <div className="text-sm space-y-3 mb-8">
+    <h2 className="font-bold text-[11px] mt-3 mb-2">C. INSTRUCTIONS FOR THE REPORTING OFFICER</h2>
+    <div className="text-[10px] space-y-1.5 text-justify mb-3">
       <p>(i) Ensure that the form is filled in duplicate.</p>
       <p>(ii) Complete the assessment in Part II carefully.</p>
       <p>(iii) The "Pen Picture" in Part IV should be a comprehensive assessment of the officer's strengths, weaknesses, and overall suitability.</p>
       <p>(iv) Sign and date the report before submitting it to the Countersigning Officer.</p>
     </div>
 
-    <h2 className="font-bold text-sm mb-4">D. INSTRUCTIONS FOR THE COUNTERSIGNING OFFICER</h2>
-    <div className="text-sm space-y-3">
-      <p>1. Review the assessment made by the Reporting Officer.</p>
-      <p>2. Add any additional remarks or observations in the space provided.</p>
-      <p>3. If you disagree with any assessment made by the Reporting Officer, state the reasons clearly.</p>
-      <p>4. Sign and date the report.</p>
+    <h2 className="font-bold text-[11px] mt-3 mb-2">D. INSTRUCTIONS FOR THE COUNTERSIGNING OFFICER</h2>
+    <div className="text-[10px] space-y-1.5 text-justify">
+      <p><span className="mr-2 font-semibold">1.</span>Review the assessment made by the Reporting Officer.</p>
+      <p><span className="mr-2 font-semibold">2.</span>Add any additional remarks or observations in the space provided.</p>
+      <p><span className="mr-2 font-semibold">3.</span>If you disagree with any assessment made by the Reporting Officer, state the reasons clearly.</p>
+      <p><span className="mr-2 font-semibold">4.</span>Sign and date the report.</p>
     </div>
   </FormPage>
 );
@@ -452,7 +448,6 @@ const FormC_Inspector: React.FC = () => {
       <FormC_Page3 />
       <FormC_Page4 />
       <FormC_Page5 />
-      <FormC_Page6 />
     </div>
   );
 };

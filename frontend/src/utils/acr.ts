@@ -8,13 +8,19 @@ export type DashboardMode =
   | "executive"
   | "employee";
 
-const closedStatuses = new Set<AcrStatus>(["Archived", "Completed", "Submitted to Secret Branch"]);
+const closedStatuses = new Set<AcrStatus>(["Archived", "Completed"]);
 const actionableStatuses = new Set<AcrStatus>([
   "Draft",
   "Returned",
+  "Returned to Clerk",
+  "Returned to Reporting Officer",
+  "Returned to Countersigning Officer",
   "In Review",
   "Pending Reporting Officer",
   "Pending Countersigning",
+  "Pending Countersigning Officer",
+  "Pending Secret Branch Review",
+  "Pending Secret Branch Verification",
   "Overdue",
 ]);
 
@@ -50,7 +56,12 @@ export function isDraftStatus(status: AcrStatus) {
 }
 
 export function isReturnedStatus(status: AcrStatus) {
-  return status === "Returned";
+  return (
+    status === "Returned" ||
+    status === "Returned to Clerk" ||
+    status === "Returned to Reporting Officer" ||
+    status === "Returned to Countersigning Officer"
+  );
 }
 
 export function isOverdueStatus(item: AcrSummary) {
@@ -84,11 +95,15 @@ function urgencyWeight(item: AcrSummary) {
   if (isReturnedStatus(item.status)) {
     return 3;
   }
-  if (item.status === "Pending Reporting Officer" || item.status === "Pending Countersigning" || item.status === "In Review") {
+  if (
+    item.status === "Pending Reporting Officer" ||
+    item.status === "Pending Countersigning" ||
+    item.status === "Pending Countersigning Officer" ||
+    item.status === "In Review" ||
+    item.status === "Pending Secret Branch Review" ||
+    item.status === "Pending Secret Branch Verification"
+  ) {
     return 2;
-  }
-  if (item.status === "Submitted to Secret Branch") {
-    return 1;
   }
   return 0;
 }
@@ -113,20 +128,36 @@ export function getCurrentStageLabel(item: AcrSummary) {
   if (item.workflowState === "Draft" || isDraftStatus(item.status)) {
     return "Clerk drafting";
   }
-  if (item.workflowState === "Returned" || isReturnedStatus(item.status)) {
+  if (item.workflowState === "Returned" || item.workflowState === "Returned to Clerk" || isReturnedStatus(item.status)) {
     return "Returned to clerk";
+  }
+  if (item.workflowState === "Returned to Reporting Officer") {
+    return "Returned to reporting officer";
+  }
+  if (item.workflowState === "Returned to Countersigning Officer") {
+    return "Returned to countersigning officer";
   }
   if (item.workflowState === "Pending Reporting" || item.status === "Pending Reporting Officer" || item.status === "In Review" || item.status === "Overdue") {
     return "Reporting review";
   }
-  if (item.workflowState === "Pending Countersigning" || item.status === "Pending Countersigning") {
+  if (
+    item.workflowState === "Pending Countersigning" ||
+    item.status === "Pending Countersigning" ||
+    item.status === "Pending Countersigning Officer"
+  ) {
     return "Countersigning review";
   }
+  if (item.workflowState === "Pending Secret Branch Review" || item.status === "Pending Secret Branch Review") {
+    return "Secret Branch review";
+  }
+  if (item.workflowState === "Pending Secret Branch Verification" || item.status === "Pending Secret Branch Verification") {
+    return "AD Secret Branch verification";
+  }
   if (item.workflowState === "Submitted to Secret Branch" || item.status === "Submitted to Secret Branch") {
-    return "Secret Branch archive";
+    return "Secret Branch intake";
   }
   if (isClosedStatus(item.status)) {
-    return "Closed record";
+    return "Archived record";
   }
   return item.status;
 }
@@ -142,11 +173,17 @@ export function getCurrentOwnerLabel(item: AcrSummary) {
   if (item.status === "Pending Reporting Officer" || item.status === "In Review" || item.status === "Overdue") {
     return item.reportingOfficer;
   }
-  if (item.status === "Pending Countersigning") {
+  if (item.status === "Pending Countersigning" || item.status === "Pending Countersigning Officer") {
     return item.countersigningOfficer ?? "Pending assignment";
   }
-  if (item.status === "Submitted to Secret Branch" || item.status === "Archived" || item.status === "Completed") {
-    return "Secret Branch";
+  if (
+    item.status === "Pending Secret Branch Review" ||
+    item.status === "Pending Secret Branch Verification" ||
+    item.status === "Submitted to Secret Branch" ||
+    item.status === "Archived" ||
+    item.status === "Completed"
+  ) {
+    return item.secretBranch?.allocatedTo ?? item.secretBranch?.verifiedBy ?? "Secret Branch";
   }
   return item.reportingOfficer;
 }
@@ -163,18 +200,59 @@ export function countStatuses(items: AcrSummary[]) {
     pendingReview: items.filter((item) =>
       item.status === "Pending Reporting Officer" ||
       item.status === "Pending Countersigning" ||
+      item.status === "Pending Countersigning Officer" ||
+      item.status === "Pending Secret Branch Review" ||
+      item.status === "Pending Secret Branch Verification" ||
       item.status === "In Review",
     ).length,
   };
+}
+
+export function groupAcrsByServicePeriod(items: AcrSummary[]) {
+  const groups = new Map<
+    string,
+    {
+      key: string;
+      label: string;
+      items: AcrSummary[];
+      latestTimestamp: number;
+    }
+  >();
+
+  for (const item of items) {
+    const key = item.servicePeriodKey ?? item.servicePeriodLabel ?? item.reportingPeriod;
+    const label = item.servicePeriodLabel ?? item.reportingPeriod;
+    const latestTimestamp = Math.max(
+      parseIsoDate(item.reportingPeriodTo),
+      parseIsoDate(item.completedDate),
+      parseIsoDate(item.initiatedDate),
+    );
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.items.push(item);
+      existing.latestTimestamp = Math.max(existing.latestTimestamp, latestTimestamp);
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      label,
+      items: [item],
+      latestTimestamp,
+    });
+  }
+
+  return Array.from(groups.values()).sort((left, right) => right.latestTimestamp - left.latestTimestamp);
 }
 
 export function buildStatusDistribution(items: AcrSummary[]): DashboardDistributionEntry[] {
   return [
     { label: "Draft", value: items.filter((item) => item.status === "Draft").length },
     { label: "Needs Review", value: items.filter((item) => item.status === "Pending Reporting Officer" || item.status === "In Review").length },
-    { label: "Countersigning", value: items.filter((item) => item.status === "Pending Countersigning").length },
-    { label: "Secret Branch Final", value: items.filter((item) => item.status === "Submitted to Secret Branch" || item.status === "Archived" || item.status === "Completed").length },
-    { label: "Returned", value: items.filter((item) => item.status === "Returned").length },
+    { label: "Countersigning", value: items.filter((item) => item.status === "Pending Countersigning" || item.status === "Pending Countersigning Officer").length },
+    { label: "Secret Branch", value: items.filter((item) => item.status === "Pending Secret Branch Review" || item.status === "Pending Secret Branch Verification").length },
+    { label: "Returned", value: items.filter((item) => isReturnedStatus(item.status)).length },
     { label: "Closed", value: items.filter((item) => isClosedStatus(item.status)).length },
   ];
 }

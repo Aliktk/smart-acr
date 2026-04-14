@@ -99,7 +99,7 @@ export function Timeline({ items }: TimelineProps) {
                   </span>
                 </div>
                 {item.remarks && (
-                  <p className="mt-2 rounded-xl border border-white/60 bg-white/60 px-3 py-2 text-xs text-gray-600">
+                  <p className="mt-2 rounded-xl border border-white/60 bg-white/60 px-3 py-2 text-xs text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-[var(--fia-gray-600)]">
                     {item.remarks}
                   </p>
                 )}

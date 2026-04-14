@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, ForbiddenException, Get, Param, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import type { Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
@@ -7,7 +7,11 @@ import * as path from "node:path";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import type { AuthenticatedUser } from "../../@types/authenticated-user.interface";
+import { validateFileContent } from "../../helpers/file-validation";
 import { FilesService } from "./files.service";
+
+const ALLOWED_KINDS = ["SIGNATURE", "STAMP", "DOCUMENT"] as const;
+type FileKind = (typeof ALLOWED_KINDS)[number];
 
 @Controller("files")
 @UseGuards(JwtAuthGuard)
@@ -35,13 +39,28 @@ export class FilesController {
       },
     }),
   )
-  upload(
+  async upload(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
     @Query("kind") kind = "DOCUMENT",
     @Query("acrRecordId") acrRecordId?: string,
   ) {
-    return this.filesService.recordFile(user.id, acrRecordId, kind as "SIGNATURE" | "STAMP" | "DOCUMENT", file);
+    if (!ALLOWED_KINDS.includes(kind as FileKind)) {
+      throw new BadRequestException(`Invalid file kind "${kind}". Allowed: ${ALLOWED_KINDS.join(", ")}`);
+    }
+
+    const signatureStampRoles = ["REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "ADDITIONAL_DIRECTOR", "SUPER_ADMIN", "IT_OPS"];
+    if ((kind === "SIGNATURE" || kind === "STAMP") && !signatureStampRoles.includes(user.activeRole)) {
+      throw new ForbiddenException("Only officers may upload signature or stamp files");
+    }
+
+    if (!file) {
+      throw new BadRequestException("Unsupported file type. Allowed types: JPEG, PNG, WebP, PDF.");
+    }
+
+    await validateFileContent(file);
+
+    return this.filesService.recordFile(user.id, acrRecordId, kind as FileKind, file);
   }
 
   @Get(":id/content")

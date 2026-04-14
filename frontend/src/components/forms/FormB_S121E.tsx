@@ -295,127 +295,33 @@ const FormB_Page4: React.FC = () => (
 
 const FormB_Page5: React.FC = () => (
   <FormPage pageNumber={5}>
-    <h3 className="font-bold text-sm mb-4 text-center">
-      Assistant Private Secretary (APS) / Stenotypists
-    </h3>
+    <h3 className="font-bold text-[11px] mb-2 text-center">Assistant Private Secretary (APS) / Stenotypists</h3>
 
-    <h3 className="font-bold text-sm mb-3">A. INSTRUCTIONS FOR MINISTRIES, DEPARTMENTS, ETC.</h3>
-
-    <div className="text-xs space-y-3 text-justify">
-      <p>
-        <span className="mr-3">1.</span>
-        The reports will be initiated by the officer to whom the Stenographer / Stenotypist is attached.
-      </p>
-
-      <p>
-        <span className="mr-3">2.</span>
-        When an adverse remark is made in the evaluation report of the official reported upon
-        a copy of the whole report should be furnished to him at the earliest opportunity, and
-        in any case within one month from the date the report is countersigned, with a
-        memorandum, a copy of which should be signed and returned by him in
-        acknowledgement of the report and be in turn placed in the character roll for record. A
-        serious view should be taken of any failure on the part of the official concerned to
-        furnish a copy of the report containing adverse remarks to the person reported upon.
-      </p>
-
-      <p>
-        <span className="mr-3">3.</span>
-        The officials making representation against adverse remarks recorded in their
-        evaluation reports should not make any personal remark or remarks against the
-        integrity of the Reporting Officers. Violation of this rule will be considered a
-        misconduct and will also render the representation liable to be summarily rejected.
-      </p>
-
-      <p>
-        <span className="mr-3">4.</span>
-        Any remarks to the effect that the persons reported upon has or has not taken steps to
-        remedy the defects pointed out to him in previous year, should also be communicated.
-      </p>
-
-      <p>
-        <span className="mr-3">5.</span>
-        The adverse remarks should be communicated by the senior officer incharge of
-        establishment matters in the Ministry/Division/Department/Office concerned.
-      </p>
-
-      <p>
-        <span className="mr-3">6.</span>
-        Annual performance evaluation report containing adverse remarks should not be taken
-        into consideration until they have been communicated following rule A-2 above and a
-        decision taken on the representation, if any, of the person reported upon.
-      </p>
+    <h3 className="font-bold text-[11px] mb-2">A. INSTRUCTIONS FOR MINISTRIES, DEPARTMENTS, ETC.</h3>
+    <div className="text-[10px] space-y-1.5 text-justify">
+      <p><span className="mr-2 font-semibold">1.</span>The reports will be initiated by the officer to whom the Stenographer / Stenotypist is attached.</p>
+      <p><span className="mr-2 font-semibold">2.</span>When an adverse remark is made in the evaluation report of the official reported upon, a copy of the whole report should be furnished to him within one month from the date the report is countersigned. A serious view should be taken of any failure to furnish a copy containing adverse remarks.</p>
+      <p><span className="mr-2 font-semibold">3.</span>Officials making representations against adverse remarks should not make personal remarks against the integrity of reporting officers. Violation will be considered misconduct and may render the representation liable to be summarily rejected.</p>
+      <p><span className="mr-2 font-semibold">4.</span>Any remarks to the effect that the person reported upon has or has not taken steps to remedy the defects pointed out in the previous year should also be communicated.</p>
+      <p><span className="mr-2 font-semibold">5.</span>Adverse remarks should be communicated by the senior officer incharge of establishment matters in the Ministry/Division/Department/Office concerned.</p>
+      <p><span className="mr-2 font-semibold">6.</span>Annual performance evaluation reports containing adverse remarks should not be taken into consideration until communicated following rule A-2 above and a decision taken on the representation, if any.</p>
     </div>
 
-    <h3 className="font-bold text-sm mt-6 mb-3">
-      B. INSTRUCTIONS FOR THE OFFICERS RESPONSIBLE FOR THE CUSTODY OF CHARACTER ROLLS
-    </h3>
-
-    <div className="text-xs space-y-3 text-justify">
-      <p>
-        <span className="mr-3">1.</span>
-        Arrange for the completion of the routine part of form and send it to the reporting
-        officer concerned.
-      </p>
-
-      <p>
-        <span className="mr-3">2.</span>
-        Go through each report carefully in order to see if there are any adverse remarks
-        underlined in red ink. If so, arrange to have them communicated to the person
-        concerned immediately with the direction that his representation, if any, should be
-        submitted within a fortnight of the receipt of those remarks by him.
-      </p>
-
-      <p>
-        <span className="mr-3">3.</span>
-        Arrange to obtain a decision on the representation, if any, and communicate it to the
-        official concerned with one month. Place a copy of representation in the dossier.
-      </p>
-
-      <p>
-        <span className="mr-3">4.</span>
-        Keep the duplicate as well as original copies of the evaluation reports in your office.
-      </p>
-
-      <p>
-        <span className="mr-3">5.</span>
-        If an official has been receiving adverse remarks for two successive years from the
-        same reporting officer, take up the question of placing him under another reporting
-        officer.
-      </p>
+    <h3 className="font-bold text-[11px] mt-3 mb-2">B. INSTRUCTIONS FOR THE OFFICERS RESPONSIBLE FOR THE CUSTODY OF CHARACTER ROLLS</h3>
+    <div className="text-[10px] space-y-1.5 text-justify">
+      <p><span className="mr-2 font-semibold">1.</span>Arrange for the completion of the routine part of form and send it to the reporting officer concerned.</p>
+      <p><span className="mr-2 font-semibold">2.</span>Go through each report carefully to see if there are any adverse remarks underlined in red ink. If so, arrange to have them communicated to the person concerned immediately, with the direction that his representation, if any, should be submitted within a fortnight.</p>
+      <p><span className="mr-2 font-semibold">3.</span>Arrange to obtain a decision on the representation, if any, and communicate it to the official concerned within one month. Place a copy of the representation in the dossier.</p>
+      <p><span className="mr-2 font-semibold">4.</span>Keep the duplicate as well as original copies of the evaluation reports in your office.</p>
+      <p><span className="mr-2 font-semibold">5.</span>If an official has been receiving adverse remarks for two successive years from the same reporting officer, take up the question of placing him under another reporting officer.</p>
     </div>
-  </FormPage>
-);
 
-const FormB_Page6: React.FC = () => (
-  <FormPage pageNumber={6}>
-    <h3 className="font-bold text-sm mb-3">C. INSTRUCTIONS FOR THE REPORTING OFFICER</h3>
-
-    <div className="text-xs space-y-3 text-justify">
-      <p>
-        While reporting on each subordinate: —
-      </p>
-      <div className="ml-6 space-y-1">
-        <p>(i) Be as objective as possible.</p>
-        <p>(ii) Be as accurate as possible.</p>
-        <p>(iii) State all positive and negative points or issues in your remarks.</p>
-        <p>(iv) Be fair to your subordinates.</p>
-      </div>
-
-      <p>
-        <span className="mr-3">2.</span>
-        State whether any of the defects reported have already been brought to the notice of the person concerned
-        and whether in the case of those already brought to notice, there has been any improvement.
-      </p>
-
-      <p>
-        <span className="mr-3">3.</span>
-        Fill this form in duplicate and affix your signature on both, at the end of the 'general remarks'.
-      </p>
-
-      <p>
-        <span className="mr-3">4.</span>
-        After an evaluation is complete, send it to the officer responsible for the custody of character rolls.
-      </p>
+    <h3 className="font-bold text-[11px] mt-3 mb-2">C. INSTRUCTIONS FOR THE REPORTING OFFICER</h3>
+    <div className="text-[10px] space-y-1.5 text-justify">
+      <p>While reporting on each subordinate: (i) Be as objective as possible. (ii) Be as accurate as possible. (iii) State all positive and negative points or issues in your remarks. (iv) Be fair to your subordinates.</p>
+      <p><span className="mr-2 font-semibold">2.</span>State whether any of the defects reported have already been brought to the notice of the person concerned and whether there has been any improvement.</p>
+      <p><span className="mr-2 font-semibold">3.</span>Fill this form in duplicate and affix your signature on both, at the end of the 'general remarks'.</p>
+      <p><span className="mr-2 font-semibold">4.</span>After an evaluation is complete, send it to the officer responsible for the custody of character rolls.</p>
     </div>
   </FormPage>
 );
@@ -537,8 +443,6 @@ const FormB_S121E: React.FC = () => (
     <FormB_Page4 />
     <PageBreak />
     <FormB_Page5 />
-    <PageBreak />
-    <FormB_Page6 />
     <PageBreak />
     <FormB_Page7 />
     <PageBreak />

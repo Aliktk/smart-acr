@@ -1,11 +1,12 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
-import { Prisma, UserRole } from "@prisma/client";
+import { OrgScopeTrack, Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { randomBytes, randomInt, randomUUID } from "crypto";
 import type { Response } from "express";
 import { PrismaService } from "../../common/prisma.service";
+import { inferScopeTrack } from "../../helpers/org-scope.utils";
 
 const AUTH_CHALLENGE_TTL_SECONDS = 105;
 const MAX_AUTH_CHALLENGE_ATTEMPTS = 5;
@@ -14,13 +15,28 @@ const AUTH_USER_INCLUDE = {
   roleAssignments: {
     include: {
       wing: true,
+      directorate: true,
+      region: true,
       zone: true,
+      circle: true,
+      station: true,
+      branch: true,
+      cell: true,
       office: true,
+      department: true,
     },
   },
   wing: true,
+  directorate: true,
+  region: true,
   zone: true,
+  circle: true,
+  station: true,
+  branch: true,
+  cell: true,
   office: true,
+  department: true,
+  secretBranchProfile: true,
 } satisfies Prisma.UserInclude;
 
 type AuthUserRecord = Prisma.UserGetPayload<{
@@ -40,6 +56,7 @@ type MappedSession = {
   name: string;
   email: string;
   badgeNo: string;
+  positionTitle: string | null;
   hasAvatar: boolean;
   avatarVersion: string;
   activeRole: string;
@@ -47,13 +64,34 @@ type MappedSession = {
   availableRoles: string[];
   availableRoleCodes: UserRole[];
   scope: {
+    scopeTrack: OrgScopeTrack;
     wingId: string | null;
     wingName: string | null;
+    directorateId: string | null;
+    directorateName: string | null;
+    regionId: string | null;
+    regionName: string | null;
     zoneId: string | null;
     zoneName: string | null;
+    circleId: string | null;
+    circleName: string | null;
+    stationId: string | null;
+    stationName: string | null;
+    branchId: string | null;
+    branchName: string | null;
+    cellId: string | null;
+    cellName: string | null;
     officeId: string | null;
     officeName: string | null;
+    departmentId: string | null;
+    departmentName: string | null;
   };
+  secretBranchProfile: {
+    deskCode: string;
+    canManageUsers: boolean;
+    canVerify: boolean;
+    isActive: boolean;
+  } | null;
   mustChangePassword: boolean;
 };
 
@@ -64,7 +102,6 @@ type AuthResult =
       expiresInSeconds: number;
       expiresAt: string;
       maskedDestination: string;
-      demoCode?: string;
     }
   | {
       status: "authenticated";
@@ -201,7 +238,6 @@ export class AuthService {
       expiresInSeconds: AUTH_CHALLENGE_TTL_SECONDS,
       expiresAt: expiresAt.toISOString(),
       maskedDestination: challenge.maskedDestination,
-      ...(this.isProduction() ? {} : { demoCode: nextCode }),
     };
   }
 
@@ -262,7 +298,6 @@ export class AuthService {
     return {
       success: true,
       message: "If the account is eligible for self-service recovery, password reset instructions will be issued.",
-      ...(this.isProduction() ? {} : { demoResetToken: resetToken }),
     };
   }
 
@@ -351,6 +386,7 @@ export class AuthService {
     try {
       payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken, {
         secret: this.configService.getOrThrow("JWT_REFRESH_SECRET"),
+        algorithms: ["HS256"],
       });
     } catch {
       this.clearCookies(response);
@@ -372,6 +408,13 @@ export class AuthService {
     }
 
     this.assertSessionState(session);
+
+    const maxLifetimeMs = this.configService.get<number>("SESSION_MAX_LIFETIME_HOURS", 10) * 60 * 60 * 1000;
+    if (Date.now() - session.createdAt.getTime() > maxLifetimeMs) {
+      await this.revokeSession(session.id);
+      this.clearCookies(response);
+      throw new UnauthorizedException("Session has exceeded maximum lifetime. Please log in again.");
+    }
 
     const refreshMatches = await bcrypt.compare(refreshToken, session.refreshTokenHash);
     if (!refreshMatches) {
@@ -512,22 +555,31 @@ export class AuthService {
       expiresInSeconds: AUTH_CHALLENGE_TTL_SECONDS,
       expiresAt: challenge.expiresAt.toISOString(),
       maskedDestination: challenge.maskedDestination,
-      ...(this.isProduction() ? {} : { demoCode: challenge.otpCode }),
     };
   }
 
   private async resolveActiveUser(identifier: string) {
+    const normalizedCnic = this.normalizeCnicIdentifier(identifier);
     return this.prisma.user.findFirst({
       where: {
         OR: [
           { username: identifier },
           { email: identifier },
           { badgeNo: this.normalizeBadgeNumber(identifier) },
+          ...(normalizedCnic ? [{ cnic: normalizedCnic }] : []),
         ],
         isActive: true,
       },
       include: AUTH_USER_INCLUDE,
     });
+  }
+
+  private normalizeCnicIdentifier(identifier: string): string | null {
+    const digits = identifier.replace(/\D/g, "");
+    if (digits.length === 13) {
+      return `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12)}`;
+    }
+    return null;
   }
 
   private normalizeAuthIdentifier(identifier: string) {
@@ -655,6 +707,7 @@ export class AuthService {
       {
         secret: this.configService.getOrThrow("JWT_REFRESH_SECRET"),
         expiresIn: `${this.refreshTokenTtlDays()}d`,
+        algorithm: "HS256",
       },
     );
   }
@@ -665,35 +718,35 @@ export class AuthService {
       {
         secret: this.configService.getOrThrow("JWT_ACCESS_SECRET"),
         expiresIn: this.configService.getOrThrow("ACCESS_TOKEN_TTL"),
+        algorithm: "HS256",
       },
     );
 
-    const cookieBase = {
+    const cookieShared = {
       httpOnly: true,
       secure: this.isProduction(),
-      sameSite: "lax" as const,
-      path: "/",
+      sameSite: "strict" as const,
     };
 
-    response.cookie("acr_access_token", accessToken, cookieBase);
+    response.cookie("acr_access_token", accessToken, { ...cookieShared, path: "/" });
     if (refreshToken) {
       response.cookie("acr_refresh_token", refreshToken, {
-        ...cookieBase,
+        ...cookieShared,
+        path: "/api/v1/auth/refresh",
         maxAge: this.refreshTokenTtlDays() * 24 * 60 * 60 * 1000,
       });
     }
   }
 
   private clearCookies(response: Response) {
-    const cookieBase = {
+    const cookieShared = {
       httpOnly: true,
       secure: this.isProduction(),
-      sameSite: "lax" as const,
-      path: "/",
+      sameSite: "strict" as const,
     };
 
-    response.clearCookie("acr_access_token", cookieBase);
-    response.clearCookie("acr_refresh_token", cookieBase);
+    response.clearCookie("acr_access_token", { ...cookieShared, path: "/" });
+    response.clearCookie("acr_refresh_token", { ...cookieShared, path: "/api/v1/auth/refresh" });
   }
 
   private assertSessionState(session: Pick<SessionRecord, "revokedAt" | "expiresAt">) {
@@ -723,6 +776,7 @@ export class AuthService {
       name: user.displayName,
       email: user.email,
       badgeNo: user.badgeNo,
+      positionTitle: user.positionTitle ?? null,
       hasAvatar: Boolean(user.avatarStoragePath),
       avatarVersion: user.updatedAt.toISOString(),
       activeRole: this.displayRole(sessionRole),
@@ -730,13 +784,47 @@ export class AuthService {
       availableRoles: user.roleAssignments.map((assignment) => this.displayRole(assignment.role)),
       availableRoleCodes: user.roleAssignments.map((assignment) => assignment.role),
       scope: {
+        scopeTrack: activeAssignment?.scopeTrack ?? user.scopeTrack ?? inferScopeTrack({
+          wingId: activeAssignment?.wing?.id ?? user.wing?.id ?? null,
+          directorateId: activeAssignment?.directorate?.id ?? user.directorate?.id ?? null,
+          regionId: activeAssignment?.region?.id ?? user.region?.id ?? null,
+          zoneId: activeAssignment?.zone?.id ?? user.zone?.id ?? null,
+          circleId: activeAssignment?.circle?.id ?? user.circle?.id ?? null,
+          stationId: activeAssignment?.station?.id ?? user.station?.id ?? null,
+          branchId: activeAssignment?.branch?.id ?? user.branch?.id ?? null,
+          cellId: activeAssignment?.cell?.id ?? user.cell?.id ?? null,
+          officeId: activeAssignment?.office?.id ?? user.office?.id ?? null,
+          departmentId: activeAssignment?.department?.id ?? user.department?.id ?? null,
+        }),
         wingId: activeAssignment?.wing?.id ?? user.wing?.id ?? null,
         wingName: activeAssignment?.wing?.name ?? user.wing?.name ?? null,
+        directorateId: activeAssignment?.directorate?.id ?? user.directorate?.id ?? null,
+        directorateName: activeAssignment?.directorate?.name ?? user.directorate?.name ?? null,
+        regionId: activeAssignment?.region?.id ?? user.region?.id ?? null,
+        regionName: activeAssignment?.region?.name ?? user.region?.name ?? null,
         zoneId: activeAssignment?.zone?.id ?? user.zone?.id ?? null,
         zoneName: activeAssignment?.zone?.name ?? user.zone?.name ?? null,
+        circleId: activeAssignment?.circle?.id ?? user.circle?.id ?? null,
+        circleName: activeAssignment?.circle?.name ?? user.circle?.name ?? null,
+        stationId: activeAssignment?.station?.id ?? user.station?.id ?? null,
+        stationName: activeAssignment?.station?.name ?? user.station?.name ?? null,
+        branchId: activeAssignment?.branch?.id ?? user.branch?.id ?? null,
+        branchName: activeAssignment?.branch?.name ?? user.branch?.name ?? null,
+        cellId: activeAssignment?.cell?.id ?? user.cell?.id ?? null,
+        cellName: activeAssignment?.cell?.name ?? user.cell?.name ?? null,
         officeId: activeAssignment?.office?.id ?? user.office?.id ?? null,
         officeName: activeAssignment?.office?.name ?? user.office?.name ?? null,
+        departmentId: activeAssignment?.department?.id ?? user.department?.id ?? null,
+        departmentName: activeAssignment?.department?.name ?? user.department?.name ?? user.departmentName ?? null,
       },
+      secretBranchProfile: user.secretBranchProfile
+        ? {
+            deskCode: user.secretBranchProfile.deskCode,
+            canManageUsers: user.secretBranchProfile.canManageUsers,
+            canVerify: user.secretBranchProfile.canVerify,
+            isActive: user.secretBranchProfile.isActive,
+          }
+        : null,
       mustChangePassword: user.mustChangePassword,
     };
   }
@@ -744,6 +832,10 @@ export class AuthService {
   private displayRole(role: UserRole) {
     if (role === UserRole.DG) {
       return "DG";
+    }
+
+    if (role === UserRole.EXECUTIVE_VIEWER) {
+      return "DG Viewer";
     }
 
     if (role === UserRole.IT_OPS) {

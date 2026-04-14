@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { AcrSummary, DashboardOverview, UserRoleCode, UserSession } from "@/types/contracts";
+import { RetirementWarnings } from "./RetirementWarnings";
 import { PortalPageHeader, PortalSurface, QuickLinkCard, QuietBarChart, QuietDonutChart, EmptyState } from "@/components/portal/PortalPrimitives";
 import { OverdueBadge, PriorityBadge, StatCard, StatusChip } from "@/components/ui";
 import {
@@ -26,6 +27,7 @@ import {
   getCurrentOwnerLabel,
   getCurrentStageLabel,
   getDashboardMode,
+  groupAcrsByServicePeriod,
   isClosedStatus,
   isOverdueStatus,
   sortAcrsByUrgency,
@@ -65,7 +67,7 @@ function roleItems(mode: DashboardMode, items: AcrSummary[]) {
         items.filter((item) =>
           item.status === "Pending Reporting Officer" ||
           item.status === "In Review" ||
-          item.status === "Returned" ||
+          item.status === "Returned to Reporting Officer" ||
           isOverdueStatus(item),
         ),
       );
@@ -73,13 +75,18 @@ function roleItems(mode: DashboardMode, items: AcrSummary[]) {
       return sortAcrsByUrgency(
         items.filter((item) =>
           item.status === "Pending Countersigning" ||
-          item.status === "Returned" ||
+          item.status === "Pending Countersigning Officer" ||
+          item.status === "Returned to Countersigning Officer" ||
           isOverdueStatus(item),
         ),
       );
     case "secret-branch":
       return sortAcrsByUrgency(
-        items.filter((item) => isClosedStatus(item.status) || item.status === "Submitted to Secret Branch"),
+        items.filter((item) =>
+          item.status === "Pending Secret Branch Review" ||
+          item.status === "Pending Secret Branch Verification" ||
+          isClosedStatus(item.status),
+        ),
       );
     case "executive":
       return sortAcrsByUrgency(items.filter((item) => item.isPriority || isOverdueStatus(item) || !isClosedStatus(item.status)));
@@ -119,11 +126,12 @@ function buildModeConfig(mode: DashboardMode): ModeConfig {
       return {
         title: "Secret Branch Dashboard",
         actions: [
+          { href: "/queue?status=Pending%20Secret%20Branch%20Review", title: "Review queue", description: "Process desk allocation and internal review items entering Secret Branch.", icon: ClipboardCheck, tone: "navy" },
           { href: "/archive", title: "Open archive", description: "Review finalized packets and authoritative references.", icon: FolderArchive, tone: "green" },
           { href: "/search", title: "Enterprise search", description: "Find any record, employee, or packet reference quickly.", icon: Search, tone: "cyan" },
         ],
-        tableTitle: "Finalized record index",
-        actionLabel: "View record",
+        tableTitle: "Secret Branch workload",
+        actionLabel: "Open",
       };
     case "executive":
       return {
@@ -139,8 +147,8 @@ function buildModeConfig(mode: DashboardMode): ModeConfig {
       return {
         title: "Employee Dashboard",
         actions: [
-          { href: "/queue", title: "View your records", description: "Track current and historical ACR status in one place.", icon: FileStack, tone: "navy" },
-          { href: "/search", title: "Search history", description: "Find earlier packets or archived cycles quickly.", icon: Search, tone: "cyan" },
+          { href: "/queue", title: "My ACR history", description: "Track current and previous ACR cycles with employee-safe workflow visibility.", icon: FileStack, tone: "navy" },
+          { href: "/archive", title: "Archive metadata", description: "View historical archive entries and uploaded legacy records linked to your profile.", icon: FolderArchive, tone: "green" },
         ],
         tableTitle: "Your ACR records",
         actionLabel: "Track",
@@ -152,7 +160,7 @@ function buildModeConfig(mode: DashboardMode): ModeConfig {
         actions: [
           { href: "/acr/new", title: "Initiate new ACR", description: "Create a clean new record and start the annual reporting flow.", icon: FilePlus, tone: "navy" },
           { href: "/queue?status=Draft", title: "Continue drafts", description: "Resume work that has not yet been submitted onward.", icon: FileStack, tone: "amber" },
-          { href: "/queue?status=Returned", title: "Handle returns", description: "Correct and resubmit records that came back with remarks.", icon: Send, tone: "red" },
+          { href: "/queue?status=Returned%20to%20Clerk", title: "Handle returns", description: "Correct and resubmit records that came back with remarks.", icon: Send, tone: "red" },
         ],
         tableTitle: "Active clerk queue",
         actionLabel: "Open",
@@ -199,7 +207,7 @@ function buildMetricCards(mode: DashboardMode, items: AcrSummary[], overview: Da
       return [
         {
           title: "Awaiting Countersign",
-          value: countMatching(items, (item) => item.status === "Pending Countersigning" || item.status === "Overdue"),
+          value: countMatching(items, (item) => item.status === "Pending Countersigning" || item.status === "Pending Countersigning Officer" || item.status === "Overdue"),
           subtitle: "Ready for final supervisory review",
           icon: <FileCheck2 size={18} />,
           accent: "navy" as const,
@@ -220,8 +228,8 @@ function buildMetricCards(mode: DashboardMode, items: AcrSummary[], overview: Da
         },
         {
           title: "Submitted Onward",
-          value: countMatching(items, (item) => item.status === "Submitted to Secret Branch" || isClosedStatus(item.status)),
-          subtitle: "Already moved beyond this stage",
+          value: countMatching(items, (item) => item.status === "Pending Secret Branch Review" || item.status === "Pending Secret Branch Verification" || isClosedStatus(item.status)),
+          subtitle: "Already moved beyond countersigning",
           icon: <Send size={18} />,
           accent: "cyan" as const,
         },
@@ -230,22 +238,22 @@ function buildMetricCards(mode: DashboardMode, items: AcrSummary[], overview: Da
       return [
         {
           title: "Finalized Records",
-          value: countMatching(items, (item) => item.status === "Submitted to Secret Branch" || item.status === "Archived" || item.status === "Completed"),
+          value: countMatching(items, (item) => item.status === "Archived" || item.status === "Completed"),
           subtitle: "Closed in Secret Branch custody",
           icon: <FolderArchive size={18} />,
           accent: "navy" as const,
         },
         {
-          title: "Archived",
-          value: countMatching(items, (item) => item.status === "Archived" || item.status === "Completed"),
-          subtitle: "Stored with archive reference",
+          title: "Pending Review",
+          value: countMatching(items, (item) => item.status === "Pending Secret Branch Review"),
+          subtitle: "Desk review pending",
           icon: <Archive size={18} />,
-          accent: "green" as const,
+          accent: "amber" as const,
         },
         {
-          title: "Legacy Submitted",
-          value: countMatching(items, (item) => item.status === "Submitted to Secret Branch"),
-          subtitle: "Older packets still carrying the pre-final status label",
+          title: "Pending Verification",
+          value: countMatching(items, (item) => item.status === "Pending Secret Branch Verification"),
+          subtitle: "Awaiting AD Secret Branch verification",
           icon: <Send size={18} />,
           accent: "cyan" as const,
         },
@@ -306,13 +314,13 @@ function buildMetricCards(mode: DashboardMode, items: AcrSummary[], overview: Da
       return [
         {
           title: "Active Cycle",
-          value: countMatching(items, (item) => !isClosedStatus(item.status) && item.status !== "Returned"),
+          value: countMatching(items, (item) => !isClosedStatus(item.status) && !item.status.startsWith("Returned")),
           subtitle: "Currently moving in workflow",
           icon: <FileStack size={18} />,
           accent: "navy" as const,
         },
         {
-          title: "Returned",
+          title: "Returned / Rework",
           value: counts.returned,
           subtitle: "Needs upstream correction",
           icon: <Send size={18} />,
@@ -345,7 +353,7 @@ function buildMetricCards(mode: DashboardMode, items: AcrSummary[], overview: Da
         },
         {
           title: "In Flight",
-          value: countMatching(items, (item) => !isClosedStatus(item.status) && item.status !== "Draft" && item.status !== "Returned"),
+          value: countMatching(items, (item) => !isClosedStatus(item.status) && item.status !== "Draft" && !item.status.startsWith("Returned")),
           subtitle: "Submitted and still active",
           icon: <FileStack size={18} />,
           accent: "cyan" as const,
@@ -385,35 +393,114 @@ function DashboardRecordsTable({
   title,
   items,
   actionLabel,
+  mode,
 }: {
   title: string;
   items: AcrSummary[];
   actionLabel: string;
+  mode: DashboardMode;
 }) {
   return (
     <PortalSurface title={title}>
       {items.length === 0 ? (
         <EmptyState
-          title="No records need attention"
-          description="Your highest-priority queue is clear for now. The next items will appear here as workflow states change."
+          title={mode === "employee" ? "No employee history is available yet" : "No records need attention"}
+          description={
+            mode === "employee"
+              ? "Your personal ACR metadata will appear here as records are initiated and move through workflow."
+              : "Your highest-priority queue is clear for now. The next items will appear here as workflow states change."
+          }
         />
-      ) : (
+      ) : mode === "employee" ? (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="border-b border-[var(--fia-gray-100)] bg-[var(--fia-gray-50)] text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
               <tr>
-                <th className="px-3.5 py-3">Record</th>
-                <th className="px-3.5 py-3">Employee</th>
-                <th className="px-3.5 py-3">Current Stage</th>
-                <th className="px-3.5 py-3">Status</th>
-                <th className="px-3.5 py-3">Due Date</th>
-                <th className="px-3.5 py-3">Current Owner</th>
+                <th className="px-3.5 py-3">ACR</th>
+                <th className="px-3.5 py-3">Template / Period</th>
+                <th className="px-3.5 py-3">Workflow Transparency</th>
+                <th className="px-3.5 py-3">Archive</th>
                 <th className="px-3.5 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className="border-b border-[var(--fia-gray-100)] last:border-b-0">
+                  <td className="px-3.5 py-3.5 align-top">
+                    <Link href={`/acr/${item.id}`} className="font-semibold text-[var(--fia-navy)] hover:text-[var(--fia-cyan)]">
+                      {item.acrNo}
+                    </Link>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <StatusChip status={item.status} />
+                      {item.isPriority ? <PriorityBadge priority /> : null}
+                      {item.isOverdue ? <OverdueBadge days={item.overdueDays} /> : null}
+                    </div>
+                  </td>
+                  <td className="px-3.5 py-3.5 align-top">
+                    <p className="font-semibold text-[var(--fia-gray-900)]">{item.templateFamily ?? "Template not recorded"}</p>
+                    <p className="mt-1 text-xs text-[var(--fia-gray-500)]">{item.servicePeriodLabel ?? item.reportingPeriod}</p>
+                    <p className="mt-2 text-xs text-[var(--fia-gray-600)]">
+                      RO: <span className="font-medium text-[var(--fia-gray-900)]">{item.reportingOfficer}</span>
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--fia-gray-600)]">
+                      CSO: <span className="font-medium text-[var(--fia-gray-900)]">{item.countersigningOfficer ?? "Not applicable"}</span>
+                    </p>
+                  </td>
+                  <td className="px-3.5 py-3.5 align-top text-[var(--fia-gray-700)]">
+                    <p className="font-medium">{item.secretBranch?.status ?? getCurrentStageLabel(item)}</p>
+                    <p className="mt-1 text-xs text-[var(--fia-gray-500)]">
+                      Initiated: {item.initiatedDate}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--fia-gray-500)]">
+                      Submitted to RO: {item.submittedToReportingAt ? new Date(item.submittedToReportingAt).toLocaleDateString("en-PK") : "Pending"}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--fia-gray-500)]">
+                      Sent to Secret Branch: {item.secretBranch?.submittedAt ? new Date(item.secretBranch.submittedAt).toLocaleDateString("en-PK") : "Not yet"}
+                    </p>
+                  </td>
+                  <td className="px-3.5 py-3.5 align-top text-[var(--fia-gray-700)]">
+                    <p className="font-medium">{item.completedDate ?? item.archivedAt ?? "In progress"}</p>
+                    <p className="mt-1 text-xs text-[var(--fia-gray-500)]">
+                      PDF retained: {item.hasHistoricalPdf ? "Yes, restricted" : "Not available"}
+                    </p>
+                  </td>
+                  <td className="px-3.5 py-3.5 text-right align-top">
+                    <Link
+                      href={`/acr/${item.id}`}
+                      className="inline-flex items-center gap-2 rounded-full bg-[var(--fia-cyan-100)] px-3.5 py-1.5 font-semibold text-[var(--fia-cyan)] transition-colors hover:bg-[#D7EFFB]"
+                    >
+                      {actionLabel}
+                      <ArrowRight size={14} />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-[var(--fia-gray-100)] bg-[var(--fia-gray-50)] text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
+              <tr>
+                <th className="px-3.5 py-3">{mode === "executive" ? "ACR No" : "Record"}</th>
+                <th className="px-3.5 py-3">Employee</th>
+                <th className="px-3.5 py-3">{mode === "executive" ? "Stage" : "Current Stage"}</th>
+                <th className="px-3.5 py-3">Status</th>
+                {mode === "executive" ? (
+                  <th className="px-3.5 py-3">Days Overdue</th>
+                ) : (
+                  <>
+                    <th className="px-3.5 py-3">Due Date</th>
+                    <th className="px-3.5 py-3">Current Owner</th>
+                  </>
+                )}
+                <th className="px-3.5 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} className={`border-b border-[var(--fia-gray-100)] last:border-b-0 ${mode === "executive" && item.isOverdue ? "bg-[rgba(239,68,68,0.02)]" : ""}`}>
                   <td className="px-3.5 py-3.5">
                     <Link href={`/acr/${item.id}`} className="font-semibold text-[var(--fia-navy)] hover:text-[var(--fia-cyan)]">
                       {item.acrNo}
@@ -428,23 +515,37 @@ function DashboardRecordsTable({
                   </td>
                   <td className="px-3.5 py-3.5 text-[var(--fia-gray-700)]">{getCurrentStageLabel(item)}</td>
                   <td className="px-3.5 py-3.5">
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       <StatusChip status={item.status} />
                       {item.isPriority ? <PriorityBadge priority /> : null}
-                      {item.isOverdue ? <OverdueBadge days={item.overdueDays} /> : null}
+                      {mode !== "executive" && item.isOverdue ? <OverdueBadge days={item.overdueDays} /> : null}
                     </div>
                   </td>
-                  <td className={`px-3.5 py-3.5 ${item.isOverdue ? "font-semibold text-[var(--fia-danger)]" : "text-[var(--fia-gray-700)]"}`}>
-                    {item.dueDate}
-                  </td>
-                  <td className="px-3.5 py-3.5 text-[var(--fia-gray-700)]">{getCurrentOwnerLabel(item)}</td>
+                  {mode === "executive" ? (
+                    <td className="px-3.5 py-3.5">
+                      {item.isOverdue ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--fia-danger-bg,rgba(239,68,68,0.1))] px-2.5 py-0.5 text-xs font-bold text-[var(--fia-danger)]">
+                          +{item.overdueDays ?? 0}d
+                        </span>
+                      ) : (
+                        <span className="text-xs text-[var(--fia-gray-400)]">—</span>
+                      )}
+                    </td>
+                  ) : (
+                    <>
+                      <td className={`px-3.5 py-3.5 ${item.isOverdue ? "font-semibold text-[var(--fia-danger)]" : "text-[var(--fia-gray-700)]"}`}>
+                        {item.dueDate}
+                      </td>
+                      <td className="px-3.5 py-3.5 text-[var(--fia-gray-700)]">{getCurrentOwnerLabel(item)}</td>
+                    </>
+                  )}
                   <td className="px-3.5 py-3.5 text-right">
                     <Link
-                      href={item.status === "Pending Reporting Officer" ? `/review/${item.id}` : `/acr/${item.id}`}
-                      className="inline-flex items-center gap-2 rounded-full bg-[var(--fia-cyan-100)] px-3.5 py-1.5 font-semibold text-[var(--fia-cyan)] transition-colors hover:bg-[#D7EFFB]"
+                      href={`/acr/${item.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[var(--fia-cyan-100)] px-3.5 py-1.5 text-xs font-semibold text-[var(--fia-cyan)] transition-colors hover:bg-[#D7EFFB]"
                     >
                       {actionLabel}
-                      <ArrowRight size={14} />
+                      <ArrowRight size={12} />
                     </Link>
                   </td>
                 </tr>
@@ -521,6 +622,7 @@ export function RoleDashboard({
     value: entry.pending,
     color: chartPalette(index),
   }));
+  const servicePeriodGroups = mode === "employee" ? groupAcrsByServicePeriod(ownerScopedItems) : [];
 
   return (
     <div className="mx-auto flex max-w-screen-2xl flex-col gap-5 p-5">
@@ -557,10 +659,65 @@ export function RoleDashboard({
         ))}
       </div>
 
+      {overview?.retirementWarnings && overview.retirementWarnings.length > 0 ? (
+        <RetirementWarnings warnings={overview.retirementWarnings} />
+      ) : null}
+
+      {mode === "employee" ? (
+        <PortalSurface title="Service-period summaries" subtitle="Each service period is shown as metadata only. Confidential narrative remarks and form contents remain restricted.">
+          {servicePeriodGroups.length === 0 ? (
+            <EmptyState
+              title="No service periods available"
+              description="Your service-period summaries will appear here once ACR records are linked to your employee profile."
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {servicePeriodGroups.map((group) => {
+                const archivedCount = group.items.filter((item) => item.status === "Archived" || item.status === "Completed").length;
+                const activeCount = group.items.length - archivedCount;
+                const latestItem = [...group.items].sort(
+                  (left, right) => new Date(right.reportingPeriodTo ?? right.initiatedDate).getTime() - new Date(left.reportingPeriodTo ?? left.initiatedDate).getTime(),
+                )[0];
+
+                return (
+                  <div key={group.key} className="rounded-3xl border border-[var(--fia-gray-100)] bg-[var(--fia-gray-50)] px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Service period</p>
+                    <p className="mt-2 text-lg font-semibold text-[var(--fia-gray-950)]">{group.label}</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <p className="text-xs text-[var(--fia-gray-500)]">Records</p>
+                        <p className="mt-1 text-base font-semibold text-[var(--fia-gray-900)]">{group.items.length}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--fia-gray-500)]">Archived</p>
+                        <p className="mt-1 text-base font-semibold text-[var(--fia-gray-900)]">{archivedCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--fia-gray-500)]">Active</p>
+                        <p className="mt-1 text-base font-semibold text-[var(--fia-gray-900)]">{activeCount}</p>
+                      </div>
+                    </div>
+                    {latestItem ? (
+                      <div className="mt-4 rounded-2xl bg-white px-3 py-3">
+                        <p className="text-xs text-[var(--fia-gray-500)]">Latest status</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <StatusChip status={latestItem.status} />
+                          <span className="text-sm text-[var(--fia-gray-700)]">{latestItem.acrNo}</span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </PortalSurface>
+      ) : null}
+
       <div className={`grid gap-4 ${mode === "executive" ? "" : "xl:grid-cols-[320px_minmax(0,1fr)]"}`}>
         {config.actions.length > 0 ? (
           <PortalSurface title="Quick actions">
-            <div className="space-y-3">
+            <div className={config.actions.length >= 3 ? "grid gap-3 sm:grid-cols-2" : "space-y-3"}>
               {config.actions.map((action) => (
                 <QuickLinkCard key={action.href} {...action} />
               ))}
@@ -581,6 +738,7 @@ export function RoleDashboard({
         title={config.tableTitle}
         items={focusItems}
         actionLabel={config.actionLabel}
+        mode={mode}
       />
     </div>
   );

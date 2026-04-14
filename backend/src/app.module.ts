@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { PrismaModule } from "./common/prisma.module";
 import { validateEnv } from "./config/env";
 import { AuthModule } from "./modules/auth/auth.module";
@@ -18,6 +19,9 @@ import { FilesModule } from "./modules/files/files.module";
 import { WorkflowModule } from "./modules/workflow/workflow.module";
 import { HealthModule } from "./modules/health/health.module";
 import { UsersModule } from "./modules/users/users.module";
+import { UserAssetsModule } from "./modules/user-assets/user-assets.module";
+import { AdverseRemarksModule } from "./modules/adverse-remarks/adverse-remarks.module";
+import { AuthorityMatrixModule } from "./modules/authority-matrix/authority-matrix.module";
 
 @Module({
   imports: [
@@ -26,6 +30,10 @@ import { UsersModule } from "./modules/users/users.module";
       validate: validateEnv,
     }),
     JwtModule.register({ global: true }),
+    ThrottlerModule.forRoot([
+      { name: "short", ttl: 1000, limit: 5 },
+      { name: "medium", ttl: 60000, limit: 30 },
+    ]),
     PrismaModule,
     AuthModule,
     DashboardModule,
@@ -42,6 +50,9 @@ import { UsersModule } from "./modules/users/users.module";
     WorkflowModule,
     HealthModule,
     UsersModule,
+    UserAssetsModule,
+    AdverseRemarksModule,
+    AuthorityMatrixModule,
   ],
 })
 export class AppModule {}

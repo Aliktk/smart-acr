@@ -1,0 +1,116 @@
+name: Release On-Prem
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Deployment target environment"
+        type: choice
+        required: true
+        default: production
+        options:
+          - staging
+          - production
+      image_tag:
+        description: "Image tag to publish (default: git sha)"
+        required: false
+      run_seed:
+        description: "Run database seed job after migrations"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute image tag
+        id: meta
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "image_tag=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "image_tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        run: |
+          docker build -f backend/Dockerfile -t ghcr.io/${{ github.repository_owner }}/smart-acr/backend:${{ steps.meta.outputs.image_tag }} .
+          docker push ghcr.io/${{ github.repository_owner }}/smart-acr/backend:${{ steps.meta.outputs.image_tag }}
+
+      - name: Build and push frontend image
+        run: |
+          docker build -f frontend/Dockerfile -t ghcr.io/${{ github.repository_owner }}/smart-acr/frontend:${{ steps.meta.outputs.image_tag }} .
+          docker push ghcr.io/${{ github.repository_owner }}/smart-acr/frontend:${{ steps.meta.outputs.image_tag }}
+
+      - name: Generate release env artifact
+        run: |
+          cat > onprem.release.env <<'EOF'
+          IMAGE_TAG=${{ steps.meta.outputs.image_tag }}
+          BACKEND_IMAGE_REPO=ghcr.io/${{ github.repository_owner }}/smart-acr/backend
+          FRONTEND_IMAGE_REPO=ghcr.io/${{ github.repository_owner }}/smart-acr/frontend
+          EOF
+
+      - name: Upload release env artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: onprem-release-env
+          path: onprem.release.env
+
+  deploy:
+    runs-on: self-hosted
+    needs: build-and-push
+    environment: ${{ github.event.inputs.target_environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download release env artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: onprem-release-env
+          path: infra/docker/env
+
+      - name: Prepare runtime env files
+        shell: bash
+        run: |
+          cp infra/state/current-release.env infra/state/previous-release.env || true
+          if [ "${{ github.event.inputs.target_environment }}" = "production" ]; then
+            printf '%s' "${{ secrets.BACKEND_ENV_PRODUCTION }}" > infra/docker/env/backend.prod.env
+            printf '%s' "${{ secrets.FRONTEND_ENV_PRODUCTION }}" > infra/docker/env/frontend.prod.env
+          else
+            printf '%s' "${{ secrets.BACKEND_ENV_STAGING }}" > infra/docker/env/backend.prod.env
+            printf '%s' "${{ secrets.FRONTEND_ENV_STAGING }}" > infra/docker/env/frontend.prod.env
+          fi
+
+      - name: Docker login for registry pull
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy stack
+        shell: bash
+        run: |
+          RUN_DB_SEED=${{ github.event.inputs.run_seed }} \
+          RELEASE_ENV_FILE=infra/docker/env/onprem.release.env \
+          BACKEND_ENV_FILE=infra/docker/env/backend.prod.env \
+          FRONTEND_ENV_FILE=infra/docker/env/frontend.prod.env \
+          bash infra/scripts/deploy-onprem.sh

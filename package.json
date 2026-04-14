@@ -16,10 +16,17 @@
     "db:generate": "pnpm --filter @smart-acr/backend prisma:generate",
     "db:push": "pnpm --filter @smart-acr/backend prisma:push",
     "db:migrate": "pnpm --filter @smart-acr/backend prisma:migrate",
+    "deploy:onprem": "bash infra/scripts/deploy-onprem.sh",
+    "rollback:onprem": "bash infra/scripts/rollback-onprem.sh",
+    "backup:onprem": "bash infra/scripts/backup-onprem.sh",
+    "e2e": "npx playwright test",
+    "e2e:ui": "npx playwright test --ui",
+    "e2e:report": "npx playwright show-report playwright-report",
     "docker:up": "docker compose -f infra/docker/docker-compose.yml up --build",
     "docker:down": "docker compose -f infra/docker/docker-compose.yml down -v"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "concurrently": "^9.1.2",

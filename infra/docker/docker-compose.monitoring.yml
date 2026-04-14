@@ -1,0 +1,104 @@
+# Monitoring and observability stack.
+# Usage:
+#   docker compose --env-file infra/docker/env/onprem.release.env \
+#     -f infra/docker/docker-compose.onprem.yml \
+#     -f infra/docker/docker-compose.monitoring.yml \
+#     up -d
+#
+# Adds Prometheus (metrics), Loki (logs), and Grafana (dashboards).
+# All services join the `internal` network defined in the base compose file.
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: smart-acr-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:9090/-/healthy || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
+
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: smart-acr-loki
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3100/ready || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
+
+  promtail:
+    image: grafana/promtail:3.1.0
+    container_name: smart-acr-promtail
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: smart-acr-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me-grafana}
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
+
+  # Override reverse-proxy to expose Grafana path
+  reverse-proxy:
+    volumes:
+      - ./monitoring/nginx-monitoring.conf:/etc/nginx/conf.d/monitoring.conf:ro
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:

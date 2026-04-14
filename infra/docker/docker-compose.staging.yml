@@ -1,0 +1,17 @@
+services:
+  reverse-proxy:
+    ports:
+      - "8080:80"
+      - "8443:443"
+
+  postgres:
+    ports:
+      - "5434:5432"
+
+  backend:
+    environment:
+      NODE_ENV: production
+
+  frontend:
+    environment:
+      NODE_ENV: production

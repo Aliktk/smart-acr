@@ -52,10 +52,10 @@ export function PortalSurface({
 }) {
   return (
     <section
-      className={`rounded-[24px] border border-[var(--fia-gray-200)] bg-white shadow-[0_8px_22px_rgba(15,23,42,0.05)] ${className}`}
+      className={`rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] shadow-[0_8px_22px_rgba(15,23,42,0.05)] dark:shadow-[0_8px_22px_rgba(0,0,0,0.2)] ${className}`}
     >
       {title || subtitle || action ? (
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--fia-gray-100)] px-5 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--fia-gray-200)] px-5 py-4">
           <div className="space-y-0.5">
             {title ? <h2 className="text-[1.02rem] font-semibold text-[var(--fia-gray-950)]">{title}</h2> : null}
             {subtitle ? <p className="text-sm leading-5 text-[var(--fia-gray-500)]">{subtitle}</p> : null}
@@ -79,19 +79,19 @@ export function PortalBanner({
 }) {
   const tones = {
     neutral: {
-      shell: "border-[var(--fia-gray-200)] bg-[linear-gradient(135deg,#FFFFFF_0%,#F8FAFC_100%)]",
+      shell: "border-[var(--fia-gray-200)] bg-[linear-gradient(135deg,var(--card)_0%,var(--fia-gray-50)_100%)]",
       title: "text-[var(--fia-gray-900)]",
       body: "text-[var(--fia-gray-600)]",
     },
     attention: {
-      shell: "border-[#FED7AA] bg-[linear-gradient(135deg,#FFF7ED_0%,#FFFFFF_100%)]",
-      title: "text-[#9A3412]",
-      body: "text-[#B45309]",
+      shell: "border-[#FED7AA] bg-[linear-gradient(135deg,#FFF7ED_0%,#FFFFFF_100%)] dark:border-[rgba(217,119,6,0.3)] dark:bg-[linear-gradient(135deg,rgba(217,119,6,0.1)_0%,var(--card)_100%)]",
+      title: "text-[#9A3412] dark:text-[#FDBA74]",
+      body: "text-[#B45309] dark:text-[#FCD34D]",
     },
     success: {
-      shell: "border-[#BBF7D0] bg-[linear-gradient(135deg,#F0FDF4_0%,#FFFFFF_100%)]",
-      title: "text-[#166534]",
-      body: "text-[#15803D]",
+      shell: "border-[#BBF7D0] bg-[linear-gradient(135deg,#F0FDF4_0%,#FFFFFF_100%)] dark:border-[rgba(22,163,74,0.3)] dark:bg-[linear-gradient(135deg,rgba(22,163,74,0.1)_0%,var(--card)_100%)]",
+      title: "text-[#166534] dark:text-[#86EFAC]",
+      body: "text-[#15803D] dark:text-[#4ADE80]",
     },
   } as const;
 
@@ -129,7 +129,7 @@ export function QuickLinkCard({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-3 rounded-[18px] border border-[var(--fia-gray-200)] bg-white px-3.5 py-3 transition-all hover:-translate-y-[1px] hover:border-[var(--fia-gray-300)] hover:shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
+      className="group flex items-center gap-3 rounded-[18px] border border-[var(--fia-gray-200)] bg-[var(--card)] px-3.5 py-3 transition-all hover:-translate-y-[1px] hover:border-[var(--fia-gray-300)] hover:shadow-[0_8px_18px_rgba(15,23,42,0.06)] dark:hover:shadow-[0_8px_18px_rgba(0,0,0,0.2)]"
     >
       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] ${toneMap[tone].badge}`}>
         <Icon size={17} />
@@ -204,7 +204,7 @@ export function QuietDonutChart({ data }: { data: ChartDatum[] }) {
             );
           })}
         </svg>
-        <div className="absolute flex h-20 w-20 flex-col items-center justify-center rounded-full bg-white">
+        <div className="absolute flex h-20 w-20 flex-col items-center justify-center rounded-full bg-[var(--card)]">
           <span className="text-[1.2rem] font-semibold text-[var(--fia-gray-950)]">{total}</span>
           <span className="text-xs uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">records</span>
         </div>
@@ -248,13 +248,13 @@ export function SegmentedTabs<T extends string>({
             onClick={() => onChange(tab.key)}
             className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
               active
-                ? "bg-[var(--fia-navy)] text-white"
+                ? "bg-[var(--fia-navy)] text-white dark:bg-[var(--fia-cyan)] dark:text-white"
                 : "bg-[var(--fia-gray-50)] text-[var(--fia-gray-600)] hover:bg-[var(--fia-gray-100)]"
             }`}
           >
             {tab.label}
             {typeof tab.count === "number" ? (
-                <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${active ? "bg-white/15" : "bg-white text-[var(--fia-gray-500)]"}`}>
+                <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${active ? "bg-white/15" : "bg-[var(--card)] text-[var(--fia-gray-500)]"}`}>
                   {tab.count}
                 </span>
               ) : null}
@@ -275,7 +275,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-[20px] border border-dashed border-[var(--fia-gray-300)] bg-[linear-gradient(180deg,#FCFCFD_0%,#F8FAFC_100%)] px-5 py-8 text-center">
+    <div className="rounded-[20px] border border-dashed border-[var(--fia-gray-300)] bg-[linear-gradient(180deg,var(--card)_0%,var(--fia-gray-50)_100%)] px-5 py-8 text-center">
       <p className="text-lg font-semibold text-[var(--fia-gray-900)]">{title}</p>
       <p className="mx-auto mt-1.5 max-w-xl text-sm leading-6 text-[var(--fia-gray-500)]">{description}</p>
       {action ? <div className="mt-4 flex justify-center">{action}</div> : null}

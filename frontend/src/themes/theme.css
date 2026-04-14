@@ -38,6 +38,15 @@
   --fia-white:        #FFFFFF;
   --color-white:      #FFFFFF;
 
+  /* ─── Semantic Aliases ─── */
+  --fia-navy-hover:       var(--fia-navy-500);
+  --fia-cyan-hover:       var(--fia-cyan-600);
+  --fia-cyan-bg:          #EEF8FF;
+  --fia-border:           #D8DEE8;
+  --fia-text-primary:     var(--fia-gray-900);
+  --fia-text-secondary:   #475569;
+  --fia-info-text:        #0369A1;
+
   /* ─── Status Colors ─── */
   --fia-success:      #16A34A;
   --fia-success-bg:   #F0FDF4;
@@ -128,6 +137,7 @@
 }
 
 .dark {
+  /* ─── Tailwind Compat Tokens ─── */
   --background:              #0F1117;
   --foreground:              #F9FAFB;
   --card:                    #1A1D2E;
@@ -146,12 +156,85 @@
   --destructive-foreground:  #FFFFFF;
   --border:                  rgba(255,255,255,0.1);
   --input:                   rgba(255,255,255,0.05);
+  --input-background:        #1F2937;
+  --switch-background:       #4B5563;
   --ring:                    #0095D9;
+
+  /* ─── Chart Colors ─── */
   --chart-1: #60A5FA;
   --chart-2: #34D399;
   --chart-3: #FCD34D;
   --chart-4: #F87171;
   --chart-5: #A78BFA;
+
+  /* ─── Neutrals (semantically inverted) ─── */
+  --fia-gray-950:     #F9FAFB;
+  --fia-gray-900:     #F3F4F6;
+  --fia-gray-800:     #E5E7EB;
+  --fia-gray-700:     #D1D5DB;
+  --fia-gray-600:     #9CA3AF;
+  --fia-gray-500:     #9CA3AF;
+  --fia-gray-400:     #6B7280;
+  --fia-gray-300:     #4B5563;
+  --fia-gray-200:     rgba(255,255,255,0.1);
+  --fia-gray-100:     #1F2937;
+  --fia-gray-50:      #1A1D2E;
+  --fia-white:        #1A1D2E;
+
+  /* ─── Semantic Aliases ─── */
+  --fia-border:           rgba(255,255,255,0.1);
+  --fia-text-primary:     #F9FAFB;
+  --fia-text-secondary:   #9CA3AF;
+  --fia-info-text:        #60A5FA;
+  --fia-cyan-bg:          rgba(0,149,217,0.12);
+
+  /* ─── Status Backgrounds ─── */
+  --fia-success-bg:   rgba(22,163,74,0.15);
+  --fia-warning-bg:   rgba(217,119,6,0.15);
+  --fia-danger-bg:    rgba(220,38,38,0.15);
+  --fia-info-bg:      rgba(37,99,235,0.15);
+
+  /* ─── Brand Light Variants ─── */
+  --fia-navy-100:     rgba(45,48,143,0.25);
+  --fia-navy-50:      rgba(45,48,143,0.12);
+  --fia-cyan-100:     rgba(0,149,217,0.2);
+  --fia-cyan-50:      rgba(0,149,217,0.1);
+
+  /* ─── Elevation ─── */
+  --shadow-xs:  0 1px 2px 0 rgba(0,0,0,0.4);
+  --shadow-sm:  0 1px 3px 0 rgba(0,0,0,0.5), 0 1px 2px -1px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -2px rgba(0,0,0,0.4);
+  --shadow-lg:  0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.4);
+
+  /* ─── Tailwind Built-in Gray Palette Override ───
+     Semantically invert Tailwind's gray scale so all text-gray-*,
+     bg-gray-*, border-gray-*, hover:bg-gray-* utilities automatically
+     adapt across the entire app. */
+  --color-gray-50:  #1A1D2E;
+  --color-gray-100: #1F2937;
+  --color-gray-200: #2D3344;
+  --color-gray-300: #4B5563;
+  --color-gray-400: #6B7280;
+  --color-gray-500: #9CA3AF;
+  --color-gray-600: #9CA3AF;
+  --color-gray-700: #D1D5DB;
+  --color-gray-800: #E5E7EB;
+  --color-gray-900: #F3F4F6;
+  --color-gray-950: #F9FAFB;
+}
+
+/* ─── Global Dark Mode Surface Override ───
+   Catch bg-white used as card/surface backgrounds app-wide.
+   Form/print containers are excluded by their own higher-specificity styles. */
+.dark [class~="bg-white"] {
+  background-color: var(--card);
+}
+
+/* Preserve white surfaces in print/form contexts */
+.form-container [class~="bg-white"],
+.form-page[class~="bg-white"],
+.form-page [class~="bg-white"] {
+  background-color: #FFFFFF;
 }
 
 @theme inline {
@@ -258,6 +341,10 @@
   box-shadow: var(--shadow-xs);
 }
 
+.dark .fia-card {
+  background: var(--card);
+}
+
 .fia-input {
   background: var(--fia-gray-50);
   border: 1px solid var(--fia-gray-200);
@@ -267,6 +354,12 @@
   transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
   color: var(--fia-gray-900);
+}
+
+.dark .fia-input {
+  background: var(--input-background);
+  border-color: var(--border);
+  color: var(--foreground);
 }
 
 .fia-input:focus {
@@ -341,6 +434,14 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--fia-gray-400);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4B5563;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
 }
 
 /* ============================================

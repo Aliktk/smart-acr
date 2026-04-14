@@ -61,6 +61,51 @@ function readErrorMessage(error: unknown) {
   }
 }
 
+const FIELD_NAME_PREFIXES = [
+  "basicPay",
+  "mobile",
+  "dateOfBirth",
+  "fatherName",
+  "spouseName",
+  "appointmentToBpsDate",
+  "educationLevel",
+  "qualifications",
+  "deputationType",
+  "natureOfDuties",
+  "personnelNumber",
+  "serviceGroup",
+  "licenseType",
+  "vehicleType",
+  "trainingCoursesText",
+  "joiningDate",
+  "gender",
+];
+
+function parseApiFieldErrors(error: unknown): Record<string, string> {
+  if (!(error instanceof Error)) return {};
+  try {
+    const parsed = JSON.parse(error.message) as { message?: unknown };
+    if (!Array.isArray(parsed.message)) return {};
+    const result: Record<string, string> = {};
+    for (const msg of parsed.message as string[]) {
+      if (typeof msg !== "string") continue;
+      const matchedField = FIELD_NAME_PREFIXES.find(
+        (field) =>
+          msg.startsWith(field + " ") ||
+          msg.startsWith(field + "_") ||
+          msg.toLowerCase().startsWith(field.toLowerCase() + " ") ||
+          msg.toLowerCase().startsWith(field.toLowerCase() + "_")
+      );
+      if (matchedField) {
+        result[matchedField] = msg;
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
 function mergeSession(current: UserSession | null, settings: UserSettings) {
   if (!current) {
     return null;
@@ -79,28 +124,36 @@ function mergeSession(current: UserSession | null, settings: UserSettings) {
 function Field(props: {
   label: string;
   value: string;
-  type?: "text" | "email" | "password";
+  type?: "text" | "email" | "password" | "number";
   disabled?: boolean;
   helperText?: string;
+  error?: string;
   onChange?: (value: string) => void;
+  onBlur?: () => void;
 }) {
   return (
-    <label className="block space-y-2">
-      <span className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">
-        {props.label}
-      </span>
+    <label className="block space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">
+          {props.label}
+        </span>
+        {props.error ? <span className="text-[10px] font-medium text-[#DC2626]">{props.error}</span> : null}
+      </div>
       <input
         type={props.type ?? "text"}
         value={props.value}
         disabled={props.disabled}
         onChange={(event) => props.onChange?.(event.target.value)}
-        className={`w-full rounded-[16px] border px-4 py-3 text-sm outline-none transition-all ${
+        onBlur={props.onBlur}
+        className={`w-full rounded-[16px] border px-4 py-2.5 text-sm outline-none transition-all ${
           props.disabled
             ? "cursor-not-allowed border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] text-[var(--fia-gray-400)]"
+            : props.error
+            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20"
             : "border-[var(--fia-gray-200)] bg-white text-[var(--fia-gray-900)] focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
         }`}
       />
-      {props.helperText ? <p className="text-xs text-[var(--fia-gray-400)]">{props.helperText}</p> : null}
+      {props.helperText && !props.error ? <p className="text-xs text-[var(--fia-gray-400)]">{props.helperText}</p> : null}
     </label>
   );
 }
@@ -111,25 +164,69 @@ function SelectField(props: {
   options: Array<{ value: string; label: string }>;
   placeholder?: string;
   helperText?: string;
+  error?: string;
   onChange?: (value: string) => void;
 }) {
   return (
-    <label className="block space-y-2">
-      <span className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">
-        {props.label}
-      </span>
+    <label className="block space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">
+          {props.label}
+        </span>
+        {props.error ? <span className="text-[10px] font-medium text-[#DC2626]">{props.error}</span> : null}
+      </div>
       <select
         value={props.value}
         onChange={(event) => props.onChange?.(event.target.value)}
-        className="w-full rounded-[16px] border border-[var(--fia-gray-200)] bg-white px-4 py-3 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
+        className={`w-full rounded-[16px] border px-4 py-2.5 text-sm outline-none transition-all ${
+          props.error
+            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20"
+            : "border-[var(--fia-gray-200)] bg-white text-[var(--fia-gray-900)] focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
+        }`}
       >
         {props.placeholder ? <option value="">{props.placeholder}</option> : null}
         {props.options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
-      {props.helperText ? <p className="text-xs text-[var(--fia-gray-400)]">{props.helperText}</p> : null}
+      {props.helperText && !props.error ? <p className="text-xs text-[var(--fia-gray-400)]">{props.helperText}</p> : null}
     </label>
+  );
+}
+
+function ServiceGroupField(props: { value: string; onChange: (v: string) => void }) {
+  const knownValues = SERVICE_GROUP_OPTIONS.map((o) => o.value);
+  const isKnown = props.value === "" || knownValues.includes(props.value);
+  const selectValue = isKnown ? props.value : "Other";
+
+  function handleSelectChange(v: string) {
+    if (v === "Other") {
+      props.onChange("Other");
+    } else {
+      props.onChange(v);
+    }
+  }
+
+  return (
+    <div className="block space-y-1.5">
+      <SelectField
+        label="Service Group"
+        value={selectValue}
+        options={SERVICE_GROUP_OPTIONS}
+        placeholder="Select service / group"
+        helperText="Civil service group or cadre (for PER-17/18 Officers)"
+        onChange={handleSelectChange}
+      />
+      {selectValue === "Other" ? (
+        <input
+          type="text"
+          value={props.value === "Other" ? "" : props.value}
+          onChange={(e) => props.onChange(e.target.value || "Other")}
+          placeholder="Specify service group"
+          className="w-full rounded-[16px] border border-[var(--fia-gray-200)] bg-white px-4 py-2.5 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -138,31 +235,69 @@ function TextareaField(props: {
   value: string;
   rows?: number;
   helperText?: string;
+  error?: string;
   onChange?: (value: string) => void;
 }) {
   return (
-    <label className="block space-y-2">
-      <span className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">
-        {props.label}
-      </span>
+    <label className="block space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">
+          {props.label}
+        </span>
+        {props.error ? <span className="text-[10px] font-medium text-[#DC2626]">{props.error}</span> : null}
+      </div>
       <textarea
         value={props.value}
         rows={props.rows ?? 3}
         onChange={(event) => props.onChange?.(event.target.value)}
-        className="w-full resize-none rounded-[16px] border border-[var(--fia-gray-200)] bg-white px-4 py-3 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
+        className={`w-full resize-none rounded-[16px] border px-4 py-2.5 text-sm outline-none transition-all ${
+          props.error
+            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20"
+            : "border-[var(--fia-gray-200)] bg-white text-[var(--fia-gray-900)] focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
+        }`}
       />
-      {props.helperText ? <p className="text-xs text-[var(--fia-gray-400)]">{props.helperText}</p> : null}
+      {props.helperText && !props.error ? <p className="text-xs text-[var(--fia-gray-400)]">{props.helperText}</p> : null}
+    </label>
+  );
+}
+
+function DateField(props: {
+  label: string;
+  value: string;
+  helperText?: string;
+  error?: string;
+  onChange?: (value: string) => void;
+}) {
+  return (
+    <label className="block space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">
+          {props.label}
+        </span>
+        {props.error ? <span className="text-[10px] font-medium text-[#DC2626]">{props.error}</span> : null}
+      </div>
+      <input
+        type="date"
+        value={props.value}
+        onChange={(event) => props.onChange?.(event.target.value)}
+        className={`w-full rounded-[16px] border px-4 py-2.5 text-sm outline-none transition-all ${
+          props.error
+            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20"
+            : "border-[var(--fia-gray-200)] bg-white text-[var(--fia-gray-900)] focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
+        }`}
+      />
+      {props.helperText && !props.error ? <p className="text-xs text-[var(--fia-gray-400)]">{props.helperText}</p> : null}
     </label>
   );
 }
 
 function ReadonlyField(props: { label: string; value: string; helperText?: string }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <span className="block text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">
         {props.label}
       </span>
-      <div className="w-full rounded-[16px] border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-4 py-3 text-sm text-[var(--fia-gray-400)] cursor-not-allowed">
+      <div className="w-full rounded-[16px] border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-4 py-2.5 text-sm text-[var(--fia-gray-400)] cursor-not-allowed">
         {props.value || <span className="italic">Not set</span>}
       </div>
       {props.helperText ? <p className="text-xs text-[var(--fia-gray-400)]">{props.helperText}</p> : null}
@@ -332,6 +467,45 @@ const EDUCATION_LEVEL_OPTIONS: Array<{ value: EducationLevel; label: string }> =
   { value: "OTHER", label: "Other" },
 ];
 
+const LICENSE_TYPE_OPTIONS = [
+  { value: "MOTORCYCLE", label: "Motorcycle" },
+  { value: "LTV", label: "LTV — Light Transport Vehicle" },
+  { value: "HTV", label: "HTV — Heavy Transport Vehicle" },
+  { value: "PSV", label: "PSV — Public Service Vehicle" },
+  { value: "A", label: "Class A" },
+  { value: "B", label: "Class B — Motor Car" },
+  { value: "C", label: "Class C — LTV" },
+  { value: "D", label: "Class D — HTV" },
+];
+
+const VEHICLE_TYPE_OPTIONS = [
+  { value: "MOTORCYCLE", label: "Motorcycle" },
+  { value: "CAR_SEDAN", label: "Car (Sedan)" },
+  { value: "CAR_SUV", label: "Car (SUV / Jeep)" },
+  { value: "PICKUP", label: "Pickup" },
+  { value: "VAN", label: "Van" },
+  { value: "MINIBUS", label: "Minibus" },
+  { value: "BUS", label: "Bus" },
+  { value: "TRUCK", label: "Truck" },
+];
+
+const SERVICE_GROUP_OPTIONS = [
+  { value: "Police Service of Pakistan (PSP)", label: "Police Service of Pakistan (PSP)" },
+  { value: "District Management Group (DMG)", label: "District Management Group (DMG)" },
+  { value: "Foreign Service of Pakistan (FSP)", label: "Foreign Service of Pakistan (FSP)" },
+  { value: "Inland Revenue Service (IRS)", label: "Inland Revenue Service (IRS)" },
+  { value: "Pakistan Customs Service (PCS)", label: "Pakistan Customs Service (PCS)" },
+  { value: "Office Management Group (OMG)", label: "Office Management Group (OMG)" },
+  { value: "Information Group", label: "Information Group" },
+  { value: "Postal Group", label: "Postal Group" },
+  { value: "Accounts Group", label: "Accounts Group" },
+  { value: "Audit & Accounts Service", label: "Audit & Accounts Service" },
+  { value: "Military", label: "Military" },
+  { value: "Federal Government Service", label: "Federal Government Service" },
+  { value: "Provincial Civil Service", label: "Provincial Civil Service" },
+  { value: "Other", label: "Other (specify below)" },
+];
+
 const LANG_LEVEL_OPTIONS: Array<{ value: LanguageProficiencyLevel; label: string }> = [
   { value: "NONE", label: "None" },
   { value: "BASIC", label: "Basic" },
@@ -351,11 +525,30 @@ function ServiceRecordSection(props: {
   isPending: boolean;
   isSuccess: boolean;
   error: string | null;
+  apiErrors?: Record<string, string>;
 }) {
   const { employee, form, setForm } = props;
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   function setField<K extends keyof UpdateEmployeeProfilePayload>(key: K, value: UpdateEmployeeProfilePayload[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function validateMobile(value: string) {
+    if (!value) return "";
+    const cleaned = value.replace(/\s/g, "");
+    return /^03\d{2}-?\d{7}$/.test(cleaned) ? "" : "Format: 03xx-xxxxxxx";
+  }
+
+  function validatePersonnelNumber(value: string) {
+    if (!value) return "";
+    return /^[A-Za-z0-9\-/]+$/.test(value.trim()) ? "" : "Alphanumeric, hyphens and / only";
+  }
+
+  function formatMobile(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 4) return digits;
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
   }
 
   return (
@@ -373,75 +566,112 @@ function ServiceRecordSection(props: {
         />
       }
     >
-      {/* Read-only identity block */}
-      <div className="mb-5 rounded-[20px] border border-[var(--fia-gray-100)] bg-[linear-gradient(145deg,#F8FAFC_0%,#FFFFFF_100%)] p-4">
-        <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">
-          Organisational Record — Read Only
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <ReadonlyField label="Name" value={employee.name} />
-          <ReadonlyField label="Rank" value={employee.rank} />
-          <ReadonlyField label="Designation" value={employee.designation} helperText="Updated by Clerk / Admin" />
-          <ReadonlyField label="BPS / Scale" value={String(employee.bps)} />
-          <ReadonlyField label="Current Posting" value={employee.posting} helperText="Updated by Clerk / Admin" />
-          <ReadonlyField label="Date of Entry in Service" value={employee.joiningDate.substring(0, 10)} />
+      {/* Read-only identity block — only shown when an employee record is linked */}
+      {employee.isLinked ? (
+        <div className="mb-5 rounded-[20px] border border-[var(--fia-gray-100)] bg-[linear-gradient(145deg,#F8FAFC_0%,#FFFFFF_100%)] p-4">
+          <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">
+            Organisational Record — Read Only
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ReadonlyField label="Name" value={employee.name} />
+            <ReadonlyField label="Rank" value={employee.rank} />
+            <ReadonlyField label="Designation" value={employee.designation} helperText="Updated by Clerk / Admin" />
+            <ReadonlyField label="BPS / Scale" value={String(employee.bps)} />
+            <ReadonlyField label="Current Posting" value={employee.posting} helperText="Updated by Clerk / Admin" />
+            <ReadonlyField label="Date of Entry in Service" value={employee.joiningDate.substring(0, 10)} />
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-5 flex items-start gap-3 rounded-[20px] border border-[#FEF3C7] bg-[#FFFBEB] p-4">
+          <Info size={16} className="mt-0.5 shrink-0 text-[#B45309]" />
+          <div>
+            <p className="text-sm font-semibold text-[#92400E]">Employee record not yet created</p>
+            <p className="mt-1 text-xs leading-5 text-[#A16207]">
+              Your rank, posting, and organisational details will be filled in by a Clerk when they create your employee record. You can save the personal details below now — they will be used as pre-fill when your record is set up.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Editable personal details */}
-      <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">
+      <p className="mb-2.5 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">
         Personal Details
       </p>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3">
         <SelectField
           label="Gender"
           value={form.gender ?? ""}
           options={GENDER_OPTIONS}
           placeholder="Select gender"
+          error={props.apiErrors?.gender || ""}
           onChange={(v) => setField("gender", (v as Gender) || undefined)}
         />
-        <Field
+        <DateField
           label="Date of Birth"
-          type="text"
           value={form.dateOfBirth ?? ""}
-          helperText="Format: YYYY-MM-DD"
+          error={props.apiErrors?.dateOfBirth || ""}
           onChange={(v) => setField("dateOfBirth", v || undefined)}
         />
         <Field
           label="Father's Name"
           value={form.fatherName ?? ""}
+          error={props.apiErrors?.fatherName || ""}
           onChange={(v) => setField("fatherName", v || undefined)}
         />
         <Field
-          label="Spouse's Name (if applicable)"
+          label="Spouse's Name"
           value={form.spouseName ?? ""}
           helperText="Leave blank if not applicable"
+          error={props.apiErrors?.spouseName || ""}
           onChange={(v) => setField("spouseName", v || undefined)}
         />
         <Field
           label="Mobile Number"
           value={form.mobile ?? ""}
-          onChange={(v) => setField("mobile", v || undefined)}
+          error={errors.mobile}
+          helperText="Format: 03xx-xxxxxxx"
+          onChange={(v) => {
+            const formatted = formatMobile(v);
+            setField("mobile", formatted || undefined);
+            setErrors((e) => ({ ...e, mobile: validateMobile(formatted) }));
+          }}
+          onBlur={() => setErrors((e) => ({ ...e, mobile: validateMobile(form.mobile ?? "") }))}
         />
       </div>
 
       {/* Service details */}
-      <p className="mb-3 mt-6 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">
+      <p className="mb-2.5 mt-5 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">
         Service Details
       </p>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3">
         <Field
           label="Basic Pay (PKR)"
-          type="text"
+          type="number"
           value={form.basicPay !== undefined ? String(form.basicPay) : ""}
-          helperText="Current basic pay amount"
-          onChange={(v) => setField("basicPay", v ? Number(v) : undefined)}
+          helperText="Monthly basic pay"
+          error={errors.basicPay || props.apiErrors?.basicPay || ""}
+          onChange={(v) => {
+            setField("basicPay", v ? Number(v) : undefined);
+            if (v && (!Number.isInteger(Number(v)) || Number(v) < 0)) {
+              setErrors((e) => ({ ...e, basicPay: "Basic pay must be a whole number (no decimals)" }));
+            } else {
+              setErrors((e) => ({ ...e, basicPay: "" }));
+            }
+          }}
         />
-        <Field
-          label="Date of Appointment to Current BPS"
-          type="text"
+        {!employee.isLinked && (
+          <DateField
+            label="Date of Entry in Service"
+            value={form.joiningDate ?? ""}
+            helperText="Your joining / appointment date"
+            error={props.apiErrors?.joiningDate || ""}
+            onChange={(v) => setField("joiningDate", v || undefined)}
+          />
+        )}
+        <DateField
+          label="Appointment to Current BPS"
           value={form.appointmentToBpsDate ?? ""}
-          helperText="Format: YYYY-MM-DD"
+          error={props.apiErrors?.appointmentToBpsDate || ""}
           onChange={(v) => setField("appointmentToBpsDate", v || undefined)}
         />
         <SelectField
@@ -449,61 +679,84 @@ function ServiceRecordSection(props: {
           value={form.deputationType ?? ""}
           options={DEPUTATION_OPTIONS}
           placeholder="Select type"
+          error={props.apiErrors?.deputationType || ""}
           onChange={(v) => setField("deputationType", (v as DeputationType) || undefined)}
         />
-        <Field
-          label="Service Group"
+        <ServiceGroupField
           value={form.serviceGroup ?? ""}
-          helperText="e.g., Police Service of Pakistan"
           onChange={(v) => setField("serviceGroup", v || undefined)}
         />
-        <Field
+        <SelectField
           label="License Type"
           value={form.licenseType ?? ""}
+          options={LICENSE_TYPE_OPTIONS}
+          placeholder="Select license type"
           helperText="For Driver / Dispatch Rider template"
+          error={props.apiErrors?.licenseType || ""}
           onChange={(v) => setField("licenseType", v || undefined)}
         />
-        <Field
+        <SelectField
           label="Vehicle Type"
           value={form.vehicleType ?? ""}
+          options={VEHICLE_TYPE_OPTIONS}
+          placeholder="Select vehicle type"
           helperText="For Driver / Dispatch Rider template"
+          error={props.apiErrors?.vehicleType || ""}
           onChange={(v) => setField("vehicleType", v || undefined)}
         />
         <Field
           label="Personnel Number"
           value={form.personnelNumber ?? ""}
-          helperText="PER number for PER-17/18 Officers form family"
-          onChange={(v) => setField("personnelNumber", v || undefined)}
+          error={errors.personnelNumber}
+          helperText="PER number for PER-17/18 Officers"
+          onChange={(v) => {
+            setField("personnelNumber", v || undefined);
+            setErrors((e) => ({ ...e, personnelNumber: validatePersonnelNumber(v) }));
+          }}
+          onBlur={() => setErrors((e) => ({ ...e, personnelNumber: validatePersonnelNumber(form.personnelNumber ?? "") }))}
         />
       </div>
-      <div className="mt-4 grid gap-4">
+
+      {/* Education & duties */}
+      <p className="mb-2.5 mt-5 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">
+        Education & Duties
+      </p>
+      <div className="grid grid-cols-2 gap-3">
         <SelectField
           label="Highest Education Level"
           value={form.educationLevel ?? ""}
           options={EDUCATION_LEVEL_OPTIONS}
           placeholder="Select education level"
+          error={props.apiErrors?.educationLevel || ""}
           onChange={(v) => setField("educationLevel", (v as EducationLevel) || undefined)}
         />
         <Field
           label="Subject / Field of Study"
           value={form.qualifications ?? ""}
-          helperText="e.g. Engineering, Computer Science, Arts, Law"
+          helperText="e.g. Computer Science, Law, Arts"
+          error={props.apiErrors?.qualifications || ""}
           onChange={(v) => setField("qualifications", v || undefined)}
         />
-        <TextareaField
-          label="Nature of Duties"
-          value={form.natureOfDuties ?? ""}
-          rows={2}
-          helperText="Brief description of current duties and responsibilities"
-          onChange={(v) => setField("natureOfDuties", v || undefined)}
-        />
-        <TextareaField
-          label="Training Courses (Text Summary)"
-          value={form.trainingCoursesText ?? ""}
-          rows={2}
-          helperText="Free-text summary of training courses attended"
-          onChange={(v) => setField("trainingCoursesText", v || undefined)}
-        />
+        <div className="col-span-2">
+          <TextareaField
+            label="Nature of Duties"
+            value={form.natureOfDuties ?? ""}
+            rows={2}
+            helperText="Brief description of current duties"
+            error={props.apiErrors?.natureOfDuties || ""}
+            onChange={(v) => setField("natureOfDuties", v || undefined)}
+          />
+        </div>
+        <div className="col-span-2">
+          <TextareaField
+            label="Training Courses (Text Summary)"
+            value={form.trainingCoursesText ?? ""}
+            rows={2}
+            helperText="Free-text summary of courses attended"
+            error={props.apiErrors?.trainingCoursesText || ""}
+            onChange={(v) => setField("trainingCoursesText", v || undefined)}
+          />
+        </div>
       </div>
 
       {/* Language proficiencies */}
@@ -622,22 +875,18 @@ function ServiceRecordSection(props: {
                       setField("trainingCourses", next);
                     }}
                   />
-                  <Field
+                  <DateField
                     label="From Date"
-                    type="text"
                     value={course.durationFrom ?? ""}
-                    helperText="YYYY-MM-DD"
                     onChange={(v) => {
                       const next = [...(form.trainingCourses ?? [])];
                       next[idx] = { ...next[idx], durationFrom: v || undefined };
                       setField("trainingCourses", next);
                     }}
                   />
-                  <Field
+                  <DateField
                     label="To Date"
-                    type="text"
                     value={course.durationTo ?? ""}
-                    helperText="YYYY-MM-DD"
                     onChange={(v) => {
                       const next = [...(form.trainingCourses ?? [])];
                       next[idx] = { ...next[idx], durationTo: v || undefined };
@@ -710,6 +959,8 @@ export function UserSettingsPage({
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", nextPassword: "", confirmPassword: "" });
   const [avatarValidationError, setAvatarValidationError] = useState<string | null>(null);
   const [assetValidationErrors, setAssetValidationErrors] = useState<Partial<Record<UserAssetType, string | null>>>({});
+  const [showForcePasswordBanner, setShowForcePasswordBanner] = useState(forcePasswordChange);
+  const [employeeApiErrors, setEmployeeApiErrors] = useState<Record<string, string>>({});
 
   const settingsQuery = useQuery({
     queryKey: ["settings", "me"],
@@ -728,34 +979,33 @@ export function UserSettingsPage({
     setSecurityForm({ twoFactorEnabled: settingsQuery.data.security.twoFactorEnabled });
 
     const emp = settingsQuery.data.employeeProfile;
-    if (emp) {
-      setEmployeeForm({
-        gender: emp.gender ?? undefined,
-        dateOfBirth: emp.dateOfBirth ? emp.dateOfBirth.substring(0, 10) : undefined,
-        fatherName: emp.fatherName ?? undefined,
-        spouseName: emp.spouseName ?? undefined,
-        mobile: emp.mobile,
-        basicPay: emp.basicPay ?? undefined,
-        appointmentToBpsDate: emp.appointmentToBpsDate ? emp.appointmentToBpsDate.substring(0, 10) : undefined,
-        educationLevel: emp.educationLevel ?? undefined,
-        qualifications: emp.qualifications ?? undefined,
-        deputationType: emp.deputationType ?? undefined,
-        natureOfDuties: emp.natureOfDuties ?? undefined,
-        personnelNumber: emp.personnelNumber ?? undefined,
-        serviceGroup: emp.serviceGroup ?? undefined,
-        licenseType: emp.licenseType ?? undefined,
-        vehicleType: emp.vehicleType ?? undefined,
-        trainingCoursesText: emp.trainingCoursesText ?? undefined,
-        trainingCourses: emp.trainingCourses.map((c) => ({
-          courseName: c.courseName,
-          durationFrom: c.durationFrom ?? undefined,
-          durationTo: c.durationTo ?? undefined,
-          institution: c.institution ?? undefined,
-          country: c.country ?? undefined,
-        })),
-        languages: emp.languages,
-      });
-    }
+    setEmployeeForm({
+      gender: emp.gender ?? undefined,
+      dateOfBirth: emp.dateOfBirth ? emp.dateOfBirth.substring(0, 10) : undefined,
+      joiningDate: !emp.isLinked && emp.joiningDate ? emp.joiningDate.substring(0, 10) : undefined,
+      fatherName: emp.fatherName ?? undefined,
+      spouseName: emp.spouseName ?? undefined,
+      mobile: emp.mobile || undefined,
+      basicPay: emp.basicPay ?? undefined,
+      appointmentToBpsDate: emp.appointmentToBpsDate ? emp.appointmentToBpsDate.substring(0, 10) : undefined,
+      educationLevel: emp.educationLevel ?? undefined,
+      qualifications: emp.qualifications ?? undefined,
+      deputationType: emp.deputationType ?? undefined,
+      natureOfDuties: emp.natureOfDuties ?? undefined,
+      personnelNumber: emp.personnelNumber ?? undefined,
+      serviceGroup: emp.serviceGroup ?? undefined,
+      licenseType: emp.licenseType ?? undefined,
+      vehicleType: emp.vehicleType ?? undefined,
+      trainingCoursesText: emp.trainingCoursesText ?? undefined,
+      trainingCourses: (emp.trainingCourses ?? []).map((c) => ({
+        courseName: c.courseName,
+        durationFrom: c.durationFrom ?? undefined,
+        durationTo: c.durationTo ?? undefined,
+        institution: c.institution ?? undefined,
+        country: c.country ?? undefined,
+      })),
+      languages: emp.languages ?? [],
+    });
   }, [settingsQuery.data]);
 
   function syncSettings(nextSettings: UserSettings) {
@@ -768,7 +1018,16 @@ export function UserSettingsPage({
   }
 
   const profileMutation = useMutation({ mutationFn: updateUserProfile, onSuccess: syncSettings });
-  const employeeProfileMutation = useMutation({ mutationFn: updateUserEmployeeProfile, onSuccess: syncSettings });
+  const employeeProfileMutation = useMutation({
+    mutationFn: updateUserEmployeeProfile,
+    onSuccess: (nextSettings) => {
+      setEmployeeApiErrors({});
+      syncSettings(nextSettings);
+    },
+    onError: (error: unknown) => {
+      setEmployeeApiErrors(parseApiFieldErrors(error));
+    },
+  });
   const avatarMutation = useMutation({
     mutationFn: uploadUserProfileAvatar,
     onSuccess: (nextSettings) => {
@@ -781,6 +1040,9 @@ export function UserSettingsPage({
     onSuccess: (nextSettings, variables) => {
       setAssetValidationErrors((current) => ({ ...current, [variables.assetType]: null }));
       syncSettings(nextSettings);
+    },
+    onError: (error, variables) => {
+      setAssetValidationErrors((current) => ({ ...current, [variables.assetType]: readErrorMessage(error) }));
     },
   });
   const removeProfileAssetMutation = useMutation({
@@ -803,6 +1065,7 @@ export function UserSettingsPage({
     mutationFn: updateUserPassword,
     onSuccess: () => {
       setPasswordForm({ currentPassword: "", nextPassword: "", confirmPassword: "" });
+      setShowForcePasswordBanner(false);
       if (user) {
         const nextSession = { ...user, mustChangePassword: false };
         setUser(nextSession);
@@ -821,6 +1084,7 @@ export function UserSettingsPage({
   const canUseSignatureAndStamp =
     user?.activeRoleCode === "REPORTING_OFFICER" ||
     user?.activeRoleCode === "COUNTERSIGNING_OFFICER" ||
+    user?.activeRoleCode === "ADDITIONAL_DIRECTOR" ||
     (user?.activeRoleCode === "SECRET_BRANCH" && Boolean(user?.secretBranchProfile?.canVerify));
 
   function handleProfileSave() {
@@ -1019,21 +1283,19 @@ export function UserSettingsPage({
               </PortalSurface>
               ) : null}
 
-              {currentSettings.employeeProfile ? (
-                <ServiceRecordSection
-                  employee={currentSettings.employeeProfile}
-                  form={employeeForm}
-                  setForm={setEmployeeForm}
-                  showLanguages={showLanguages}
-                  setShowLanguages={setShowLanguages}
-                  showTrainingCourses={showTrainingCourses}
-                  setShowTrainingCourses={setShowTrainingCourses}
-                  onSave={handleEmployeeProfileSave}
-                  isPending={employeeProfileMutation.isPending}
-                  isSuccess={employeeProfileMutation.isSuccess}
-                  error={employeeProfileMutation.isError ? readErrorMessage(employeeProfileMutation.error) : null}
-                />
-              ) : null}
+              <ServiceRecordSection
+                employee={currentSettings.employeeProfile}
+                form={employeeForm}
+                setForm={setEmployeeForm}
+                showLanguages={showLanguages}
+                setShowLanguages={setShowLanguages}
+                showTrainingCourses={showTrainingCourses}
+                setShowTrainingCourses={setShowTrainingCourses}
+                onSave={handleEmployeeProfileSave}
+                isPending={employeeProfileMutation.isPending}
+                isSuccess={employeeProfileMutation.isSuccess}
+                error={employeeProfileMutation.isError ? readErrorMessage(employeeProfileMutation.error) : null}
+              />
             </>
           ) : null}
 
@@ -1051,7 +1313,7 @@ export function UserSettingsPage({
 
           {activeTab === "security" ? (
             <>
-              {forcePasswordChange ? (
+              {showForcePasswordBanner ? (
                 <PortalSurface className="border-[#FDE68A] bg-[linear-gradient(135deg,#FFFBEA_0%,#FFFFFF_100%)]">
                   <div className="flex items-start gap-3">
                     <Info size={18} className="mt-0.5 text-[#B45309]" />

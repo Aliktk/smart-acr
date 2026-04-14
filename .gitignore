@@ -1,3 +1,8 @@
+# Playwright E2E
+playwright-report/
+e2e/test-results/
+blob-report/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -213,10 +218,25 @@ __marimo__/
 .venv/*
 venv/*
 .agent/*
-
+.claude**
+\.playwright
+\.playwright-cli
+\.playwright-mcp
 # Node / web workspaces
 node_modules/
 .next/
 .turbo/
 .vercel/
 .tmp/
+ACR forms
+playwright-report
+# Infrastructure runtime (secrets, state, backups)
+infra/docker/env/*.env
+!infra/docker/env/.gitkeep
+infra/state/*.env
+!infra/state/.gitkeep
+infra/backups/
+infra/docker/certs/*.crt
+infra/docker/certs/*.key
+!infra/docker/certs/.gitkeep
+.vscode

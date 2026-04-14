@@ -250,166 +250,52 @@ const FormA_Page3: React.FC = () => (
       <SignatureBlock scope="countersigning" title="Signature, Name & Designation" showStamp={true} />
     </div>
 
-    {/* Instructions begin */}
-    <div className="mt-12 border-t-2 border-black pt-4">
-      <h3 className="font-bold text-sm mb-3">A. INSTRUCTIONS FOR MINISTRIES, DEPARTMENTS, ETC.</h3>
-
-      <div className="text-xs space-y-3 text-justify">
-        <p>
-          <span className="mr-3">1.</span>
-          The reports will be initiated by the Branch/Section Officer incharge and will be countersigned by the next higher
-          officer, both being concerned with the work of the person reported upon.
-        </p>
-
-        <p>
-          <span className="mr-3">2.</span>
-          When an adverse remark is made in the confidential report of the official reported upon, a copy of the whole
-          report should be furnished to him at the earliest opportunity, and in any case within one month from the date the report
-          is countersigned, with a memorandum a copy of which should be signed and returned by him in acknowledgement of the report
-          and be in turn placed in the character roll for record. A serious view should be taken of any failure on the part of the
-          official concerned to furnish a copy of the report containing adverse remarks to the person reported upon.
-        </p>
-
-        <p>
-          <span className="mr-3">3.</span>
-          The officials making representations against adverse remarks recorded in their confidential reports should not
-          make any personal remark or remarks against the integrity of the reporting officers. Violation of this rule will be considered
-          a misconduct and will also render the representation liable to be summarily rejected.
-        </p>
-      </div>
-    </div>
   </FormPage>
 );
 
 const FormA_Page4: React.FC = () => (
   <FormPage pageNumber={4}>
-    <div className="text-xs space-y-3 text-justify">
-      <p>
-        <span className="mr-3">4.</span>
-        When a report is both upon on the individual opinion of the reporting and countersigning officers, it is only
-        the report is intended to be a complete one.
-      </p>
+    <div className="border-t-2 border-black pt-3">
+      <h3 className="font-bold text-[11px] mb-2">A. INSTRUCTIONS FOR MINISTRIES, DEPARTMENTS, ETC.</h3>
+      <div className="text-[10px] space-y-1.5 text-justify">
+        <p><span className="mr-2 font-semibold">1.</span>The reports will be initiated by the Branch/Section Officer incharge and will be countersigned by the next higher officer, both being concerned with the work of the person reported upon.</p>
+        <p><span className="mr-2 font-semibold">2.</span>When an adverse remark is made in the confidential report of the official reported upon, a copy of the whole report should be furnished to him within one month from the date the report is countersigned, with a memorandum to be signed and returned by him. A serious view should be taken of any failure to furnish a copy containing adverse remarks.</p>
+        <p><span className="mr-2 font-semibold">3.</span>Officials making representations against adverse remarks should not make personal remarks against the integrity of reporting officers. Violation will be considered misconduct and may render the representation liable to be summarily rejected.</p>
+        <p><span className="mr-2 font-semibold">4.</span>When a report is based on the individual opinion of both the reporting and countersigning officers, it is intended to be a complete one.</p>
+        <p><span className="mr-2 font-semibold">5.</span>Remarks in cases where the reporting/countersigning officer suspends judgement should not be communicated.</p>
+        <p><span className="mr-2 font-semibold">6.</span>Adverse remarks communicated by the Branch/Section Officer incharge or by the countersigning officer in previous years should also be communicated.</p>
+        <p><span className="mr-2 font-semibold">7.</span>Annual Confidential/Sensitive adverse remarks should not be taken into consideration until communicated following rule A-2 above and a decision taken thereon.</p>
+      </div>
 
-      <p>
-        <span className="mr-3">5.</span>
-        Remarks in cases where the reporting/countersigning officeruspends judgement, should not be communicated.
-      </p>
+      <h3 className="font-bold text-[11px] mt-3 mb-2">B. INSTRUCTIONS FOR THE OFFICERS RESPONSIBLE FOR THE CUSTODY OF CHARACTER ROLLS</h3>
+      <div className="text-[10px] space-y-1.5 text-justify">
+        <p><span className="mr-2 font-semibold">1.</span>Arrange for the completion of the routine part of form and send it to the reporting officer concerned.</p>
+        <p><span className="mr-2 font-semibold">2.</span>On receipt of the completed form from the reporting officer, attach it with a relevant note for the countersigning officer.</p>
+        <p><span className="mr-2 font-semibold">3.</span>See that all entries and remarks are in order; if any differences of opinion are noted in red ink, arrange to have them communicated to the person concerned with a direction that his representation, if any, should be submitted with a signed acknowledgement.</p>
+        <p><span className="mr-2 font-semibold">4.</span>Arrange to obtain a decision on the representation, if any, and communicate it to the official concerned. Place a copy of the representation in the dossier.</p>
+        <p><span className="mr-2 font-semibold">5.</span>If an official has been receiving adverse remarks for two successive years from the same reporting officer, take up the question of placing him under another reporting officer.</p>
+      </div>
 
-      <p>
-        <span className="mr-3">6.</span>
-        The adverse remarks communicated by the Branch/Section Officer incharge or by the countersigning officer to the
-        Establishment Officer upon his on her request in the previous years should also be communicated.
-      </p>
+      <h3 className="font-bold text-[11px] mt-3 mb-2">C. INSTRUCTIONS FOR THE REPORTING OFFICERS</h3>
+      <div className="text-[10px] space-y-1.5 text-justify">
+        <p>While reporting on each subordinate: (i) Be as objective as possible. (ii) Be as accurate as possible. (iii) State all positive and negative points or issues in your remarks. (iv) Be fair to your subordinates.</p>
+        <p><span className="mr-2 font-semibold">2.</span>State whether any of the defects reported have already been brought to the notice of the person concerned and whether, in the case of those already brought to notice, there has been any improvement.</p>
+        <p><span className="mr-2 font-semibold">3.</span>Fill this form in duplicate and affix your signature on both, at the end of the 'general remarks'.</p>
+        <p><span className="mr-2 font-semibold">4.</span>After an evaluation is complete, pass on the form to the officer authorized to countersign. Retain a copy in your office.</p>
+      </div>
 
-      <p>
-        <span className="mr-3">7.</span>
-        Annual Confidential/Sensitive adverse remarks should not be taken into consideration until they
-        have been communicated following rule A-2 above and a decision taken thereon by the officer responsible for custody of reports in
-        open.
-      </p>
-    </div>
+      <h3 className="font-bold text-[11px] mt-3 mb-2">D. INSTRUCTIONS FOR THE COUNTERSIGNING OFFICERS</h3>
+      <div className="text-[10px] space-y-1.5 text-justify">
+        <p><span className="mr-2 font-semibold">1.</span>Weigh the remarks of the reporting officer against (a) your personal knowledge of the person reported upon, (b) the previous reports in his character roll, and then give your own remarks at the end of the report.</p>
+        <p><span className="mr-2 font-semibold">2.</span>If you consider that a particular remark should be expunged, score it out in red and give reasons, with a direction that your remarks in red should be communicated to the person concerned. If you do not wholly agree with remarks, give your own remarks against the relevant entry or at the end of the report.</p>
+        <p><span className="mr-2 font-semibold">3.</span>See whether adverse remarks were acted upon and whether the person has taken steps to remedy the defects pointed out. Comment on this aspect unless the reporting officer has already done so.</p>
+        <p><span className="mr-2 font-semibold">4.</span>After countersigning, ensure adverse remarks to be communicated are forwarded. See also instructions 2 and 4–6 under A above.</p>
+        <p><span className="mr-2 font-semibold">5.</span>After completing the form, return it to the officer responsible for the custody of the character roll.</p>
+      </div>
 
-    <h3 className="font-bold text-sm mt-6 mb-3">B. INSTRUCTIONS FOR THE OFFICERS RESPONSIBLE FOR THE CUSTODY OF CHARACTER ROLLS</h3>
-
-    <div className="text-xs space-y-3 text-justify">
-      <p>
-        <span className="mr-3">1.</span>
-        Arrange for the completion of the routine part of form and send it to the reporting officer concerned.
-      </p>
-
-      <p>
-        <span className="mr-3">2.</span>
-        On receipt of the completed form from the reporting officer attach an along with relevant note for the
-        countersigning officer.
-      </p>
-
-      <p>
-        <span className="mr-3">3.</span>
-        See that all entries and remarks, if any, of there are differences of opinion as regards any part in red ink- If so,
-        arrange to have them communicated to the person concerned immediately with the direction that his representation, if any,
-        should be submitted along with a signed acknowledgement of the adverse remarks by him.
-      </p>
-
-      <p>
-        <span className="mr-3">4.</span>
-        Arrange to obtain a decision on the representation, if any, and communicate it to the official concerned along with
-        one seal. Place a copy of the representation in the dossier.
-      </p>
-
-      <p>
-        <span className="mr-3">5.</span>
-        If an official has been receiving adverse remarks for two successive years from the same reporting officer, take
-        up the question of placing him under another reporting officer.
-      </p>
-    </div>
-
-    <h3 className="font-bold text-sm mt-6 mb-3">C. INSTRUCTIONS FOR THE REPORTING OFFICERS</h3>
-
-    <div className="text-xs space-y-3 text-justify">
-      <p>
-        While reporting on each subordinate: —
-      </p>
-      <p className="ml-6">
-        (i) Be as objective as possible.<br/>
-        (ii) Be as accurate as possible.<br/>
-        (iii) State all positive and negative points or issues in your remarks.<br/>
-        (iv) Be fair to your subordinates.
-      </p>
-
-      <p>
-        <span className="mr-3">2.</span>
-        State whether any of the defects reported have already been brought to the notice of the person concerned
-        and whether in the case of those already brought to notice, there has been any improvement.
-      </p>
-
-      <p>
-        <span className="mr-3">3.</span>
-        Fill this form in duplicate and affix your signature on both, at the end of the 'general remarks'.
-      </p>
-
-      <p>
-        <span className="mr-3">4.</span>
-        After an evaluation is complete, pass on the form to the officer authorized to countersign. Retain a copy and roll in your
-        office.
-      </p>
-    </div>
-
-    <h3 className="font-bold text-sm mt-6 mb-3">D. INSTRUCTIONS FOR THE COUNTERSIGNING OFFICERS</h3>
-
-    <div className="text-xs space-y-3 text-justify">
-      <p>
-        <span className="mr-3">1.</span>
-        Weigh the remarks of the reporting officer against (a) your personal knowledge, if any, of the person reported
-        upon, (b) the previous reports in his character roll and then give your own remarks at the end of the report.
-      </p>
-
-      <p>
-        <span className="mr-3">2.</span>
-        If you consider that a particular remark on the reporting officer is strong and should be expunged, score it out
-        in red and give reasons for such adverse action, with a direction that your remarks in red should be communicated to the person
-        concerned. If you do not wholly agree with remarks give you own remarks either against the relevant entry or at the end of the report.
-      </p>
-
-      <p>
-        <span className="mr-3">3.</span>
-        See whether any adverse remarks were, in your opinion, are taken or not should or be has taken steps to remedy the defects pointed out to him. Comment on this aspect unless the reporting
-        officer has already done so.
-      </p>
-
-      <p>
-        <span className="mr-3">4.</span>
-        After countersigning or adverse remarks which are to be communicated to the person
-        reported upon. Please see also instructions 2 and 4 to 6 under A — Instructions for Ministries, Departments etc.
-      </p>
-
-      <p>
-        <span className="mr-3">5.</span>
-        After completing the form, return it to the officer responsible for the custody of the character roll.
-      </p>
-    </div>
-
-    <div className="text-center text-xs mt-8 text-gray-600">
-      PGP/PK—LRH/1996/07/DC/44F—100,000 Loose
+      <div className="text-center text-[9px] mt-4 text-gray-500">
+        PGP/PK—LRH/1996/07/DC/44F—100,000 Loose
+      </div>
     </div>
   </FormPage>
 );

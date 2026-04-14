@@ -4,7 +4,7 @@ import { UserRole } from "@prisma/client";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PrismaService } from "../../common/prisma.service";
-import { canAccessAcr, loadScopedUser } from "../../helpers/security.utils";
+import { canAccessAcr, canAccessEmployee, loadScopedUser } from "../../helpers/security.utils";
 
 @Injectable()
 export class FilesService {
@@ -13,10 +13,17 @@ export class FilesService {
     private readonly configService: ConfigService,
   ) {}
 
-  async recordFile(userId: string, acrRecordId: string | undefined, kind: "SIGNATURE" | "STAMP" | "DOCUMENT", file: Express.Multer.File) {
+  async recordFile(
+    userId: string,
+    acrRecordId: string | undefined,
+    kind: "SIGNATURE" | "STAMP" | "DOCUMENT",
+    file: Express.Multer.File,
+    archiveRecordId?: string,
+  ) {
     const created = await this.prisma.fileAsset.create({
       data: {
         acrRecordId,
+        archiveRecordId,
         uploadedById: userId,
         kind,
         fileName: file.filename,
@@ -30,6 +37,7 @@ export class FilesService {
       kind: created.kind,
       fileName: created.fileName,
       mimeType: created.mimeType,
+      storagePath: created.storagePath,
       contentUrl: `/api/v1/files/${created.id}/content`,
     };
   }
@@ -43,6 +51,11 @@ export class FilesService {
             employee: true,
           },
         },
+        archiveRecord: {
+          include: {
+            employee: true,
+          },
+        },
       },
     });
 
@@ -50,11 +63,19 @@ export class FilesService {
       throw new NotFoundException("The requested file could not be found.");
     }
 
-    if (file.acrRecord) {
-      const user = await loadScopedUser(this.prisma, userId, activeRole);
+    const user = await loadScopedUser(this.prisma, userId, activeRole);
 
+    if (activeRole === UserRole.EMPLOYEE && (file.acrRecord || file.archiveRecord)) {
+      throw new ForbiddenException("Employees can view archive metadata only and cannot access stored documents.");
+    }
+
+    if (file.acrRecord) {
       if (!canAccessAcr(user, file.acrRecord)) {
         throw new ForbiddenException("You are not allowed to access this file.");
+      }
+    } else if (file.archiveRecord) {
+      if (!canAccessEmployee(user, file.archiveRecord.employee)) {
+        throw new ForbiddenException("You are not allowed to access this archived file.");
       }
     } else if (file.uploadedById && file.uploadedById !== userId) {
       throw new ForbiddenException("You are not allowed to access this file.");
@@ -73,6 +94,23 @@ export class FilesService {
       mimeType: file.mimeType,
       fileName: file.fileName,
     };
+  }
+
+  async deleteStoredFile(storedPath?: string | null) {
+    if (!storedPath) {
+      return;
+    }
+
+    try {
+      await fs.unlink(this.resolveStoragePath(storedPath));
+    } catch (error) {
+      const errorCode =
+        typeof error === "object" && error !== null && "code" in error ? (error as { code?: string }).code : undefined;
+
+      if (errorCode !== "ENOENT") {
+        throw error;
+      }
+    }
   }
 
   private storageRoot() {

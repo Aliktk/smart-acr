@@ -8,7 +8,41 @@ interface StatCardProps {
   icon: ReactNode;
   trend?: { value: number; label: string; up: boolean };
   accent?: "navy" | "cyan" | "green" | "amber" | "red" | "purple" | "slate";
+  sparkline?: number[];
   onClick?: () => void;
+}
+
+function InlineSparkline({ data, color }: { data: number[]; color: string }) {
+  if (data.length < 2) return null;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const range = max - min || 1;
+  const w = 80;
+  const h = 28;
+  const pad = 2;
+  const iw = w - pad * 2;
+  const ih = h - pad * 2;
+  const pts = data.map((v, i) => {
+    const x = pad + (i / (data.length - 1)) * iw;
+    const y = pad + ih - ((v - min) / range) * ih;
+    return `${x},${y}`;
+  });
+  const linePath = `M${pts.join("L")}`;
+  const fillPath = `${linePath}L${pad + iw},${pad + ih}L${pad},${pad + ih}Z`;
+  const gradId = `sg-${color.replace(/[^a-z0-9]/gi, "")}`;
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block shrink-0 opacity-80">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <path d={fillPath} fill={`url(#${gradId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 const accentConfig = {
@@ -28,16 +62,18 @@ export function StatCard({
   icon,
   trend,
   accent = "navy",
+  sparkline,
   onClick,
 }: StatCardProps) {
   const cfg = accentConfig[accent];
 
   return (
     <div
-      className="overflow-hidden rounded-[24px] bg-white transition-all duration-150"
+      data-testid="stat-card"
+      className="overflow-hidden rounded-[24px] bg-[var(--card)] transition-all duration-150"
       style={{
         border: "1px solid var(--fia-gray-200)",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+        boxShadow: "var(--shadow-xs)",
         cursor: onClick ? "pointer" : "default",
       }}
       onClick={onClick}
@@ -92,12 +128,18 @@ export function StatCard({
             )}
           </div>
 
-          {/* Icon */}
-          <div
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[16px]"
-            style={{ background: cfg.iconBg, color: cfg.iconColor }}
-          >
-            {icon}
+          {/* Right side: sparkline (if provided) or icon */}
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            {/* Icon always shown */}
+            <div
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[16px]"
+              style={{ background: cfg.iconBg, color: cfg.iconColor }}
+            >
+              {icon}
+            </div>
+            {sparkline && sparkline.length >= 2 ? (
+              <InlineSparkline data={sparkline} color={cfg.topBar} />
+            ) : null}
           </div>
         </div>
       </div>

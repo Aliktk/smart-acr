@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { uploadAcrAsset } from "@/api/client";
+import { useEffect, useRef, useState } from "react";
+import { getUserAssetContentUrl, uploadAcrAsset, uploadUserProfileAsset } from "@/api/client";
 import type {
   AcrAssetKind,
   AcrAssetReference,
   AcrFormData,
   AcrReplicaState,
   AcrReviewerContext,
+  UserAssetType,
 } from "@/types/contracts";
 
 type InteractiveFormProps = {
@@ -15,6 +16,7 @@ type InteractiveFormProps = {
   editable?: boolean;
   formData?: AcrFormData | null;
   editableScopes?: string[];
+  inlineProfileAssetScope?: "reporting" | "countersigning" | null;
   acrRecordId?: string;
   reviewerContext?: AcrReviewerContext | null;
   onReplicaStateChange?: (replicaState: AcrReplicaState) => void;
@@ -27,6 +29,62 @@ const EMPTY_REPLICA_STATE: AcrReplicaState = {
 };
 
 type ReplicaFieldKind = "text" | "check" | "asset";
+type ReviewerScope = "reporting" | "countersigning";
+type AssetFieldDescriptor = {
+  key: string;
+  scope: string;
+  kind: AcrAssetKind;
+  element: HTMLElement;
+};
+type RuntimeReviewerAssetMap = Partial<Record<ReviewerScope, Partial<Record<AcrAssetKind, AcrAssetReference>>>>;
+
+const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const MAX_REUSABLE_ASSET_SIZE_BYTES = 2 * 1024 * 1024;
+
+function readErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "The request could not be completed.";
+  }
+
+  try {
+    const parsed = JSON.parse(error.message) as { message?: string | string[] };
+    if (Array.isArray(parsed.message)) {
+      return parsed.message.join(" ");
+    }
+    return parsed.message ?? error.message;
+  } catch {
+    return error.message;
+  }
+}
+
+function toUserAssetType(kind: AcrAssetKind): UserAssetType {
+  return kind === "STAMP" ? "STAMP" : "SIGNATURE";
+}
+
+function buildAssetReference(asset: {
+  id: string;
+  fileName: string;
+  mimeType: string;
+}, kind: AcrAssetKind, acrRecordId?: string) {
+  return {
+    url: getUserAssetContentUrl(asset.id, { acrId: acrRecordId ?? null }),
+    fileName: asset.fileName,
+    mimeType: asset.mimeType,
+    kind,
+  } satisfies AcrAssetReference;
+}
+
+function validateReusableAssetFile(file: File) {
+  if (!SUPPORTED_IMAGE_TYPES.includes(file.type as (typeof SUPPORTED_IMAGE_TYPES)[number])) {
+    return "Please upload a JPG, PNG, or WEBP image.";
+  }
+
+  if (file.size > MAX_REUSABLE_ASSET_SIZE_BYTES) {
+    return "Reusable signature and stamp files must be 2 MB or smaller.";
+  }
+
+  return null;
+}
 
 function cloneReplicaState(state?: AcrReplicaState | null): AcrReplicaState {
   return {
@@ -104,6 +162,16 @@ function explicitFieldKind(element: HTMLElement): ReplicaFieldKind | null {
 function explicitBinding(element: HTMLElement) {
   const binding = element.dataset.replicaBinding?.trim();
   return binding ? binding : null;
+}
+
+function explicitPrefillBinding(element: HTMLElement) {
+  const binding = element.dataset.replicaPrefill?.trim();
+  return binding ? binding : null;
+}
+
+function explicitCheckGroup(element: HTMLElement) {
+  const group = element.dataset.replicaGroup?.trim();
+  return group ? group : null;
 }
 
 function isAssetField(element: HTMLElement) {
@@ -255,7 +323,12 @@ function applyAssetValue(element: HTMLElement, value?: AcrAssetReference | strin
   }
 
   const alt = element.dataset.replicaAssetKind === "STAMP" || element.className.includes("stamp") ? "Official Stamp" : "Signature";
-  element.innerHTML = `<img src="${assetUrl}" class="h-full w-full object-contain mix-blend-multiply opacity-90" alt="${alt}" />`;
+  element.textContent = "";
+  const img = document.createElement("img");
+  img.src = assetUrl;
+  img.alt = alt;
+  img.className = "h-full w-full object-contain mix-blend-multiply opacity-90";
+  element.appendChild(img);
   element.style.borderStyle = "solid";
   element.style.borderColor = "transparent";
 }
@@ -329,13 +402,47 @@ function resolveBoundPrefill(binding: string, formData?: AcrFormData | null, rev
       return reviewerContext?.countersigning?.name ?? null;
     case "countersigning-officer-designation":
       return reviewerContext?.countersigning?.designation ?? "Countersigning Officer";
+    case "reporting-date":
+    case "reporting-officer-date":
+    case "reporting-signature-date":
+      return new Date().toISOString().slice(0, 10);
+    case "countersigning-date":
+    case "countersigning-officer-date":
+    case "countersigning-signature-date":
+    case "second-countersigning-signature-date":
+    case "per1718-submission-certificate-date":
+      return new Date().toISOString().slice(0, 10);
+    case "drivers-date-of-birth":
+      return readRecordString(employee, "dateOfBirth");
+    case "per1718-personnel-number":
+      return readRecordString(employee, "personnelNumber");
+    case "per1718-date-of-birth":
+      return readRecordString(employee, "dateOfBirth");
+    case "per1718-academic-qualifications":
+      return readRecordString(employee, "qualifications");
+    case "per1718-service-group":
+      return readRecordString(employee, "serviceGroup");
+    case "reporting-period-from-day-month": {
+      const from = clerkSection?.periodFrom;
+      if (!from) return null;
+      const parts = from.split("-");
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${parts[2] ?? ""} ${monthNames[(parseInt(parts[1] ?? "0", 10) - 1)] ?? ""}`;
+    }
+    case "reporting-period-to-day-month": {
+      const to = clerkSection?.periodTo;
+      if (!to) return null;
+      const parts = to.split("-");
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${parts[2] ?? ""} ${monthNames[(parseInt(parts[1] ?? "0", 10) - 1)] ?? ""}`;
+    }
     default:
       return null;
   }
 }
 
 function resolveTextPrefill(element: HTMLElement, formData?: AcrFormData | null, reviewerContext?: AcrReviewerContext | null) {
-  const binding = explicitBinding(element);
+  const binding = explicitPrefillBinding(element) ?? explicitBinding(element);
   if (binding) {
     return resolveBoundPrefill(binding, formData, reviewerContext);
   }
@@ -436,6 +543,14 @@ function resolveTextPrefill(element: HTMLElement, formData?: AcrFormData | null,
 }
 
 function getSiblingCheckElements(container: HTMLElement, element: HTMLElement) {
+  const explicitGroup = explicitCheckGroup(element);
+
+  if (explicitGroup) {
+    return Array.from(container.querySelectorAll<HTMLElement>("[data-replica-kind='check']")).filter(
+      (candidate) => candidate.dataset.replicaGroup === explicitGroup,
+    );
+  }
+
   const row = element.closest("tr");
 
   if (row) {
@@ -477,6 +592,37 @@ function assetKindForElement(element: HTMLElement): AcrAssetKind {
   }
 
   return "SIGNATURE";
+}
+
+function resolveReusableReviewerAssetValue(
+  element: HTMLElement,
+  reviewerContext?: AcrReviewerContext | null,
+  acrRecordId?: string,
+  runtimeAssets?: RuntimeReviewerAssetMap,
+) {
+  const scope = resolveFieldScope(element);
+  const kind = assetKindForElement(element);
+
+  if (scope === "reporting" || scope === "countersigning") {
+    const runtimeAsset = runtimeAssets?.[scope]?.[kind];
+    if (runtimeAsset) {
+      return runtimeAsset;
+    }
+  }
+
+  const reviewer = scope === "countersigning" ? reviewerContext?.countersigning : reviewerContext?.reporting;
+
+  if (!reviewer) {
+    return undefined;
+  }
+
+  const asset = kind === "STAMP" ? reviewer.stampAsset : reviewer.signatureAsset;
+
+  if (!asset) {
+    return undefined;
+  }
+
+  return buildAssetReference(asset, kind, acrRecordId);
 }
 
 function findCompatibleAssetValue(binding: string | null, state: AcrReplicaState) {
@@ -537,6 +683,7 @@ export function InteractiveForm({
   children,
   editable = false,
   editableScopes,
+  inlineProfileAssetScope = null,
   formData,
   acrRecordId,
   reviewerContext,
@@ -545,16 +692,196 @@ export function InteractiveForm({
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<AcrReplicaState>(cloneReplicaState(formData?.replicaState));
   const onReplicaStateChangeRef = useRef(onReplicaStateChange);
+  const assetFieldRegistryRef = useRef<AssetFieldDescriptor[]>([]);
+  const [runtimeReviewerAssets, setRuntimeReviewerAssets] = useState<RuntimeReviewerAssetMap>({});
+  const [inlineUploadBusy, setInlineUploadBusy] = useState<{
+    kind: AcrAssetKind;
+    mode: "profile" | "acr";
+  } | null>(null);
+  const [inlineUploadError, setInlineUploadError] = useState<string | null>(null);
+  const [inlineUploadMessage, setInlineUploadMessage] = useState<string | null>(null);
+  const [assetUiVersion, setAssetUiVersion] = useState(0);
+
   const editableScopesKey = editableScopes?.join("|") ?? "";
   const reviewerContextKey = [
     reviewerContext?.reporting.name ?? "",
     reviewerContext?.reporting.designation ?? "",
+    reviewerContext?.reporting.signatureAsset?.id ?? "",
+    reviewerContext?.reporting.stampAsset?.id ?? "",
     reviewerContext?.countersigning?.name ?? "",
     reviewerContext?.countersigning?.designation ?? "",
+    reviewerContext?.countersigning?.signatureAsset?.id ?? "",
+    reviewerContext?.countersigning?.stampAsset?.id ?? "",
   ].join("|");
+  const runtimeReviewerAssetsKey = [
+    runtimeReviewerAssets.reporting?.SIGNATURE?.url ?? "",
+    runtimeReviewerAssets.reporting?.STAMP?.url ?? "",
+    runtimeReviewerAssets.countersigning?.SIGNATURE?.url ?? "",
+    runtimeReviewerAssets.countersigning?.STAMP?.url ?? "",
+  ].join("|");
+  const effectiveInlineScope =
+    editable && inlineProfileAssetScope && (!editableScopes || editableScopes.includes(inlineProfileAssetScope))
+      ? inlineProfileAssetScope
+      : null;
+
+  function emitReplicaState() {
+    onReplicaStateChangeRef.current?.(cloneReplicaState(stateRef.current));
+  }
+
+  function bumpAssetUiVersion() {
+    setAssetUiVersion((current) => current + 1);
+  }
+
+  function getAssetDescriptors(scope: ReviewerScope, kind: AcrAssetKind) {
+    return assetFieldRegistryRef.current.filter((descriptor) => descriptor.scope === scope && descriptor.kind === kind);
+  }
+
+  function hasAcrAssetOverride(scope: ReviewerScope, kind: AcrAssetKind) {
+    return getAssetDescriptors(scope, kind).some((descriptor) => stateRef.current.assetFields[descriptor.key] !== undefined);
+  }
+
+  function applyScopedAssetOverride(scope: ReviewerScope, kind: AcrAssetKind, value: AcrAssetReference | string) {
+    const descriptors = getAssetDescriptors(scope, kind);
+
+    descriptors.forEach((descriptor) => {
+      stateRef.current.assetFields[descriptor.key] = value;
+      applyAssetValue(descriptor.element, value);
+    });
+
+    emitReplicaState();
+    bumpAssetUiVersion();
+  }
+
+  function clearScopedAssetOverride(scope: ReviewerScope, kind: AcrAssetKind) {
+    const descriptors = getAssetDescriptors(scope, kind);
+
+    descriptors.forEach((descriptor) => {
+      delete stateRef.current.assetFields[descriptor.key];
+      applyAssetValue(descriptor.element, resolveReusableReviewerAssetValue(descriptor.element, reviewerContext, acrRecordId, runtimeReviewerAssets));
+    });
+
+    emitReplicaState();
+    bumpAssetUiVersion();
+  }
+
+  function resolveAssetAvailability(scope: ReviewerScope, kind: AcrAssetKind) {
+    if (hasAcrAssetOverride(scope, kind)) {
+      return "acr" as const;
+    }
+
+    if (runtimeReviewerAssets[scope]?.[kind]) {
+      return "profile" as const;
+    }
+
+    const reviewer = scope === "countersigning" ? reviewerContext?.countersigning : reviewerContext?.reporting;
+    const reusableAsset = kind === "STAMP" ? reviewer?.stampAsset : reviewer?.signatureAsset;
+    return reusableAsset ? ("profile" as const) : ("missing" as const);
+  }
+
+  async function pickImageFile() {
+    return new Promise<File | null>((resolve) => {
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = SUPPORTED_IMAGE_TYPES.join(",");
+      fileInput.onchange = () => resolve(fileInput.files?.[0] ?? null);
+      fileInput.click();
+    });
+  }
+
+  async function handleProfileAssetUpload(kind: AcrAssetKind) {
+    if (!effectiveInlineScope || kind === "DOCUMENT") {
+      return;
+    }
+
+    setInlineUploadError(null);
+    setInlineUploadMessage(null);
+
+    const file = await pickImageFile();
+    if (!file) {
+      return;
+    }
+
+    const validationError = validateReusableAssetFile(file);
+    if (validationError) {
+      setInlineUploadError(validationError);
+      return;
+    }
+
+    setInlineUploadBusy({ kind, mode: "profile" });
+
+    try {
+      const settings = await uploadUserProfileAsset(toUserAssetType(kind), file);
+      const profileAsset = kind === "STAMP" ? settings.profile.stampAsset : settings.profile.signatureAsset;
+
+      if (!profileAsset) {
+        throw new Error("The profile asset could not be saved.");
+      }
+
+      const reusableReference = buildAssetReference(profileAsset, kind, acrRecordId);
+      setRuntimeReviewerAssets((current) => ({
+        ...current,
+        [effectiveInlineScope]: {
+          ...(current[effectiveInlineScope] ?? {}),
+          [kind]: reusableReference,
+        },
+      }));
+      applyScopedAssetOverride(effectiveInlineScope, kind, reusableReference);
+      setInlineUploadMessage(
+        `${kind === "STAMP" ? "Official stamp" : "Signature"} saved to profile and applied to this form.`,
+      );
+    } catch (error) {
+      setInlineUploadError(readErrorMessage(error));
+    } finally {
+      setInlineUploadBusy(null);
+    }
+  }
+
+  async function handleAcrOnlyAssetUpload(kind: AcrAssetKind) {
+    if (!effectiveInlineScope || kind === "DOCUMENT") {
+      return;
+    }
+
+    setInlineUploadError(null);
+    setInlineUploadMessage(null);
+
+    const file = await pickImageFile();
+    if (!file) {
+      return;
+    }
+
+    const validationError = validateReusableAssetFile(file);
+    if (validationError) {
+      setInlineUploadError(validationError);
+      return;
+    }
+
+    setInlineUploadBusy({ kind, mode: "acr" });
+
+    try {
+      if (acrRecordId) {
+        const uploaded = await uploadAcrAsset(acrRecordId, kind, file, file.name);
+        applyScopedAssetOverride(effectiveInlineScope, kind, {
+          fileId: uploaded.id,
+          url: uploaded.contentUrl,
+          fileName: uploaded.fileName,
+          mimeType: uploaded.mimeType,
+          kind: uploaded.kind,
+        });
+      } else {
+        applyScopedAssetOverride(effectiveInlineScope, kind, await readImageAsDataUrl(file));
+      }
+
+      setInlineUploadMessage(`${kind === "STAMP" ? "Official stamp" : "Signature"} attached to this ACR.`);
+    } catch (error) {
+      setInlineUploadError(readErrorMessage(error));
+    } finally {
+      setInlineUploadBusy(null);
+    }
+  }
 
   useEffect(() => {
     stateRef.current = cloneReplicaState(formData?.replicaState);
+    bumpAssetUiVersion();
   }, [formData?.replicaState]);
 
   useEffect(() => {
@@ -568,8 +895,9 @@ export function InteractiveForm({
       return;
     }
 
-    const emitReplicaState = () => onReplicaStateChangeRef.current?.(cloneReplicaState(stateRef.current));
     let didMigrateLegacyKeys = false;
+    let didPersistPrefill = false;
+    const nextAssetFieldRegistry: AssetFieldDescriptor[] = [];
 
     Array.from(container.querySelectorAll<HTMLElement>("span,div,td")).forEach((element) => {
       if (isTextField(element)) {
@@ -599,6 +927,10 @@ export function InteractiveForm({
 
         if (prefillValue) {
           applyTextValue(element, prefillValue);
+          if (savedValue === undefined) {
+            stateRef.current.textFields[key] = prefillValue;
+            didPersistPrefill = true;
+          }
         } else if (savedValue === "") {
           element.textContent = "";
         }
@@ -687,8 +1019,13 @@ export function InteractiveForm({
 
         const currentAssetValue =
           stateRef.current.assetFields[key] ??
-          findCompatibleAssetValue(binding, stateRef.current);
+          findCompatibleAssetValue(binding, stateRef.current) ??
+          resolveReusableReviewerAssetValue(element, reviewerContext, acrRecordId, runtimeReviewerAssets);
         const fieldEditable = editable && (!editableScopes || editableScopes.includes(resolveFieldScope(element)));
+        const scope = resolveFieldScope(element);
+        const kind = assetKindForElement(element);
+
+        nextAssetFieldRegistry.push({ key, scope, kind, element });
         element.dataset.replicaKind = "asset";
         element.dataset.replicaKey = key;
         element.style.cursor = fieldEditable ? "pointer" : "default";
@@ -696,15 +1033,17 @@ export function InteractiveForm({
         applyAssetValue(element, currentAssetValue);
         element.onclick = fieldEditable
           ? async () => {
-              const latestAssetValue =
+              const latestExplicitAssetValue =
                 stateRef.current.assetFields[key] ??
+                stateRef.current.assetFields[legacyKey] ??
                 findCompatibleAssetValue(binding, stateRef.current);
 
-              if (latestAssetValue) {
+              if (latestExplicitAssetValue && stateRef.current.assetFields[key] !== undefined) {
                 delete stateRef.current.assetFields[key];
                 delete stateRef.current.assetFields[legacyKey];
-                applyAssetValue(element);
+                applyAssetValue(element, resolveReusableReviewerAssetValue(element, reviewerContext, acrRecordId, runtimeReviewerAssets));
                 emitReplicaState();
+                bumpAssetUiVersion();
                 return;
               }
 
@@ -720,6 +1059,11 @@ export function InteractiveForm({
                 }
 
                 try {
+                  const validationError = validateReusableAssetFile(file);
+                  if (validationError) {
+                    throw new Error(validationError);
+                  }
+
                   if (acrRecordId) {
                     const uploaded = await uploadAcrAsset(acrRecordId, assetKindForElement(element), file, file.name);
                     stateRef.current.assetFields[key] = {
@@ -735,6 +1079,7 @@ export function InteractiveForm({
 
                   applyAssetValue(element, stateRef.current.assetFields[key]);
                   emitReplicaState();
+                  bumpAssetUiVersion();
                 } catch (error) {
                   window.alert(error instanceof Error ? error.message : "Unable to upload the selected file.");
                 }
@@ -746,10 +1091,29 @@ export function InteractiveForm({
       }
     });
 
-    if (didMigrateLegacyKeys) {
+    assetFieldRegistryRef.current = nextAssetFieldRegistry;
+    bumpAssetUiVersion();
+
+    if (didMigrateLegacyKeys || didPersistPrefill) {
       emitReplicaState();
     }
-  }, [acrRecordId, editable, editableScopesKey, formData?.clerkSection, formData?.employeeSnapshot, formData?.replicaState, reviewerContextKey]);
+  }, [
+    acrRecordId,
+    editable,
+    editableScopesKey,
+    formData?.clerkSection,
+    formData?.employeeSnapshot,
+    formData?.replicaState,
+    reviewerContextKey,
+    runtimeReviewerAssetsKey,
+  ]);
+
+  const signatureFieldCount = effectiveInlineScope ? getAssetDescriptors(effectiveInlineScope, "SIGNATURE").length : 0;
+  const stampFieldCount = effectiveInlineScope ? getAssetDescriptors(effectiveInlineScope, "STAMP").length : 0;
+  const signatureAvailability = effectiveInlineScope ? resolveAssetAvailability(effectiveInlineScope, "SIGNATURE") : "missing";
+  const stampAvailability = effectiveInlineScope ? resolveAssetAvailability(effectiveInlineScope, "STAMP") : "missing";
+  const showInlineSetupPanel = Boolean(effectiveInlineScope) && (signatureFieldCount > 0 || stampFieldCount > 0);
+  const inlineScopeLabel = effectiveInlineScope === "countersigning" ? "Countersigning Officer" : "Reporting Officer";
 
   return (
     <div ref={containerRef} className="interactive-form-wrapper">

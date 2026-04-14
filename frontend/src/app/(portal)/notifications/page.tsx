@@ -99,7 +99,7 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E4E8F0] bg-[#F3F4F6] px-5 py-3 text-sm text-[#6B7280]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E4E8F0] bg-[#F3F4F6] px-5 py-3 text-sm text-[#6B7280] dark:text-slate-400">
           <span>{notifications.length} total notifications</span>
           <button
             type="button"
@@ -118,14 +118,14 @@ export default function NotificationsPage() {
               value={queryText}
               onChange={(event) => setQueryText(event.target.value)}
               placeholder="Search title, message, or ACR number"
-              className="w-full rounded-2xl border border-[#D8DEE8] bg-[#F8FAFC] py-2.5 pl-11 pr-4 text-sm outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10"
+              className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 py-2.5 pl-11 pr-4 text-sm outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10"
             />
           </label>
 
           <select
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value as NotificationItem["type"] | "all")}
-            className="rounded-2xl border border-[#D8DEE8] bg-[#F8FAFC] px-4 py-2.5 text-sm outline-none transition focus:border-[#0095D9] focus:bg-white"
+            className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 px-4 py-2.5 text-sm outline-none transition focus:border-[#0095D9] focus:bg-white"
           >
             <option value="all">All types ({typeCounts.all})</option>
             <option value="info">Info ({typeCounts.info})</option>
@@ -137,7 +137,7 @@ export default function NotificationsPage() {
           <select
             value={readFilter}
             onChange={(event) => setReadFilter(event.target.value as "read" | "unread" | "all")}
-            className="rounded-2xl border border-[#D8DEE8] bg-[#F8FAFC] px-4 py-2.5 text-sm outline-none transition focus:border-[#0095D9] focus:bg-white"
+            className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 px-4 py-2.5 text-sm outline-none transition focus:border-[#0095D9] focus:bg-white"
           >
             <option value="all">All status</option>
             <option value="unread">Unread</option>
@@ -147,7 +147,7 @@ export default function NotificationsPage() {
           <select
             value={linkedFilter}
             onChange={(event) => setLinkedFilter(event.target.value as "linked" | "system" | "all")}
-            className="rounded-2xl border border-[#D8DEE8] bg-[#F8FAFC] px-4 py-2.5 text-sm outline-none transition focus:border-[#0095D9] focus:bg-white"
+            className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 px-4 py-2.5 text-sm outline-none transition focus:border-[#0095D9] focus:bg-white"
           >
             <option value="all">All sources</option>
             <option value="linked">Linked to ACR</option>

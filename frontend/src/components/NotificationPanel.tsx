@@ -102,7 +102,7 @@ export function NotificationPanel() {
       />
       <aside
         aria-hidden={!notificationPanelOpen}
-        className={`fixed bottom-0 right-0 top-14 z-40 hidden w-[320px] border-l border-[#D7DEEA] bg-[#F8FAFD] shadow-[-16px_0_36px_rgba(15,23,42,0.16)] transition-transform duration-300 xl:flex ${
+        className={`fixed bottom-0 right-0 top-14 z-40 hidden w-[320px] border-l border-[var(--fia-gray-200)] bg-[var(--background)] shadow-[-16px_0_36px_rgba(15,23,42,0.16)] transition-transform duration-300 dark:shadow-[-16px_0_36px_rgba(0,0,0,0.4)] xl:flex ${
           notificationPanelOpen ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"
         }`}
       >
@@ -127,7 +127,7 @@ export function NotificationPanel() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-b border-[#E4E8F0] bg-[#F3F4F6] px-4 py-2.5 text-sm text-[#6B7280]">
+        <div className="flex items-center justify-between border-b border-[var(--fia-gray-200)] bg-[var(--fia-gray-100)] px-4 py-2.5 text-sm text-[var(--fia-gray-600)]">
           <span>
             {notifications.length} total · {unreadCount} unread
           </span>
@@ -135,13 +135,13 @@ export function NotificationPanel() {
             type="button"
             disabled={unreadCount === 0 || markAllMutation.isPending}
             onClick={() => markAllMutation.mutate()}
-            className="font-medium text-[#0095D9] disabled:cursor-not-allowed disabled:text-[#94A3B8]"
+            className="font-medium text-[var(--fia-cyan)] disabled:cursor-not-allowed disabled:text-[var(--fia-gray-400)]"
           >
             {markAllMutation.isPending ? "Updating..." : "Mark all read"}
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-[#F8FAFD] px-3 py-2.5">
+        <div className="flex-1 overflow-y-auto bg-[var(--background)] px-3 py-2.5">
           <div className="space-y-1.5">
             {notifications.map((notification) => {
               const visuals = getNotificationVisuals(notification);
@@ -151,7 +151,7 @@ export function NotificationPanel() {
               return (
                 <div
                   key={notification.id}
-                  className="group relative rounded-[16px] border border-transparent bg-white px-3.5 py-3.5 shadow-[0_8px_20px_rgba(15,23,42,0.05)] transition hover:border-[#D7DEEA]"
+                  className="group relative rounded-[16px] border border-transparent bg-[var(--card)] px-3.5 py-3.5 shadow-[0_8px_20px_rgba(15,23,42,0.05)] transition hover:border-[var(--fia-gray-200)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]"
                 >
                   <button
                     type="button"
@@ -164,11 +164,11 @@ export function NotificationPanel() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
-                          <p className="text-sm font-semibold text-[#111827]">{notification.title}</p>
-                          {!notification.read ? <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0095D9]" /> : null}
+                          <p className="text-sm font-semibold text-[var(--fia-gray-900)]">{notification.title}</p>
+                          {!notification.read ? <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--fia-cyan)]" /> : null}
                         </div>
-                        <p className="mt-0.5 text-sm leading-5 text-[#6B7280]">{notification.message}</p>
-                        <p className="mt-1.5 text-xs text-[#9CA3AF]">{notification.time}</p>
+                        <p className="mt-0.5 text-sm leading-5 text-[var(--fia-gray-600)]">{notification.message}</p>
+                        <p className="mt-1.5 text-xs text-[var(--fia-gray-400)]">{notification.time}</p>
                       </div>
                     </div>
                   </button>
@@ -180,13 +180,13 @@ export function NotificationPanel() {
                         event.stopPropagation();
                         setOpenMenuId((current) => (current === notification.id ? null : notification.id));
                       }}
-                      className={`rounded-full p-1.5 text-[#64748B] transition hover:bg-[#F1F5F9] hover:text-[#111827] ${menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                      className={`rounded-full p-1.5 text-[var(--fia-gray-500)] transition hover:bg-[var(--fia-gray-100)] hover:text-[var(--fia-gray-900)] ${menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                       aria-label="Notification actions"
                     >
                       <MoreHorizontal size={16} />
                     </button>
                     {menuOpen ? (
-                      <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white py-1 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+                      <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-2xl border border-[var(--fia-gray-200)] bg-[var(--card)] py-1 shadow-[0_18px_40px_rgba(15,23,42,0.12)] dark:shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
                         {!notification.read ? (
                           <button
                             type="button"
@@ -194,7 +194,7 @@ export function NotificationPanel() {
                               setOpenMenuId(null);
                               markReadMutation.mutate(notification.id);
                             }}
-                            className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[#334155] transition hover:bg-[#F8FAFC]"
+                            className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[var(--fia-gray-700)] transition hover:bg-[var(--fia-gray-50)]"
                           >
                             <CheckCircle2 size={15} />
                             Mark as read
@@ -206,7 +206,7 @@ export function NotificationPanel() {
                             setOpenMenuId(null);
                             openNotification(notification);
                           }}
-                          className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[#334155] transition hover:bg-[#F8FAFC]"
+                          className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[var(--fia-gray-700)] transition hover:bg-[var(--fia-gray-50)]"
                         >
                           <ExternalLink size={15} />
                           Open notification
@@ -218,7 +218,7 @@ export function NotificationPanel() {
                             closePanel();
                             router.push("/notifications");
                           }}
-                          className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[#334155] transition hover:bg-[#F8FAFC]"
+                          className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[var(--fia-gray-700)] transition hover:bg-[var(--fia-gray-50)]"
                         >
                           <Bell size={15} />
                           View all
@@ -226,7 +226,7 @@ export function NotificationPanel() {
                         <button
                           type="button"
                           onClick={() => dismissMutation.mutate(notification.id)}
-                          className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[#BE123C] transition hover:bg-[#FFF1F2]"
+                          className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm text-[#DC2626] transition hover:bg-[var(--fia-danger-bg)]"
                         >
                           <XCircle size={15} />
                           Dismiss
@@ -240,14 +240,14 @@ export function NotificationPanel() {
           </div>
         </div>
 
-        <div className="border-t border-[#E4E8F0] bg-white px-4 py-3">
+        <div className="border-t border-[var(--fia-gray-200)] bg-[var(--card)] px-4 py-3">
           <button
             type="button"
             onClick={() => {
               closePanel();
               router.push("/notifications");
             }}
-            className="block w-full text-center text-sm font-semibold text-[#0095D9]"
+            className="block w-full text-center text-sm font-semibold text-[var(--fia-cyan)]"
           >
             View all notifications →
           </button>

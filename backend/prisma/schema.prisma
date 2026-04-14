@@ -23,11 +23,17 @@ enum UserRole {
 
 enum AcrWorkflowState {
   DRAFT
+  PENDING_ADMIN_FORWARDING
+  PENDING_SECRET_CELL_INTAKE
   PENDING_REPORTING
   PENDING_COUNTERSIGNING
-  SUBMITTED_TO_SECRET_BRANCH
+  PENDING_SECRET_BRANCH_REVIEW
+  PENDING_SECRET_BRANCH_VERIFICATION
+  RETURNED_TO_CLERK
+  RETURNED_TO_REPORTING
+  RETURNED_TO_COUNTERSIGNING
+  RETURNED_TO_ADMIN_OFFICE
   ARCHIVED
-  RETURNED
 }
 
 enum TemplateFamilyCode {
@@ -35,6 +41,8 @@ enum TemplateFamilyCode {
   APS_STENOTYPIST
   INSPECTOR_SI_ASI
   SUPERINTENDENT_AINCHARGE
+  CAR_DRIVERS_DESPATCH_RIDERS
+  PER_17_18_OFFICERS
 }
 
 enum LanguageMode {
@@ -48,15 +56,109 @@ enum FileAssetKind {
   DOCUMENT
 }
 
+enum UserAssetType {
+  SIGNATURE
+  STAMP
+}
+
+enum FileStorageType {
+  LOCAL
+}
+
 enum NotificationType {
-  info
-  warning
-  success
-  danger
+  INFO
+  WARNING
+  SUCCESS
+  DANGER
 }
 
 enum AuthChallengePurpose {
   LOGIN
+}
+
+enum ArchiveRecordSource {
+  WORKFLOW_FINAL
+  HISTORICAL_UPLOAD
+}
+
+enum SecretBranchDeskCode {
+  AD_SECRET_BRANCH
+  DA1
+  DA2
+  DA3
+  DA4
+}
+
+enum OrgScopeTrack {
+  REGIONAL
+  WING
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  SUSPENDED
+  AWAITING_POSTING
+  RETIRED
+}
+
+enum AdverseRemarkStatus {
+  DRAFT
+  ENDORSED_BY_CSO
+  COMMUNICATED
+  ACKNOWLEDGED
+  REPRESENTATION_RECEIVED
+  REPRESENTATION_DECIDED
+}
+
+enum PartPeriodReason {
+  TRANSFER
+  MID_YEAR_POSTING
+  RETIREMENT
+  SUSPENSION
+  OTHER
+}
+
+enum EducationLevel {
+  BELOW_MATRIC
+  MATRIC
+  INTERMEDIATE
+  DIPLOMA
+  BA_BSC
+  BS_HONORS
+  MA_MSC
+  MS_MPHIL
+  PHD
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum DeputationType {
+  DIRECT
+  DEPUTATIONIST
+}
+
+enum DisciplinaryRecordType {
+  ENQUIRY
+  MAJOR_PUNISHMENT
+  MINOR_PUNISHMENT
+}
+
+enum RewardType {
+  REWARD
+  COMMENDATION_CERTIFICATE
+  LETTER_OF_APPRECIATION
+}
+
+enum LanguageProficiencyLevel {
+  NONE
+  BASIC
+  GOOD
+  EXCELLENT
 }
 
 model Wing {
@@ -67,8 +169,50 @@ model Wing {
   updatedAt       DateTime             @updatedAt
   zones           Zone[]
   offices         Office[]
+  directorates    Directorate[]
+  regions         Region[]
+  circles         Circle[]
+  stations        Station[]
+  branches        Branch[]
+  cells           Cell[]
   users           User[]               @relation("WingUsers")
   employees       Employee[]           @relation("WingEmployees")
+  roleAssignments UserRoleAssignment[]
+}
+
+model Directorate {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  wingId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  wing      Wing      @relation(fields: [wingId], references: [id])
+  regions   Region[]
+  offices   Office[]
+  users     User[]
+  employees Employee[]
+  roleAssignments UserRoleAssignment[]
+}
+
+model Region {
+  id            String       @id @default(cuid())
+  code          String       @unique
+  name          String
+  wingId        String?
+  directorateId String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  wing          Wing?        @relation(fields: [wingId], references: [id])
+  directorate   Directorate? @relation(fields: [directorateId], references: [id])
+  zones         Zone[]
+  offices       Office[]
+  circles       Circle[]
+  stations      Station[]
+  branches      Branch[]
+  cells         Cell[]
+  users         User[]
+  employees     Employee[]
   roleAssignments UserRoleAssignment[]
 }
 
@@ -76,13 +220,109 @@ model Zone {
   id              String               @id @default(cuid())
   code            String               @unique
   name            String
-  wingId          String
+  wingId          String?
+  regionId        String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
-  wing            Wing                 @relation(fields: [wingId], references: [id])
+  wing            Wing?                @relation(fields: [wingId], references: [id])
+  region          Region?              @relation(fields: [regionId], references: [id])
+  circles         Circle[]
+  stations        Station[]
+  branches        Branch[]
+  cells           Cell[]
   offices         Office[]
   users           User[]               @relation("ZoneUsers")
   employees       Employee[]           @relation("ZoneEmployees")
+  roleAssignments UserRoleAssignment[]
+}
+
+model Circle {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  wingId    String?
+  regionId  String?
+  zoneId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  wing      Wing?     @relation(fields: [wingId], references: [id])
+  zone      Zone      @relation(fields: [zoneId], references: [id])
+  region    Region?   @relation(fields: [regionId], references: [id])
+  offices   Office[]
+  stations  Station[]
+  branches  Branch[]
+  cells     Cell[]
+  users     User[]
+  employees Employee[]
+  roleAssignments UserRoleAssignment[]
+}
+
+model Station {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  wingId    String?
+  regionId  String?
+  zoneId    String
+  circleId  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  wing      Wing?     @relation(fields: [wingId], references: [id])
+  region    Region?   @relation(fields: [regionId], references: [id])
+  zone      Zone      @relation(fields: [zoneId], references: [id])
+  circle    Circle?   @relation(fields: [circleId], references: [id])
+  offices   Office[]
+  branches  Branch[]
+  cells     Cell[]
+  users     User[]
+  employees Employee[]
+  roleAssignments UserRoleAssignment[]
+}
+
+model Branch {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  wingId    String?
+  regionId  String?
+  zoneId    String
+  circleId  String?
+  stationId String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  wing      Wing?     @relation(fields: [wingId], references: [id])
+  region    Region?   @relation(fields: [regionId], references: [id])
+  zone      Zone      @relation(fields: [zoneId], references: [id])
+  circle    Circle?   @relation(fields: [circleId], references: [id])
+  station   Station?  @relation(fields: [stationId], references: [id])
+  offices   Office[]
+  cells     Cell[]
+  users     User[]
+  employees Employee[]
+  roleAssignments UserRoleAssignment[]
+}
+
+model Cell {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  wingId    String?
+  regionId  String?
+  zoneId    String
+  circleId  String?
+  stationId String?
+  branchId  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  wing      Wing?     @relation(fields: [wingId], references: [id])
+  region    Region?   @relation(fields: [regionId], references: [id])
+  zone      Zone      @relation(fields: [zoneId], references: [id])
+  circle    Circle?   @relation(fields: [circleId], references: [id])
+  station   Station?  @relation(fields: [stationId], references: [id])
+  branch    Branch?   @relation(fields: [branchId], references: [id])
+  offices   Office[]
+  users     User[]
+  employees Employee[]
   roleAssignments UserRoleAssignment[]
 }
 
@@ -90,82 +330,191 @@ model Office {
   id              String               @id @default(cuid())
   code            String               @unique
   name            String
-  wingId          String
-  zoneId          String
+  scopeTrack      OrgScopeTrack        @default(REGIONAL)
+  wingId          String?
+  zoneId          String?
+  directorateId   String?
+  regionId        String?
+  circleId        String?
+  stationId       String?
+  branchId        String?
+  cellId          String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
-  wing            Wing                 @relation(fields: [wingId], references: [id])
-  zone            Zone                 @relation(fields: [zoneId], references: [id])
+  wing            Wing?                @relation(fields: [wingId], references: [id])
+  zone            Zone?                @relation(fields: [zoneId], references: [id])
+  directorate     Directorate?         @relation(fields: [directorateId], references: [id])
+  region          Region?              @relation(fields: [regionId], references: [id])
+  circle          Circle?              @relation(fields: [circleId], references: [id])
+  station         Station?             @relation(fields: [stationId], references: [id])
+  branch          Branch?              @relation(fields: [branchId], references: [id])
+  cell            Cell?                @relation(fields: [cellId], references: [id])
+  departments     Department[]
   users           User[]
   employees       Employee[]
+  roleAssignments UserRoleAssignment[]
+
+  @@index([scopeTrack, wingId, directorateId, regionId, zoneId])
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  officeId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  office    Office   @relation(fields: [officeId], references: [id])
+  users     User[]
+  employees Employee[]
   roleAssignments UserRoleAssignment[]
 }
 
 model User {
-  id                             String                  @id @default(cuid())
-  username                       String                  @unique
-  email                          String                  @unique
-  badgeNo                        String                  @unique
+  id                             String                    @id @default(cuid())
+  username                       String                    @unique
+  email                          String                    @unique
+  badgeNo                        String                    @unique
   displayName                    String
+  positionTitle                  String?
   departmentName                 String?
+  directorateId                  String?
+  regionId                       String?
+  circleId                       String?
+  stationId                      String?
+  branchId                       String?
+  cellId                         String?
+  departmentId                   String?
   mobileNumber                   String?
+  cnic                           String?                   @unique
   passwordHash                   String
   passwordChangedAt              DateTime?
-  mustChangePassword             Boolean                 @default(false)
+  mustChangePassword             Boolean                   @default(false)
   lastLoginAt                    DateTime?
-  twoFactorEnabled               Boolean                 @default(false)
+  twoFactorEnabled               Boolean                   @default(false)
   avatarFileName                 String?
   avatarMimeType                 String?
   avatarStoragePath              String?
   notificationPreferences        Json?
   displayPreferences             Json?
-  isActive                       Boolean                 @default(true)
+  selfReportedMetadata           Json?
+  isActive                       Boolean                   @default(true)
+  scopeTrack                     OrgScopeTrack             @default(WING)
   wingId                         String?
   zoneId                         String?
   officeId                       String?
   createdById                    String?
   updatedById                    String?
-  createdAt                      DateTime                @default(now())
-  updatedAt                      DateTime                @updatedAt
-  wing                           Wing?                   @relation("WingUsers", fields: [wingId], references: [id])
-  zone                           Zone?                   @relation("ZoneUsers", fields: [zoneId], references: [id])
-  office                         Office?                 @relation(fields: [officeId], references: [id])
+  createdAt                      DateTime                  @default(now())
+  updatedAt                      DateTime                  @updatedAt
+  createdBy                      User?                     @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy                      User?                     @relation("UserUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  usersCreated                   User[]                    @relation("UserCreatedBy")
+  usersUpdated                   User[]                    @relation("UserUpdatedBy")
+  wing                           Wing?                     @relation("WingUsers", fields: [wingId], references: [id])
+  directorate                    Directorate?              @relation(fields: [directorateId], references: [id])
+  region                         Region?                   @relation(fields: [regionId], references: [id])
+  zone                           Zone?                     @relation("ZoneUsers", fields: [zoneId], references: [id])
+  circle                         Circle?                   @relation(fields: [circleId], references: [id])
+  station                        Station?                  @relation(fields: [stationId], references: [id])
+  branch                         Branch?                   @relation(fields: [branchId], references: [id])
+  cell                           Cell?                     @relation(fields: [cellId], references: [id])
+  office                         Office?                   @relation(fields: [officeId], references: [id])
+  department                     Department?               @relation(fields: [departmentId], references: [id])
   roleAssignments                UserRoleAssignment[]
   authChallenges                 AuthChallenge[]
   sessions                       Session[]
-  initiatedAcrs                  AcrRecord[]             @relation("InitiatedAcrs")
-  reportingAcrs                  AcrRecord[]             @relation("ReportingAcrs")
-  countersigningAcrs             AcrRecord[]             @relation("CountersigningAcrs")
-  currentHeldAcrs                AcrRecord[]             @relation("CurrentHolderAcrs")
-  archivedSnapshots              ArchiveSnapshot[]       @relation("ArchiveSnapshotsByUser")
-  uploadedFiles                  FileAsset[]             @relation("UploadedFiles")
-  employeeReportingAssignments   Employee[]              @relation("EmployeeReportingOfficer")
-  employeeCountersignAssignments Employee[]              @relation("EmployeeCountersigningOfficer")
-  employeeProfiles               Employee[]              @relation("EmployeeAccount")
-  timelineEntries                AcrTimelineEntry[]      @relation("TimelineActor")
+  initiatedAcrs                  AcrRecord[]               @relation("InitiatedAcrs")
+  reportingAcrs                  AcrRecord[]               @relation("ReportingAcrs")
+  countersigningAcrs             AcrRecord[]               @relation("CountersigningAcrs")
+  currentHeldAcrs                AcrRecord[]               @relation("CurrentHolderAcrs")
+  secretBranchAllocatedAcrs      AcrRecord[]               @relation("SecretBranchAllocatedAcrs")
+  secretBranchVerifiedAcrs       AcrRecord[]               @relation("SecretBranchVerifiedAcrs")
+  archivedSnapshots              ArchiveSnapshot[]         @relation("ArchiveSnapshotsByUser")
+  uploadedFiles                  FileAsset[]               @relation("UploadedFiles")
+  userAssets                     UserAsset[]
+  employeeReportingAssignments   Employee[]                @relation("EmployeeReportingOfficer")
+  employeeCountersignAssignments Employee[]                @relation("EmployeeCountersigningOfficer")
+  employeeProfiles               Employee[]                @relation("EmployeeAccount")
+  timelineEntries                AcrTimelineEntry[]        @relation("TimelineActor")
   notifications                  Notification[]
   auditEntries                   AuditLog[]
-  updatedSettings                AdminSetting[]          @relation("SettingUpdatedBy")
-  passwordResetTokens            PasswordResetToken[]    @relation("PasswordResetTokens")
+  updatedSettings                AdminSetting[]            @relation("SettingUpdatedBy")
+  passwordResetTokens            PasswordResetToken[]      @relation("PasswordResetTokens")
+  secretBranchProfile            SecretBranchStaffProfile?
+  uploadedArchiveRecords         ArchiveRecord[]           @relation("ArchiveUploadedByUser")
+  verifiedArchiveRecords         ArchiveRecord[]           @relation("ArchiveVerifiedByUser")
+  adverseRepresentationDecisions AdverseRepresentation[]   @relation("AdverseRepresentationDecisions")
+  adverseRemarkAcknowledgements  AdverseRemark[]           @relation("AdverseRemarkAcknowledgedBy")
+  adminForwardedAcrs             AcrRecord[]               @relation("AdminForwardedAcrs")
+  intakeVerifiedAcrs             AcrRecord[]               @relation("IntakeVerifiedAcrs")
+  segmentReportingAssignments    AcrOfficerSegment[]       @relation("SegmentReportingOfficer")
+  segmentCountersigningAssignments AcrOfficerSegment[]     @relation("SegmentCountersigningOfficer")
 
   @@index([isActive, updatedAt])
   @@index([lastLoginAt])
+  @@index([scopeTrack, wingId, directorateId, regionId, zoneId, officeId])
+}
+
+model SecretBranchStaffProfile {
+  id             String             @id @default(cuid())
+  userId         String             @unique
+  deskCode       SecretBranchDeskCode
+  canManageUsers Boolean            @default(false)
+  canVerify      Boolean            @default(false)
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  user           User               @relation(fields: [userId], references: [id])
+
+  @@index([deskCode, isActive])
+}
+
+model SecretBranchRoutingRule {
+  id                   String             @id @default(cuid())
+  templateFamily       TemplateFamilyCode @unique
+  reviewDeskCode       SecretBranchDeskCode
+  verificationDeskCode SecretBranchDeskCode @default(AD_SECRET_BRANCH)
+  isActive             Boolean            @default(true)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([reviewDeskCode, isActive])
 }
 
 model UserRoleAssignment {
-  id        String   @id @default(cuid())
-  userId    String
-  role      UserRole
-  wingId    String?
-  zoneId    String?
-  officeId  String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-  wing      Wing?    @relation(fields: [wingId], references: [id])
-  zone      Zone?    @relation(fields: [zoneId], references: [id])
-  office    Office?  @relation(fields: [officeId], references: [id])
+  id            String   @id @default(cuid())
+  userId        String
+  role          UserRole
+  scopeTrack    OrgScopeTrack @default(WING)
+  wingId        String?
+  directorateId String?
+  regionId      String?
+  zoneId        String?
+  circleId      String?
+  stationId     String?
+  branchId      String?
+  cellId        String?
+  officeId      String?
+  departmentId  String?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id])
+  wing          Wing?    @relation(fields: [wingId], references: [id])
+  directorate   Directorate? @relation(fields: [directorateId], references: [id])
+  region        Region?  @relation(fields: [regionId], references: [id])
+  zone          Zone?    @relation(fields: [zoneId], references: [id])
+  circle        Circle?  @relation(fields: [circleId], references: [id])
+  station       Station? @relation(fields: [stationId], references: [id])
+  branch        Branch?  @relation(fields: [branchId], references: [id])
+  cell          Cell?    @relation(fields: [cellId], references: [id])
+  office        Office?  @relation(fields: [officeId], references: [id])
+  department    Department? @relation(fields: [departmentId], references: [id])
 
+  @@unique([userId, role, scopeTrack, wingId, officeId])
   @@index([userId, role])
+  @@index([role, wingId])
+  @@index([role, regionId])
+  @@index([role, officeId])
 }
 
 model Session {
@@ -182,6 +531,7 @@ model Session {
   user             User     @relation(fields: [userId], references: [id])
 
   @@index([userId, revokedAt, expiresAt])
+  @@index([refreshTokenHash])
 }
 
 model AuthChallenge {
@@ -210,6 +560,7 @@ model Employee {
   name                    String
   rank                    String
   designation             String
+  positionTitle           String?
   bps                     Int
   cnic                    String               @unique
   mobile                  String
@@ -219,24 +570,67 @@ model Employee {
   serviceYears            Int
   address                 String
   templateFamily          TemplateFamilyCode
-  wingId                  String
-  zoneId                  String
+  scopeTrack              OrgScopeTrack        @default(WING)
+  wingId                  String?
+  directorateId           String?
+  regionId                String?
+  zoneId                  String?
+  circleId                String?
+  stationId               String?
+  branchId                String?
+  cellId                  String?
   officeId                String
+  departmentId            String?
   reportingOfficerId      String?
   countersigningOfficerId String?
+  status                  EmployeeStatus       @default(ACTIVE)
+  retirementDate          DateTime?
+  suspendedFrom           DateTime?
+  suspendedTo             DateTime?
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt
-  wing                    Wing                 @relation("WingEmployees", fields: [wingId], references: [id])
-  zone                    Zone                 @relation("ZoneEmployees", fields: [zoneId], references: [id])
+  // --- metadata fields (clerk-fillable, ACR form auto-fill) ---
+  gender                  Gender?
+  dateOfBirth             DateTime?
+  basicPay                Int?
+  appointmentToBpsDate    DateTime?
+  educationLevel          EducationLevel?
+  qualifications          String?
+  fatherName              String?
+  deputationType          DeputationType?
+  natureOfDuties          String?
+  personnelNumber         String?
+  serviceGroup            String?
+  licenseType             String?
+  vehicleType             String?
+  trainingCoursesText     String?
+  spouseName              String?
+  wing                    Wing?                @relation("WingEmployees", fields: [wingId], references: [id])
+  directorate             Directorate?         @relation(fields: [directorateId], references: [id])
+  region                  Region?              @relation(fields: [regionId], references: [id])
+  zone                    Zone?                @relation("ZoneEmployees", fields: [zoneId], references: [id])
+  circle                  Circle?              @relation(fields: [circleId], references: [id])
+  station                 Station?             @relation(fields: [stationId], references: [id])
+  branch                  Branch?              @relation(fields: [branchId], references: [id])
+  cell                    Cell?                @relation(fields: [cellId], references: [id])
   office                  Office               @relation(fields: [officeId], references: [id])
+  department              Department?          @relation(fields: [departmentId], references: [id])
   userAccount             User?                @relation("EmployeeAccount", fields: [userId], references: [id])
   reportingOfficer        User?                @relation("EmployeeReportingOfficer", fields: [reportingOfficerId], references: [id])
   countersigningOfficer   User?                @relation("EmployeeCountersigningOfficer", fields: [countersigningOfficerId], references: [id])
   acrRecords              AcrRecord[]
+  archiveRecords          ArchiveRecord[]
+  trainingCourses         EmployeeTrainingCourse[]      @relation("EmployeeTrainingCourses")
+  disciplinaryRecords     EmployeeDisciplinaryRecord[]  @relation("EmployeeDisciplinaryRecords")
+  rewards                 EmployeeReward[]              @relation("EmployeeRewards")
+  languages               EmployeeLanguageProficiency[] @relation("EmployeeLanguages")
 
   @@index([officeId])
   @@index([zoneId])
   @@index([wingId])
+  @@index([status])
+  @@index([retirementDate])
+  @@index([scopeTrack, wingId, directorateId, regionId, zoneId, officeId])
   @@index([reportingOfficerId])
   @@index([countersigningOfficerId])
 }
@@ -254,48 +648,83 @@ model TemplateVersion {
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   acrRecords             AcrRecord[]
+
+  @@unique([family, version, languageMode])
 }
 
 model AcrRecord {
-  id                      String               @id @default(cuid())
-  acrNo                   String               @unique
-  employeeId              String
-  initiatedById           String
-  reportingOfficerId      String
-  countersigningOfficerId String?
-  currentHolderId         String?
-  templateVersionId       String
-  workflowState           AcrWorkflowState
-  statusLabel             String
-  reportingPeriodFrom     DateTime
-  reportingPeriodTo       DateTime
-  dueDate                 DateTime
-  completedDate           DateTime?
-  archivedAt              DateTime?
-  isPriority              Boolean              @default(false)
-  correctionRemarks       String?
-  performanceScore        Int?
-  formData                Json?
-  createdAt               DateTime             @default(now())
-  updatedAt               DateTime             @updatedAt
-  employee                Employee             @relation(fields: [employeeId], references: [id])
-  initiatedBy             User                 @relation("InitiatedAcrs", fields: [initiatedById], references: [id])
-  reportingOfficer        User                 @relation("ReportingAcrs", fields: [reportingOfficerId], references: [id])
-  countersigningOfficer   User?                @relation("CountersigningAcrs", fields: [countersigningOfficerId], references: [id])
-  currentHolder           User?                @relation("CurrentHolderAcrs", fields: [currentHolderId], references: [id])
-  templateVersion         TemplateVersion      @relation(fields: [templateVersionId], references: [id])
-  timeline                AcrTimelineEntry[]
-  notifications           Notification[]
-  auditLogs               AuditLog[]
-  files                   FileAsset[]
-  archiveSnapshot         ArchiveSnapshot?
+  id                          String               @id @default(cuid())
+  acrNo                       String               @unique
+  employeeId                  String
+  initiatedById               String
+  reportingOfficerId          String
+  countersigningOfficerId     String?
+  currentHolderId             String?
+  secretBranchAllocatedToId   String?
+  secretBranchVerifiedById    String?
+  templateVersionId           String
+  workflowState               AcrWorkflowState
+  statusLabel                 String
+  reportingPeriodFrom         DateTime
+  reportingPeriodTo           DateTime
+  dueDate                     DateTime
+  secretBranchDeskCode        SecretBranchDeskCode?
+  secretBranchSubmittedAt     DateTime?
+  secretBranchReviewedAt      DateTime?
+  secretBranchVerifiedAt      DateTime?
+  secretBranchVerificationNotes String?
+  completedDate               DateTime?
+  archivedAt                  DateTime?
+  isPriority                  Boolean              @default(false)
+  correctionRemarks           String?
+  returnToRole                UserRole?
+  returnedByRole              UserRole?
+  performanceScore            Int?
+  calendarYear                Int?
+  gradeDueDate                DateTime?
+  partPeriodReason            PartPeriodReason?
+  hasAdverseRemarks           Boolean              @default(false)
+  submissionCertificatePath   String?
+  adminForwardedAt            DateTime?
+  adminForwardedById          String?
+  intakeVerifiedAt            DateTime?
+  intakeVerifiedById          String?
+  intakeDiscrepancies         String?
+  employeeMetadataSnapshot    Json?
+  formData                    Json?
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+  employee                    Employee             @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  initiatedBy                 User                 @relation("InitiatedAcrs", fields: [initiatedById], references: [id], onDelete: Restrict)
+  reportingOfficer            User                 @relation("ReportingAcrs", fields: [reportingOfficerId], references: [id], onDelete: Restrict)
+  countersigningOfficer       User?                @relation("CountersigningAcrs", fields: [countersigningOfficerId], references: [id], onDelete: SetNull)
+  currentHolder               User?                @relation("CurrentHolderAcrs", fields: [currentHolderId], references: [id], onDelete: SetNull)
+  secretBranchAllocatedTo     User?                @relation("SecretBranchAllocatedAcrs", fields: [secretBranchAllocatedToId], references: [id], onDelete: SetNull)
+  secretBranchVerifiedBy      User?                @relation("SecretBranchVerifiedAcrs", fields: [secretBranchVerifiedById], references: [id], onDelete: SetNull)
+  adminForwardedBy            User?                @relation("AdminForwardedAcrs", fields: [adminForwardedById], references: [id], onDelete: SetNull)
+  intakeVerifiedBy            User?                @relation("IntakeVerifiedAcrs", fields: [intakeVerifiedById], references: [id], onDelete: SetNull)
+  templateVersion             TemplateVersion      @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
+  timeline                    AcrTimelineEntry[]
+  notifications               Notification[]
+  auditLogs                   AuditLog[]
+  files                       FileAsset[]
+  archiveSnapshot             ArchiveSnapshot?
+  archiveRecord               ArchiveRecord?
+  adverseRemarks              AdverseRemark[]
+  officerSegments             AcrOfficerSegment[]
+  currentSegmentIndex         Int?
 
+  @@unique([employeeId, calendarYear])
   @@index([employeeId])
+  @@index([employeeId, workflowState])
   @@index([initiatedById])
-  @@index([reportingOfficerId])
-  @@index([countersigningOfficerId])
+  @@index([reportingOfficerId, workflowState])
+  @@index([countersigningOfficerId, workflowState])
   @@index([currentHolderId, workflowState])
+  @@index([workflowState])
   @@index([workflowState, dueDate])
+  @@index([calendarYear])
+  @@index([secretBranchDeskCode, workflowState])
 }
 
 model AcrTimelineEntry {
@@ -307,11 +736,94 @@ model AcrTimelineEntry {
   status      String
   remarks     String?
   createdAt   DateTime  @default(now())
-  acrRecord   AcrRecord @relation(fields: [acrRecordId], references: [id])
-  actor       User?     @relation("TimelineActor", fields: [actorId], references: [id])
+  acrRecord   AcrRecord @relation(fields: [acrRecordId], references: [id], onDelete: Cascade)
+  actor       User?     @relation("TimelineActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([acrRecordId, createdAt])
   @@index([actorId, createdAt])
+}
+
+model AdverseRemark {
+  id                    String               @id @default(cuid())
+  acrRecordId           String
+  remarkText            String
+  counsellingDate       DateTime?
+  counsellingNotes      String?
+  endorsedByCso         Boolean              @default(false)
+  endorsedAt            DateTime?
+  communicatedAt        DateTime?
+  communicationDeadline DateTime?
+  acknowledgedAt        DateTime?
+  acknowledgedById      String?
+  acknowledgedBy        User?                @relation("AdverseRemarkAcknowledgedBy", fields: [acknowledgedById], references: [id], onDelete: SetNull)
+  status                AdverseRemarkStatus  @default(DRAFT)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  acrRecord             AcrRecord            @relation(fields: [acrRecordId], references: [id], onDelete: Cascade)
+  representation        AdverseRepresentation?
+
+  @@index([acrRecordId, status])
+  @@index([acrRecordId, createdAt])
+}
+
+model AdverseRepresentation {
+  id                     String          @id @default(cuid())
+  adverseRemarkId        String          @unique
+  representationText     String
+  receivedAt             DateTime
+  representationDeadline DateTime
+  decidedById            String?
+  decision               String?
+  decisionDate           DateTime?
+  decisionNotes          String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  adverseRemark          AdverseRemark   @relation(fields: [adverseRemarkId], references: [id], onDelete: Cascade)
+  decidedBy              User?           @relation("AdverseRepresentationDecisions", fields: [decidedById], references: [id], onDelete: SetNull)
+}
+
+model AcrOfficerSegment {
+  id                      String          @id @default(cuid())
+  acrRecordId             String
+  segmentOrder            Int
+  periodFrom              DateTime
+  periodTo                DateTime
+  reportingOfficerId      String
+  countersigningOfficerId String?
+  reason                  PartPeriodReason?
+  isConsolidated          Boolean         @default(false)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  acrRecord               AcrRecord       @relation(fields: [acrRecordId], references: [id], onDelete: Cascade)
+  reportingOfficer        User            @relation("SegmentReportingOfficer", fields: [reportingOfficerId], references: [id], onDelete: Restrict)
+  countersigningOfficer   User?           @relation("SegmentCountersigningOfficer", fields: [countersigningOfficerId], references: [id], onDelete: SetNull)
+
+  @@index([acrRecordId, segmentOrder])
+  @@index([reportingOfficerId])
+}
+
+model AuthorityMatrixRule {
+  id                            String              @id @default(cuid())
+  unitType                      String
+  wingCode                      String?
+  unitCode                      String?
+  postTitle                     String
+  bpsMin                        Int?
+  bpsMax                        Int?
+  templateFamily                TemplateFamilyCode?
+  reportingAuthorityTitle       String
+  countersigningAuthorityTitle  String?
+  priority                      Int                 @default(0)
+  isActive                      Boolean             @default(true)
+  effectiveFrom                 DateTime            @default(now())
+  effectiveTo                   DateTime?
+  createdAt                     DateTime            @default(now())
+  updatedAt                     DateTime            @updatedAt
+
+  @@unique([unitType, wingCode, postTitle, bpsMin, bpsMax, templateFamily])
+  @@index([unitType, wingCode, isActive])
+  @@index([isActive, priority])
+  @@index([postTitle, bpsMin, bpsMax])
 }
 
 model Notification {
@@ -363,17 +875,87 @@ model PasswordResetToken {
   @@index([expiresAt, consumedAt])
 }
 
+model ArchiveRecord {
+  id                   String              @id @default(cuid())
+  employeeId           String
+  acrRecordId          String?             @unique
+  source               ArchiveRecordSource
+  scopeTrack           OrgScopeTrack       @default(REGIONAL)
+  templateFamily       TemplateFamilyCode?
+  reportingPeriodFrom  DateTime?
+  reportingPeriodTo    DateTime?
+  archiveReference     String?             @unique
+  positionTitle        String?
+  employeeName         String
+  employeeServiceNumber String?
+  employeeCnic         String?
+  employeePosting      String?
+  wingId               String?
+  directorateId        String?
+  regionId             String?
+  zoneId               String?
+  circleId             String?
+  stationId            String?
+  branchId             String?
+  cellId               String?
+  officeId             String?
+  departmentId         String?
+  organizationSnapshot Json?
+  documentPath         String
+  remarks              String?
+  isVerified           Boolean             @default(false)
+  uploadedById         String?
+  verifiedById         String?
+  verifiedAt           DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  employee             Employee            @relation(fields: [employeeId], references: [id])
+  acrRecord            AcrRecord?          @relation(fields: [acrRecordId], references: [id])
+  uploadedBy           User?               @relation("ArchiveUploadedByUser", fields: [uploadedById], references: [id])
+  verifiedBy           User?               @relation("ArchiveVerifiedByUser", fields: [verifiedById], references: [id])
+  files                FileAsset[]
+
+  @@index([employeeId, source, createdAt])
+  @@index([templateFamily, isVerified, createdAt])
+  @@index([scopeTrack, wingId, directorateId, regionId, zoneId, officeId])
+}
+
 model FileAsset {
-  id           String        @id @default(cuid())
-  acrRecordId  String?
-  uploadedById String?
-  kind         FileAssetKind
-  fileName     String
-  mimeType     String
-  storagePath  String
-  createdAt    DateTime      @default(now())
-  acrRecord    AcrRecord?    @relation(fields: [acrRecordId], references: [id])
-  uploadedBy   User?         @relation("UploadedFiles", fields: [uploadedById], references: [id])
+  id              String         @id @default(cuid())
+  acrRecordId     String?
+  archiveRecordId String?
+  uploadedById    String?
+  kind            FileAssetKind
+  fileName        String
+  mimeType        String
+  storagePath     String         @unique
+  fileSize        Int            @default(0)
+  createdAt       DateTime       @default(now())
+  acrRecord       AcrRecord?     @relation(fields: [acrRecordId], references: [id])
+  archiveRecord   ArchiveRecord? @relation(fields: [archiveRecordId], references: [id])
+  uploadedBy      User?          @relation("UploadedFiles", fields: [uploadedById], references: [id])
+
+  @@index([acrRecordId, kind])
+  @@index([archiveRecordId, kind])
+}
+
+model UserAsset {
+  id          String          @id @default(cuid())
+  userId      String
+  assetType   UserAssetType
+  storageType FileStorageType @default(LOCAL)
+  filePath    String
+  fileUrl     String?
+  originalName String
+  mimeType    String
+  fileSize    Int
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id])
+
+  @@index([userId, assetType, isActive])
+  @@index([updatedAt])
 }
 
 model ArchiveSnapshot {
@@ -386,6 +968,9 @@ model ArchiveSnapshot {
   createdAt     DateTime  @default(now())
   acrRecord     AcrRecord @relation(fields: [acrRecordId], references: [id])
   archivedBy    User      @relation("ArchiveSnapshotsByUser", fields: [archivedById], references: [id])
+
+  @@index([immutableHash])
+  @@index([checksum])
 }
 
 model AdminSetting {
@@ -393,6 +978,62 @@ model AdminSetting {
   key         String   @unique
   value       Json
   updatedById String?
+  createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   updatedBy   User?    @relation("SettingUpdatedBy", fields: [updatedById], references: [id])
+}
+
+model EmployeeTrainingCourse {
+  id           String    @id @default(cuid())
+  employeeId   String
+  courseName   String
+  durationFrom DateTime?
+  durationTo   DateTime?
+  institution  String?
+  country      String?
+  createdAt    DateTime  @default(now())
+  employee     Employee  @relation("EmployeeTrainingCourses", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+}
+
+model EmployeeDisciplinaryRecord {
+  id          String                 @id @default(cuid())
+  employeeId  String
+  type        DisciplinaryRecordType
+  description String
+  year        Int?
+  outcome     String?
+  awardedDate DateTime?
+  createdAt   DateTime               @default(now())
+  employee    Employee               @relation("EmployeeDisciplinaryRecords", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+}
+
+model EmployeeReward {
+  id          String     @id @default(cuid())
+  employeeId  String
+  type        RewardType
+  description String
+  awardedDate DateTime?
+  awardedBy   String?
+  createdAt   DateTime   @default(now())
+  employee    Employee   @relation("EmployeeRewards", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+}
+
+model EmployeeLanguageProficiency {
+  id         String                   @id @default(cuid())
+  employeeId String
+  language   String
+  speaking   LanguageProficiencyLevel @default(NONE)
+  reading    LanguageProficiencyLevel @default(NONE)
+  writing    LanguageProficiencyLevel @default(NONE)
+  createdAt  DateTime                 @default(now())
+  employee   Employee                 @relation("EmployeeLanguages", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, language])
+  @@index([employeeId])
 }

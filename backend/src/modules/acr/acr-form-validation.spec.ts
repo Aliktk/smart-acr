@@ -1,4 +1,4 @@
-import { AcrWorkflowState } from "@prisma/client";
+import { AcrWorkflowState, TemplateFamilyCode } from "@prisma/client";
 import {
   getActionFormValidationMessage,
   getClerkSubmissionValidationMessage,
@@ -14,7 +14,7 @@ describe("acr form validation", () => {
 
   it("requires reviewer remarks, date, signature, and stamp", () => {
     expect(
-      getReviewerSubmissionValidationMessage("reporting", {
+      getReviewerSubmissionValidationMessage("reporting", TemplateFamilyCode.ASSISTANT_UDC_LDC, {
         replicaState: {
           textFields: {},
           checkFields: {},
@@ -28,7 +28,7 @@ describe("acr form validation", () => {
 
   it("accepts a fully completed countersigning section", () => {
     expect(
-      getReviewerSubmissionValidationMessage("countersigning", {
+      getReviewerSubmissionValidationMessage("countersigning", TemplateFamilyCode.ASSISTANT_UDC_LDC, {
         replicaState: {
           textFields: {
             "text:countersigning:pen-picture-line-1": "Reviewed and found satisfactory.",
@@ -44,11 +44,31 @@ describe("acr form validation", () => {
     ).toBeNull();
   });
 
+  it("does not require an official stamp for the BPS 17-18 PER reviewer sections", () => {
+    expect(
+      getReviewerSubmissionValidationMessage("reporting", TemplateFamilyCode.PER_17_18_OFFICERS, {
+        replicaState: {
+          textFields: {
+            "text:reporting:per1718-reporting-narrative-1": "Performance reviewed.",
+            "text:reporting:reporting-signature-date": "2026-04-05",
+          },
+          checkFields: {
+            "check:reporting:intelligence-a": true,
+          },
+          assetFields: {
+            "asset:reporting:reporting-signature": { fileId: "sig-17-18" },
+          },
+        },
+      }),
+    ).toBeNull();
+  });
+
   it("maps submit-to-secret-branch validation to the current reviewer scope", () => {
     expect(
       getActionFormValidationMessage({
         action: "submit_to_secret_branch",
         workflowState: AcrWorkflowState.PENDING_COUNTERSIGNING,
+        templateFamily: TemplateFamilyCode.ASSISTANT_UDC_LDC,
         formData: {
           replicaState: {
             textFields: {},

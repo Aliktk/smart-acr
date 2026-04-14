@@ -1,6 +1,6 @@
 import { Type } from "class-transformer";
 import { IsEnum, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
-import { UserRole } from "@prisma/client";
+import { OrgScopeTrack, UserRole } from "@prisma/client";
 
 export class ListUsersDto {
   @IsOptional()
@@ -34,9 +34,41 @@ export class ListUsersDto {
 
   @IsOptional()
   @IsString()
+  directorateId?: string;
+
+  @IsOptional()
+  @IsString()
+  regionId?: string;
+
+  @IsOptional()
+  @IsString()
   zoneId?: string;
 
   @IsOptional()
   @IsString()
+  circleId?: string;
+
+  @IsOptional()
+  @IsString()
+  stationId?: string;
+
+  @IsOptional()
+  @IsString()
+  branchId?: string;
+
+  @IsOptional()
+  @IsString()
+  cellId?: string;
+
+  @IsOptional()
+  @IsString()
   officeId?: string;
+
+  @IsOptional()
+  @IsString()
+  departmentId?: string;
+
+  @IsOptional()
+  @IsEnum(OrgScopeTrack)
+  scopeTrack?: OrgScopeTrack;
 }

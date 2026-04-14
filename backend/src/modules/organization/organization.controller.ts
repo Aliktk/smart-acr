@@ -13,4 +13,9 @@ export class OrganizationController {
   summary(@CurrentUser() user: AuthenticatedUser) {
     return this.organizationService.summary(user.id, user.activeRole);
   }
+
+  @Get("master-data")
+  masterData(@CurrentUser() user: AuthenticatedUser) {
+    return this.organizationService.masterData(user.id, user.activeRole);
+  }
 }

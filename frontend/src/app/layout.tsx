@@ -16,8 +16,15 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Static inline script to prevent flash of wrong theme on page load.
+  // Content is a hardcoded string literal — no user input, no XSS risk.
+  const themeScript = `(function(){try{var t=localStorage.getItem('fia-theme');if(t==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`;
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body suppressHydrationWarning>
         <AppProviders>{children}</AppProviders>
       </body>

@@ -26,7 +26,7 @@ function createEmptyReplicaState(): AcrReplicaState {
 
 const actionButtonBase =
   "group inline-flex cursor-pointer items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 [&_svg]:transition-transform hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)] hover:[&_svg]:scale-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none";
-const actionButtonSecondary = `${actionButtonBase} border border-[var(--fia-border,#D8DEE8)] bg-white text-[var(--fia-text-secondary,#475569)]`;
+const actionButtonSecondary = `${actionButtonBase} border border-[var(--fia-border,#D8DEE8)] bg-white dark:bg-slate-800 dark:border-slate-700 text-[var(--fia-text-secondary,#475569)] dark:text-slate-300`;
 const actionButtonPrimary = `${actionButtonBase} bg-[var(--fia-navy,#1A1C6E)] text-white hover:bg-[var(--fia-navy-hover,#2D308F)]`;
 const actionButtonDanger = `${actionButtonBase} border border-[#FECACA] bg-[#FFF1F2] text-[#BE123C]`;
 
@@ -296,7 +296,7 @@ export default function AcrDetailPage() {
           <p className="mt-1 text-sm text-[#B91C1C]">{error.message}</p>
         </div>
         <div>
-          <Link href="/queue" className="inline-flex items-center gap-2 rounded-2xl border border-[#D8DEE8] bg-white px-4 py-2.5 text-sm font-semibold text-[#475569]">
+          <Link href="/queue" className="inline-flex items-center gap-2 rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-[var(--card)] px-4 py-2.5 text-sm font-semibold text-[#475569] dark:text-slate-300">
             <ArrowLeft size={16} />
             Back to Queue
           </Link>
@@ -354,12 +354,12 @@ export default function AcrDetailPage() {
     return (
       <div className="mx-auto flex max-w-screen-xl flex-col gap-5 p-5">
         <div className="flex items-start gap-3">
-          <Link href="/queue" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-[#6B7280] shadow-sm">
+          <Link href="/queue" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] text-[#6B7280] dark:text-slate-400 shadow-sm">
             <ArrowLeft size={18} />
           </Link>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[1.6rem] font-semibold text-[#111827]">{data.acrNo}</h1>
+              <h1 className="text-[1.6rem] font-semibold text-[#111827] dark:text-slate-100">{data.acrNo}</h1>
               <StatusChip status={data.status} />
             </div>
             <p className="mt-1 text-sm text-[#64748B]">{data.reportingPeriod}</p>
@@ -367,8 +367,8 @@ export default function AcrDetailPage() {
         </div>
 
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
-            <h2 className="text-lg font-semibold text-[#111827]">ACR metadata</h2>
+          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-[#111827] dark:text-slate-100">ACR metadata</h2>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {[
                 { label: "Name", value: data.employee.name },
@@ -385,16 +385,16 @@ export default function AcrDetailPage() {
                 { label: "Completed / archived", value: data.completedDate ?? data.archivedAt ?? "In progress" },
                 { label: "Restricted PDF retained", value: data.hasHistoricalPdf ? "Yes" : "No" },
               ].map((item) => (
-                <div key={item.label} className="rounded-2xl bg-[#F8FAFC] px-4 py-3">
+                <div key={item.label} className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">{item.label}</p>
-                  <p className="mt-2 text-sm font-medium text-[#111827]">{item.value}</p>
+                  <p className="mt-2 text-sm font-medium text-[#111827] dark:text-slate-100">{item.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
-            <h2 className="text-lg font-semibold text-[#111827]">Workflow history</h2>
+          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-[#111827] dark:text-slate-100">Workflow history</h2>
             <p className="mt-1 text-sm text-[#64748B]">Only non-confidential workflow metadata is visible here. Form contents, reporting remarks, and restricted internal comments remain hidden.</p>
             <div className="mt-4">
               <Timeline items={timeline} />
@@ -586,17 +586,17 @@ export default function AcrDetailPage() {
       />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <Link href="/queue" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-[#6B7280] shadow-sm">
+          <Link href="/queue" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] text-[#6B7280] dark:text-slate-400 shadow-sm">
             <ArrowLeft size={18} />
           </Link>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[1.75rem] font-semibold leading-tight text-[#111827]">{data.acrNo}</h1>
+              <h1 className="text-[1.75rem] font-semibold leading-tight text-[#111827] dark:text-slate-100">{data.acrNo}</h1>
               <StatusChip status={data.status} />
               {data.isPriority ? <PriorityBadge priority /> : null}
               {data.isOverdue ? <OverdueBadge days={data.overdueDays} /> : null}
             </div>
-            <p className="mt-0.5 text-sm text-[#6B7280]">
+            <p className="mt-0.5 text-sm text-[#6B7280] dark:text-slate-400">
               {data.employee.name} · {data.employee.rank} · {data.reportingPeriod}
             </p>
           </div>
@@ -607,9 +607,9 @@ export default function AcrDetailPage() {
       {!compactFinalView ? (
       <div id="acr-overview" className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_340px]">
         <section className="space-y-4">
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
             <div className="mb-4">
-              <h2 className="text-[1.15rem] font-semibold text-[#111827]">Employee Information</h2>
+              <h2 className="text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">Employee Information</h2>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -617,8 +617,8 @@ export default function AcrDetailPage() {
                 {data.employee.name.charAt(0)}
               </div>
               <div>
-                <p className="text-[1.3rem] font-semibold text-[#111827]">{data.employee.name}</p>
-                <p className="text-sm text-[#6B7280]">
+                <p className="text-[1.3rem] font-semibold text-[#111827] dark:text-slate-100">{data.employee.name}</p>
+                <p className="text-sm text-[#6B7280] dark:text-slate-400">
                   {data.employee.rank} · BPS-{data.employee.bps} · {data.employee.serviceYears} yrs service
                 </p>
               </div>
@@ -634,19 +634,19 @@ export default function AcrDetailPage() {
                 { label: "Posting", value: data.employee.posting },
               ].map((field) => (
                 <div key={field.label}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">{field.label}</p>
-                  <p className="mt-1.5 text-base font-medium text-[#111827]">{field.value}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF] dark:text-slate-500">{field.label}</p>
+                  <p className="mt-1.5 text-base font-medium text-[#111827] dark:text-slate-100">{field.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#EEF2FF] text-[#4B498C]">
                 <FileText size={18} />
               </div>
-              <h2 className="text-[1.15rem] font-semibold text-[#111827]">ACR Details</h2>
+              <h2 className="text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">ACR Details</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               {[
@@ -661,8 +661,8 @@ export default function AcrDetailPage() {
                 { label: "Performance Score", value: data.performanceScore ? `${data.performanceScore}/100` : "Pending" },
               ].map((field) => (
                 <div key={field.label}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">{field.label}</p>
-                  <p className={`mt-1.5 text-base font-medium ${field.label === "Performance Score" ? "text-[#0095D9]" : "text-[#111827]"}`}>{field.value}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF] dark:text-slate-500">{field.label}</p>
+                  <p className={`mt-1.5 text-base font-medium ${field.label === "Performance Score" ? "text-[#0095D9]" : "text-[#111827] dark:text-slate-100"}`}>{field.value}</p>
                 </div>
               ))}
             </div>
@@ -670,25 +670,25 @@ export default function AcrDetailPage() {
         </section>
 
         <aside className="space-y-4">
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
-            <h2 className="mb-4 text-[1.15rem] font-semibold text-[#111827]">Workflow Timeline</h2>
+          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
+            <h2 className="mb-4 text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">Workflow Timeline</h2>
             <Timeline items={timeline} />
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280]">Due Date</p>
-            <p className="mt-2 text-[1.7rem] font-semibold text-[#111827]">{data.dueDate}</p>
+          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280] dark:text-slate-400">Due Date</p>
+            <p className="mt-2 text-[1.7rem] font-semibold text-[#111827] dark:text-slate-100">{data.dueDate}</p>
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280]">Workflow Progress</p>
+          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280] dark:text-slate-400">Workflow Progress</p>
             <div className="mt-3 space-y-2.5">
               {workflowProgress.map((step) => (
                 <div key={step.label} className="flex items-center gap-3 text-sm">
-                  <span className={`flex h-5 w-5 items-center justify-center rounded-full ${step.done ? "bg-green-100 text-green-600" : "bg-[#F4F6FB] text-[#9CA3AF]"}`}>
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full ${step.done ? "bg-green-100 text-green-600" : "bg-[#F4F6FB] dark:bg-slate-700 text-[#9CA3AF] dark:text-slate-500"}`}>
                     {step.done ? "✓" : ""}
                   </span>
-                  <span className={step.done ? "font-medium text-[#15803D]" : "text-[#6B7280]"}>{step.label}</span>
+                  <span className={step.done ? "font-medium text-[#15803D]" : "text-[#6B7280] dark:text-slate-400"}>{step.label}</span>
                 </div>
               ))}
             </div>
@@ -698,13 +698,13 @@ export default function AcrDetailPage() {
       ) : (
       <div id="acr-overview" className="space-y-4">
         <section className="space-y-4">
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">
                   {isSecretBranchView ? "Secret Branch Final Record" : "Executive Record Summary"}
                 </p>
-                <h2 className="mt-2 text-[1.35rem] font-semibold text-[#111827]">{data.employee.name}</h2>
+                <h2 className="mt-2 text-[1.35rem] font-semibold text-[#111827] dark:text-slate-100">{data.employee.name}</h2>
                 <p className="mt-1 text-sm text-[#64748B]">
                   {data.employee.rank} · {data.employee.office} · {data.reportingPeriod}
                 </p>
@@ -730,18 +730,18 @@ export default function AcrDetailPage() {
                 { label: "Wing", value: data.employee.wing },
                 { label: "Zone", value: data.employee.zone },
               ].map((field) => (
-                <div key={field.label} className="rounded-2xl bg-[#F8FAFC] px-3 py-3">
+                <div key={field.label} className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-3 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">{field.label}</p>
-                  <p className="mt-2 text-sm font-medium text-[#111827]">{field.value}</p>
+                  <p className="mt-2 text-sm font-medium text-[#111827] dark:text-slate-100">{field.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
             <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-              <div className="rounded-2xl bg-[#F8FAFC] px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280]">Workflow Progress</p>
+              <div className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280] dark:text-slate-400">Workflow Progress</p>
                 <div className="mt-3 space-y-2">
                   {workflowProgress.map((step) => (
                     <div key={step.label} className="flex items-center gap-3 text-sm">
@@ -754,10 +754,10 @@ export default function AcrDetailPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-[#F8FAFC] px-4 py-4">
+              <div className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280]">Workflow History</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280] dark:text-slate-400">Workflow History</p>
                     <p className="mt-1 text-sm text-[#64748B]">Final movement and archival history from the live backend record.</p>
                   </div>
                   <StatusChip status={data.status} />
@@ -796,12 +796,12 @@ export default function AcrDetailPage() {
 
       {/* Secret Branch Verification Card */}
       {(data.secretBranch?.verifiedBy || data.secretBranch?.reviewedAt || canReviewAsSecretBranch || canVerifyAsSecretBranch) ? (
-        <div className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+        <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#FEF3C7] text-[#D97706]">
               <ShieldCheck size={18} />
             </div>
-            <h2 className="text-[1.15rem] font-semibold text-[#111827]">Secret Branch Verification</h2>
+            <h2 className="text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">Secret Branch Verification</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {[
@@ -813,11 +813,11 @@ export default function AcrDetailPage() {
               { label: "Status", value: data.secretBranch?.verifiedBy ? "Verified" : data.secretBranch?.reviewedAt ? "Pending AD Verification" : "Pending Review" },
             ].map((field) => (
               <div key={field.label}>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">{field.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF] dark:text-slate-500">{field.label}</p>
                 <p className={`mt-1.5 text-base font-medium ${
                   field.label === "Status"
                     ? data.secretBranch?.verifiedBy ? "text-emerald-600" : "text-amber-600"
-                    : "text-[#111827]"
+                    : "text-[#111827] dark:text-slate-100"
                 }`}>{field.value}</p>
               </div>
             ))}
@@ -825,15 +825,15 @@ export default function AcrDetailPage() {
           {data.secretBranch?.verificationNotes ? (
             <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Verification Remarks</p>
-              <p className="mt-1 text-sm text-[#374151]">{data.secretBranch.verificationNotes}</p>
+              <p className="mt-1 text-sm text-[#374151] dark:text-slate-300">{data.secretBranch.verificationNotes}</p>
             </div>
           ) : null}
         </div>
       ) : null}
 
       {compactFinalView ? (
-      <details id="digital-form-replica" className="rounded-[24px] border border-[#E5E7EB] bg-white shadow-sm">
-        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-[#111827]">
+      <details id="digital-form-replica" className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] shadow-sm">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-[#111827] dark:text-slate-100">
           Digital Form Replica
         </summary>
         <div className="border-t border-[#EEF2F7] p-4">
@@ -860,14 +860,14 @@ export default function AcrDetailPage() {
         </div>
       </details>
       ) : (
-      <section id="digital-form-replica" className="rounded-[24px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+      <section id="digital-form-replica" className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
         <div className="flex flex-col gap-3 border-b border-[#EEF2F7] pb-3.5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-[1.15rem] font-semibold text-[#111827]">Digital Form Replica</h2>
+            <h2 className="text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">Digital Form Replica</h2>
           </div>
           {workflowMeta?.lastEditedAt ? (
-            <div className="rounded-2xl bg-[#F8FAFC] px-4 py-2.5 text-sm text-[#475569]">
-              <p className="font-semibold text-[#111827]">Last saved</p>
+            <div className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-4 py-2.5 text-sm text-[#475569]">
+              <p className="font-semibold text-[#111827] dark:text-slate-100">Last saved</p>
               <p className="mt-1">
                 {workflowMeta.lastEditedBy ?? "System"}{workflowMeta.lastEditedRole ? ` • ${workflowMeta.lastEditedRole}` : ""}
               </p>
@@ -901,7 +901,7 @@ export default function AcrDetailPage() {
       </div>
 
       <section className="portal-floating-action-bar">
-        <div className="rounded-[24px] border border-[#D8DEE8] bg-white/96 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur">
+        <div className="rounded-[24px] border border-[#D8DEE8] dark:border-slate-700 bg-white/96 dark:bg-[var(--card)]/96 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur">
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5 xl:justify-end">
@@ -975,7 +975,7 @@ export default function AcrDetailPage() {
                   <select
                     value={selectedDeskCode}
                     onChange={(e) => setSelectedDeskCode(e.target.value as SecretBranchDeskCode | "")}
-                    className="rounded-xl border border-[#D8DEE8] bg-white px-3 py-2 text-sm font-medium text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A1C6E]"
+                    className="rounded-xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-medium text-[#111827] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#1A1C6E]"
                   >
                     <option value="">Select DA Desk</option>
                     <option value="DA1">DA1</option>

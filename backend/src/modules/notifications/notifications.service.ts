@@ -53,17 +53,21 @@ export class NotificationsService {
       ];
     }
 
-    const notifications = await this.prisma.notification.findMany({
-      where,
-      include: {
-        acrRecord: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const [notifications, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        include: {
+          acrRecord: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
 
     return {
       items: notifications.map((notification) => mapNotification(notification)),
-      total: notifications.length,
+      total,
     };
   }
 

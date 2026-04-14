@@ -30,7 +30,12 @@ function hasUsableAccessToken(token?: string) {
 }
 
 function redirectToLogin(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/login", request.url));
+  const loginUrl = new URL("/login", request.url);
+  const destination = request.nextUrl.pathname + request.nextUrl.search;
+  if (destination !== "/" && destination !== "/login") {
+    loginUrl.searchParams.set("redirect", destination);
+  }
+  const response = NextResponse.redirect(loginUrl);
   response.cookies.delete("acr_access_token");
   response.cookies.delete("acr_refresh_token");
   return response;

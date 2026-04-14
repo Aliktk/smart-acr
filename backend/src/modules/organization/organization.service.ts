@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { PrismaService } from "../../common/prisma.service";
-import { canViewOrganization, loadScopedUser } from "../../helpers/security.utils";
+import { buildScopedOrgWhere, canViewOrganization, loadScopedUser } from "../../helpers/security.utils";
 
 const FULL_ORGANIZATION_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
@@ -11,11 +11,42 @@ const FULL_ORGANIZATION_ROLES: UserRole[] = [
   UserRole.EXECUTIVE_VIEWER,
 ];
 
-const WING_LEVEL_ORGANIZATION_ROLES: UserRole[] = [...FULL_ORGANIZATION_ROLES, UserRole.WING_OVERSIGHT];
-
 @Injectable()
 export class OrganizationService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async masterData(userId: string, activeRole: UserRole) {
+    const user = await loadScopedUser(this.prisma, userId, activeRole);
+    if (!canViewOrganization(user)) {
+      throw new ForbiddenException("The current role cannot access organization master data.");
+    }
+
+    const [wings, directorates, regions, zones, circles, stations, branches, cells, offices, departments] = await Promise.all([
+      this.prisma.wing.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.directorate.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.region.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.zone.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.circle.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.station.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.branch.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.cell.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.office.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.department.findMany({ orderBy: { name: "asc" } }),
+    ]);
+
+    return {
+      wings,
+      directorates,
+      regions,
+      zones,
+      circles,
+      stations,
+      branches,
+      cells,
+      offices,
+      departments,
+    };
+  }
 
   async summary(userId: string, activeRole: UserRole) {
     const user = await loadScopedUser(this.prisma, userId, activeRole);
@@ -23,69 +54,107 @@ export class OrganizationService {
       throw new ForbiddenException("The current role cannot access organization summary data.");
     }
 
-    const wings = await this.prisma.wing.findMany({
-      include: {
-        zones: {
-          include: {
-            offices: {
-              include: {
-                _count: { select: { employees: true, users: true } },
+    const [wings, regions] = await Promise.all([
+      this.prisma.wing.findMany({
+        include: {
+          zones: {
+            include: {
+              offices: {
+                where: {
+                  scopeTrack: "WING",
+                },
+                include: {
+                  _count: { select: { employees: true, users: true } },
+                },
               },
             },
           },
         },
-      },
-      orderBy: { name: "asc" },
-    });
+        orderBy: { name: "asc" },
+      }),
+      this.prisma.region.findMany({
+        include: {
+          zones: {
+            include: {
+              offices: {
+                where: {
+                  scopeTrack: "REGIONAL",
+                },
+                include: {
+                  _count: { select: { employees: true, users: true } },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { name: "asc" },
+      }),
+    ]);
 
-    const wingScopeId = user.activeAssignment?.wingId ?? user.wingId;
-    const zoneScopeId = user.activeAssignment?.zoneId ?? user.zoneId;
+    const scopedWhere = FULL_ORGANIZATION_ROLES.includes(user.activeRole) ? null : buildScopedOrgWhere(user);
+    const canSeeOffice = (office: { wingId?: string | null; regionId?: string | null; zoneId?: string | null; officeId?: string | null; id: string }) => {
+      if (!scopedWhere) {
+        return true;
+      }
 
-    return wings
-      .filter((wing) => {
-        if (FULL_ORGANIZATION_ROLES.includes(user.activeRole)) {
-          return true;
-        }
+      const [field, value] = Object.entries(scopedWhere)[0] ?? [];
+      if (!field || !value) {
+        return true;
+      }
 
-        if (user.activeRole === UserRole.WING_OVERSIGHT) {
-          return wing.id === wingScopeId;
-        }
+      return office[field as keyof typeof office] === value || (field === "officeId" && office.id === value);
+    };
 
-        if (user.activeRole === UserRole.ZONAL_OVERSIGHT) {
-          return wing.zones.some((zone) => zone.id === zoneScopeId);
-        }
-
-        return false;
-      })
+    const wingEntries = wings
       .map((wing) => ({
         id: wing.id,
         name: wing.name,
         code: wing.code,
+        track: "WING" as const,
         zones: wing.zones
-          .filter((zone) => {
-            if (WING_LEVEL_ORGANIZATION_ROLES.includes(user.activeRole)) {
-              return true;
-            }
-
-            if (user.activeRole === UserRole.ZONAL_OVERSIGHT) {
-              return zone.id === zoneScopeId;
-            }
-
-            return false;
-          })
           .map((zone) => ({
             id: zone.id,
             name: zone.name,
             code: zone.code,
-            offices: zone.offices.map((office) => ({
-              id: office.id,
-              name: office.name,
-              code: office.code,
-              employeeCount: office._count.employees,
-              userCount: office._count.users,
-            })),
-          })),
+            offices: zone.offices
+              .filter((office) => canSeeOffice({ ...office, officeId: office.id }))
+              .map((office) => ({
+                id: office.id,
+                name: office.name,
+                code: office.code,
+                employeeCount: office._count.employees,
+                userCount: office._count.users,
+              })),
+          }))
+          .filter((zone) => zone.offices.length > 0 || FULL_ORGANIZATION_ROLES.includes(user.activeRole)),
       }))
       .filter((wing) => wing.zones.length > 0);
+
+    const regionEntries = regions
+      .map((region) => ({
+        id: region.id,
+        name: region.name,
+        code: region.code,
+        track: "REGIONAL" as const,
+        zones: region.zones
+          .map((zone) => ({
+            id: zone.id,
+            name: zone.name,
+            code: zone.code,
+            offices: zone.offices
+              .filter((office) => canSeeOffice({ ...office, officeId: office.id }))
+              .map((office) => ({
+                id: office.id,
+                name: office.name,
+                code: office.code,
+                employeeCount: office._count.employees,
+                userCount: office._count.users,
+              })),
+          }))
+          .filter((zone) => zone.offices.length > 0 || FULL_ORGANIZATION_ROLES.includes(user.activeRole)),
+      }))
+      .filter((region) => region.zones.length > 0);
+
+    return [...regionEntries, ...wingEntries];
   }
 }

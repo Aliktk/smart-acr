@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { AcrWorkflowState, Prisma, TemplateFamilyCode, UserRole } from "@prisma/client";
+import { templateFamilyLabel } from "../../common/template-catalog";
 import { PrismaService } from "../../common/prisma.service";
-import { canAccessAcr, canViewAnalytics, loadScopedUser, type ScopedUser } from "../../helpers/security.utils";
+import { buildScopedOrgWhere, canAccessAcr, canViewAnalytics, loadScopedUser, type ScopedUser } from "../../helpers/security.utils";
 import { mapAcr } from "../../helpers/view-mappers";
 import { WorkflowService } from "../workflow/workflow.service";
 import {
@@ -22,8 +23,15 @@ const ANALYTICS_ACR_INCLUDE = {
   employee: {
     include: {
       wing: true,
+      directorate: true,
+      region: true,
       zone: true,
+      circle: true,
+      station: true,
+      branch: true,
+      cell: true,
       office: true,
+      department: true,
     },
   },
   initiatedBy: true,
@@ -135,20 +143,15 @@ type TrendPoint = {
   label: string;
 } & Record<SeriesKey, number>;
 
-function templateFamilyLabel(family: TemplateFamilyCode) {
-  switch (family) {
-    case TemplateFamilyCode.ASSISTANT_UDC_LDC:
-      return "Assistant / UDC / LDC";
-    case TemplateFamilyCode.APS_STENOTYPIST:
-      return "APS / Stenotypist";
-    case TemplateFamilyCode.INSPECTOR_SI_ASI:
-      return "Inspector / SI / ASI";
-    case TemplateFamilyCode.SUPERINTENDENT_AINCHARGE:
-      return "Superintendent / A/Incharge";
-    default:
-      return family;
-  }
-}
+type PerformanceSelector = {
+  id: string | null | undefined;
+  label: string | null | undefined;
+};
+
+type ResolvedPerformanceSelector = {
+  id: string;
+  label: string;
+};
 
 function toPercentage(part: number, whole: number) {
   if (whole <= 0) {
@@ -365,8 +368,20 @@ function isClosedStage(record: AnalyticsRecord) {
   return record.raw.workflowState === AcrWorkflowState.ARCHIVED;
 }
 
+function isReturnedWorkflowState(state: AcrWorkflowState) {
+  return state === AcrWorkflowState.RETURNED_TO_CLERK
+    || state === AcrWorkflowState.RETURNED_TO_REPORTING
+    || state === AcrWorkflowState.RETURNED_TO_COUNTERSIGNING;
+}
+
+function isSecretBranchWorkflowState(state: AcrWorkflowState) {
+  return state === AcrWorkflowState.PENDING_SECRET_BRANCH_REVIEW
+    || state === AcrWorkflowState.PENDING_SECRET_BRANCH_VERIFICATION
+    || state === AcrWorkflowState.ARCHIVED;
+}
+
 function isPendingStage(record: AnalyticsRecord) {
-  return record.raw.workflowState !== AcrWorkflowState.ARCHIVED && record.raw.workflowState !== AcrWorkflowState.RETURNED;
+  return record.raw.workflowState !== AcrWorkflowState.ARCHIVED && !isReturnedWorkflowState(record.raw.workflowState);
 }
 
 function isOverdueStage(record: AnalyticsRecord) {
@@ -381,9 +396,12 @@ function buildCurrentStage(record: AnalyticsAcrRecord): AnalyticsRecord["current
       return "reporting";
     case AcrWorkflowState.PENDING_COUNTERSIGNING:
       return "countersigning";
-    case AcrWorkflowState.SUBMITTED_TO_SECRET_BRANCH:
+    case AcrWorkflowState.PENDING_SECRET_BRANCH_REVIEW:
+    case AcrWorkflowState.PENDING_SECRET_BRANCH_VERIFICATION:
       return "secret-branch";
-    case AcrWorkflowState.RETURNED:
+    case AcrWorkflowState.RETURNED_TO_CLERK:
+    case AcrWorkflowState.RETURNED_TO_REPORTING:
+    case AcrWorkflowState.RETURNED_TO_COUNTERSIGNING:
       return "returned";
     case AcrWorkflowState.ARCHIVED:
     default:
@@ -434,9 +452,9 @@ function calculateStageDurations(record: AnalyticsAcrRecord) {
 function compareSummaryPriority(left: AnalyticsRecord, right: AnalyticsRecord) {
   const severity = (record: AnalyticsRecord) => {
     if (record.summary.isOverdue) return 5;
-    if (record.summary.status === "Returned") return 4;
+    if (record.summary.status.startsWith("Returned")) return 4;
     if (record.summary.isPriority) return 3;
-    if (record.raw.workflowState === AcrWorkflowState.SUBMITTED_TO_SECRET_BRANCH) return 2;
+    if (record.raw.workflowState === AcrWorkflowState.PENDING_SECRET_BRANCH_REVIEW || record.raw.workflowState === AcrWorkflowState.PENDING_SECRET_BRANCH_VERIFICATION) return 2;
     if (record.raw.workflowState === AcrWorkflowState.ARCHIVED) return 1;
     return 0;
   };
@@ -453,6 +471,12 @@ function compareSummaryPriority(left: AnalyticsRecord, right: AnalyticsRecord) {
   }
 
   return left.summary.employee.name.localeCompare(right.summary.employee.name);
+}
+
+function validSelector(
+  selector: PerformanceSelector,
+): selector is ResolvedPerformanceSelector {
+  return Boolean(selector.id && selector.label);
 }
 
 @Injectable()
@@ -489,6 +513,7 @@ export class AnalyticsService {
           },
         },
       },
+      take: 5000,
     });
 
     const visibleAcrs = acrs.filter((acr) => canAccessAcr(user, acr));
@@ -554,6 +579,7 @@ export class AnalyticsService {
       where: this.buildScopedWhere(user, mode),
       include: ANALYTICS_ACR_INCLUDE,
       orderBy: [{ archivedAt: "desc" }, { createdAt: "desc" }],
+      take: 2000,
     });
 
     return acrs
@@ -567,12 +593,12 @@ export class AnalyticsService {
             ? "countersigning"
             : normalizeAction(secretEvent.actorRole).includes("reporting")
               ? "reporting"
-              : record.workflowState === AcrWorkflowState.SUBMITTED_TO_SECRET_BRANCH
+              : isSecretBranchWorkflowState(record.workflowState)
                 ? "legacy"
                 : record.templateVersion.requiresCountersigning
                   ? "countersigning"
                   : "reporting"
-          : record.workflowState === AcrWorkflowState.SUBMITTED_TO_SECRET_BRANCH
+          : isSecretBranchWorkflowState(record.workflowState)
             ? "legacy"
             : record.templateVersion.requiresCountersigning
               ? "countersigning"
@@ -599,17 +625,13 @@ export class AnalyticsService {
 
   private buildScopedWhere(user: ScopedUser, mode: "executive" | "secret-branch"): Prisma.AcrRecordWhereInput {
     const and: Prisma.AcrRecordWhereInput[] = [];
-    const employeeWhere: Prisma.EmployeeWhereInput = {};
+    const employeeWhere = FULL_ANALYTICS_ROLES.includes(user.activeRole)
+      ? null
+      : user.activeRole === UserRole.WING_OVERSIGHT || user.activeRole === UserRole.ZONAL_OVERSIGHT
+        ? buildScopedOrgWhere(user)
+        : null;
 
-    if (!FULL_ANALYTICS_ROLES.includes(user.activeRole) && user.activeRole === UserRole.WING_OVERSIGHT) {
-      employeeWhere.wingId = user.activeAssignment?.wingId ?? user.wingId ?? undefined;
-    }
-
-    if (!FULL_ANALYTICS_ROLES.includes(user.activeRole) && user.activeRole === UserRole.ZONAL_OVERSIGHT) {
-      employeeWhere.zoneId = user.activeAssignment?.zoneId ?? user.zoneId ?? undefined;
-    }
-
-    if (Object.keys(employeeWhere).length > 0) {
+    if (employeeWhere) {
       and.push({
         employee: {
           is: employeeWhere,
@@ -620,7 +642,11 @@ export class AnalyticsService {
     if (mode === "secret-branch") {
       and.push({
         workflowState: {
-          in: [AcrWorkflowState.ARCHIVED, AcrWorkflowState.SUBMITTED_TO_SECRET_BRANCH],
+          in: [
+            AcrWorkflowState.ARCHIVED,
+            AcrWorkflowState.PENDING_SECRET_BRANCH_REVIEW,
+            AcrWorkflowState.PENDING_SECRET_BRANCH_VERIFICATION,
+          ],
         },
       });
     }
@@ -632,7 +658,19 @@ export class AnalyticsService {
     const window = buildWindow(mode, preset, records);
 
     return records.filter((record) => {
+      if (query.scopeTrack && record.raw.employee.scopeTrack !== query.scopeTrack) {
+        return false;
+      }
+
       if (query.wingId && record.raw.employee.wingId !== query.wingId) {
+        return false;
+      }
+
+      if (query.directorateId && record.raw.employee.directorateId !== query.directorateId) {
+        return false;
+      }
+
+      if (query.regionId && record.raw.employee.regionId !== query.regionId) {
         return false;
       }
 
@@ -640,7 +678,27 @@ export class AnalyticsService {
         return false;
       }
 
+      if (query.circleId && record.raw.employee.circleId !== query.circleId) {
+        return false;
+      }
+
+      if (query.stationId && record.raw.employee.stationId !== query.stationId) {
+        return false;
+      }
+
+      if (query.branchId && record.raw.employee.branchId !== query.branchId) {
+        return false;
+      }
+
+      if (query.cellId && record.raw.employee.cellId !== query.cellId) {
+        return false;
+      }
+
       if (query.officeId && record.raw.employee.officeId !== query.officeId) {
+        return false;
+      }
+
+      if (query.departmentId && record.raw.employee.departmentId !== query.departmentId) {
         return false;
       }
 
@@ -661,28 +719,104 @@ export class AnalyticsService {
   }
 
   private buildFilterOptions(records: AnalyticsRecord[]) {
+    const scopeTracks = new Map<string, { value: string; label: string }>();
     const wings = new Map<string, { id: string; label: string }>();
-    const zones = new Map<string, { id: string; label: string; wingId: string }>();
-    const offices = new Map<string, { id: string; label: string; wingId: string; zoneId: string }>();
+    const directorates = new Map<string, { id: string; label: string; wingId: string | null }>();
+    const regions = new Map<string, { id: string; label: string; wingId: string | null; directorateId: string | null }>();
+    const zones = new Map<string, { id: string; label: string; wingId: string | null; regionId: string | null }>();
+    const circles = new Map<string, { id: string; label: string; regionId: string | null; zoneId: string }>();
+    const stations = new Map<string, { id: string; label: string; zoneId: string; circleId: string | null }>();
+    const branches = new Map<string, { id: string; label: string; zoneId: string; stationId: string | null; circleId: string | null }>();
+    const cells = new Map<string, { id: string; label: string; zoneId: string; branchId: string | null; stationId: string | null }>();
+    const offices = new Map<string, { id: string; label: string; scopeTrack: string; wingId: string | null; directorateId: string | null; regionId: string | null; zoneId: string | null }>();
+    const departments = new Map<string, { id: string; label: string; officeId: string }>();
     const statuses = new Map<string, { value: string; label: string }>();
     const templateFamilies = new Map<TemplateFamilyCode, { value: TemplateFamilyCode; label: string }>();
 
     for (const record of records) {
-      wings.set(record.raw.employee.wingId, {
-        id: record.raw.employee.wingId,
-        label: record.raw.employee.wing.name,
+      scopeTracks.set(record.raw.employee.scopeTrack, {
+        value: record.raw.employee.scopeTrack,
+        label: record.raw.employee.scopeTrack === "REGIONAL" ? "Regional" : "Wing",
       });
-      zones.set(record.raw.employee.zoneId, {
-        id: record.raw.employee.zoneId,
-        label: record.raw.employee.zone.name,
-        wingId: record.raw.employee.wingId,
-      });
+      if (record.raw.employee.wingId && record.raw.employee.wing?.name) {
+        wings.set(record.raw.employee.wingId, {
+          id: record.raw.employee.wingId,
+          label: record.raw.employee.wing.name,
+        });
+      }
+      if (record.raw.employee.directorateId && record.raw.employee.directorate?.name) {
+        directorates.set(record.raw.employee.directorateId, {
+          id: record.raw.employee.directorateId,
+          label: record.raw.employee.directorate.name,
+          wingId: record.raw.employee.wingId ?? null,
+        });
+      }
+      if (record.raw.employee.regionId && record.raw.employee.region?.name) {
+        regions.set(record.raw.employee.regionId, {
+          id: record.raw.employee.regionId,
+          label: record.raw.employee.region.name,
+          wingId: record.raw.employee.wingId ?? null,
+          directorateId: record.raw.employee.directorateId ?? null,
+        });
+      }
+      if (record.raw.employee.zoneId && record.raw.employee.zone?.name) {
+        zones.set(record.raw.employee.zoneId, {
+          id: record.raw.employee.zoneId,
+          label: record.raw.employee.zone.name,
+          wingId: record.raw.employee.wingId ?? null,
+          regionId: record.raw.employee.regionId ?? null,
+        });
+      }
+      if (record.raw.employee.circleId && record.raw.employee.circle?.name && record.raw.employee.zoneId) {
+        circles.set(record.raw.employee.circleId, {
+          id: record.raw.employee.circleId,
+          label: record.raw.employee.circle.name,
+          regionId: record.raw.employee.regionId ?? null,
+          zoneId: record.raw.employee.zoneId,
+        });
+      }
+      if (record.raw.employee.stationId && record.raw.employee.station?.name && record.raw.employee.zoneId) {
+        stations.set(record.raw.employee.stationId, {
+          id: record.raw.employee.stationId,
+          label: record.raw.employee.station.name,
+          zoneId: record.raw.employee.zoneId,
+          circleId: record.raw.employee.circleId ?? null,
+        });
+      }
+      if (record.raw.employee.branchId && record.raw.employee.branch?.name && record.raw.employee.zoneId) {
+        branches.set(record.raw.employee.branchId, {
+          id: record.raw.employee.branchId,
+          label: record.raw.employee.branch.name,
+          zoneId: record.raw.employee.zoneId,
+          stationId: record.raw.employee.stationId ?? null,
+          circleId: record.raw.employee.circleId ?? null,
+        });
+      }
+      if (record.raw.employee.cellId && record.raw.employee.cell?.name && record.raw.employee.zoneId) {
+        cells.set(record.raw.employee.cellId, {
+          id: record.raw.employee.cellId,
+          label: record.raw.employee.cell.name,
+          zoneId: record.raw.employee.zoneId,
+          branchId: record.raw.employee.branchId ?? null,
+          stationId: record.raw.employee.stationId ?? null,
+        });
+      }
       offices.set(record.raw.employee.officeId, {
         id: record.raw.employee.officeId,
         label: record.raw.employee.office.name,
-        wingId: record.raw.employee.wingId,
-        zoneId: record.raw.employee.zoneId,
+        scopeTrack: record.raw.employee.scopeTrack,
+        wingId: record.raw.employee.wingId ?? null,
+        directorateId: record.raw.employee.directorateId ?? null,
+        regionId: record.raw.employee.regionId ?? null,
+        zoneId: record.raw.employee.zoneId ?? null,
       });
+      if (record.raw.employee.departmentId && record.raw.employee.department?.name) {
+        departments.set(record.raw.employee.departmentId, {
+          id: record.raw.employee.departmentId,
+          label: record.raw.employee.department.name,
+          officeId: record.raw.employee.officeId,
+        });
+      }
       statuses.set(record.currentStatusLabel, {
         value: record.currentStatusLabel,
         label: record.currentStatusLabel,
@@ -702,9 +836,17 @@ export class AnalyticsService {
         { value: "fy", label: "Current FY" },
         { value: "all", label: "All data" },
       ],
+      scopeTracks: Array.from(scopeTracks.values()).sort((left, right) => left.label.localeCompare(right.label)),
       wings: Array.from(wings.values()).sort((left, right) => left.label.localeCompare(right.label)),
+      directorates: Array.from(directorates.values()).sort((left, right) => left.label.localeCompare(right.label)),
+      regions: Array.from(regions.values()).sort((left, right) => left.label.localeCompare(right.label)),
       zones: Array.from(zones.values()).sort((left, right) => left.label.localeCompare(right.label)),
+      circles: Array.from(circles.values()).sort((left, right) => left.label.localeCompare(right.label)),
+      stations: Array.from(stations.values()).sort((left, right) => left.label.localeCompare(right.label)),
+      branches: Array.from(branches.values()).sort((left, right) => left.label.localeCompare(right.label)),
+      cells: Array.from(cells.values()).sort((left, right) => left.label.localeCompare(right.label)),
       offices: Array.from(offices.values()).sort((left, right) => left.label.localeCompare(right.label)),
+      departments: Array.from(departments.values()).sort((left, right) => left.label.localeCompare(right.label)),
       statuses: Array.from(statuses.values()).sort((left, right) => left.label.localeCompare(right.label)),
       templateFamilies: Array.from(templateFamilies.values()).sort((left, right) => left.label.localeCompare(right.label)),
     };
@@ -814,14 +956,21 @@ export class AnalyticsService {
       records,
       (record) => ({
         id: record.raw.employee.wingId,
-        label: record.raw.employee.wing.name,
+        label: record.raw.employee.wing?.name,
+      }),
+    );
+    const regionPerformance = this.buildPerformanceEntries(
+      records,
+      (record) => ({
+        id: record.raw.employee.regionId,
+        label: record.raw.employee.region?.name,
       }),
     );
     const zonePerformance = this.buildPerformanceEntries(
       records,
       (record) => ({
         id: record.raw.employee.zoneId,
-        label: record.raw.employee.zone.name,
+        label: record.raw.employee.zone?.name,
       }),
     );
     const officeBacklog = this.buildPerformanceEntries(
@@ -895,9 +1044,15 @@ export class AnalyticsService {
     ];
     const heatmapRows = Array.from(
       records.reduce((map, record) => {
-        const row = map.get(record.raw.employee.wingId) ?? {
-          id: record.raw.employee.wingId,
-          label: record.raw.employee.wing.name,
+        const groupId = record.raw.employee.wingId ?? record.raw.employee.regionId ?? record.raw.employee.officeId;
+        const groupLabel = record.raw.employee.wing?.name ?? record.raw.employee.region?.name ?? record.raw.employee.office.name;
+        if (!groupId || !groupLabel) {
+          return map;
+        }
+
+        const row = map.get(groupId) ?? {
+          id: groupId,
+          label: groupLabel,
           values: {
             draft: 0,
             reporting: 0,
@@ -917,7 +1072,7 @@ export class AnalyticsService {
         row.completed += isClosedStage(record) ? 1 : 0;
         row.overdue += record.summary.isOverdue ? 1 : 0;
         row.completionRate = toPercentage(row.completed, row.total);
-        map.set(record.raw.employee.wingId, row);
+        map.set(groupId, row);
         return map;
       }, new Map<string, { id: string; label: string; values: Record<string, number>; completionRate: number; overdue: number; total: number; completed: number }>()),
     )
@@ -934,14 +1089,22 @@ export class AnalyticsService {
       heading: {
         eyebrow: "Director General overview",
         title: "DG Dashboard",
-        description: "National-level execution view across workflow health, completion momentum, backlog concentration, and exception-heavy units.",
+        description: "",
       },
       appliedFilters: {
         datePreset: query.datePreset ?? "180d",
         dateLabel: window.label,
+        scopeTrack: query.scopeTrack ?? "",
         wingId: query.wingId ?? "",
+        directorateId: query.directorateId ?? "",
+        regionId: query.regionId ?? "",
         zoneId: query.zoneId ?? "",
+        circleId: query.circleId ?? "",
+        stationId: query.stationId ?? "",
+        branchId: query.branchId ?? "",
+        cellId: query.cellId ?? "",
         officeId: query.officeId ?? "",
+        departmentId: query.departmentId ?? "",
         status: query.status ?? "",
         templateFamily: query.templateFamily ?? "",
       },
@@ -973,6 +1136,7 @@ export class AnalyticsService {
       },
       performance: {
         wing: wingPerformance,
+        region: regionPerformance,
         zone: zonePerformance,
         offices: officeBacklog,
         turnaroundByStage,
@@ -1134,7 +1298,7 @@ export class AnalyticsService {
         key: "submitted",
         label: "Pending receipt",
         value: anomalyRecords.length,
-        filterValue: "Submitted to Secret Branch",
+        filterValue: "Pending Secret Branch Review",
       },
     ]);
 
@@ -1142,14 +1306,21 @@ export class AnalyticsService {
       records,
       (record) => ({
         id: record.raw.employee.wingId,
-        label: record.raw.employee.wing.name,
+        label: record.raw.employee.wing?.name,
+      }),
+    );
+    const byRegion = this.buildSecretBranchEntries(
+      records,
+      (record) => ({
+        id: record.raw.employee.regionId,
+        label: record.raw.employee.region?.name,
       }),
     );
     const byZone = this.buildSecretBranchEntries(
       records,
       (record) => ({
         id: record.raw.employee.zoneId,
-        label: record.raw.employee.zone.name,
+        label: record.raw.employee.zone?.name,
       }),
     );
     const topUnits = this.buildSecretBranchEntries(
@@ -1188,9 +1359,17 @@ export class AnalyticsService {
       appliedFilters: {
         datePreset: query.datePreset ?? "180d",
         dateLabel: window.label,
+        scopeTrack: query.scopeTrack ?? "",
         wingId: query.wingId ?? "",
+        directorateId: query.directorateId ?? "",
+        regionId: query.regionId ?? "",
         zoneId: query.zoneId ?? "",
+        circleId: query.circleId ?? "",
+        stationId: query.stationId ?? "",
+        branchId: query.branchId ?? "",
+        cellId: query.cellId ?? "",
         officeId: query.officeId ?? "",
+        departmentId: query.departmentId ?? "",
         status: query.status ?? "",
         templateFamily: query.templateFamily ?? "",
       },
@@ -1222,6 +1401,7 @@ export class AnalyticsService {
       },
       performance: {
         wing: byWing,
+        region: byRegion,
         zone: byZone,
         offices: topUnits,
         turnaroundByStage: [],
@@ -1244,11 +1424,14 @@ export class AnalyticsService {
 
   private buildPerformanceEntries(
     records: AnalyticsRecord[],
-    selector: (record: AnalyticsRecord) => { id: string; label: string },
+    selector: (record: AnalyticsRecord) => PerformanceSelector,
   ) {
     return Array.from(
       records.reduce((map, record) => {
         const key = selector(record);
+        if (!validSelector(key)) {
+          return map;
+        }
         const current = map.get(key.id) ?? {
           id: key.id,
           label: key.label,
@@ -1292,11 +1475,14 @@ export class AnalyticsService {
 
   private buildSecretBranchEntries(
     records: AnalyticsRecord[],
-    selector: (record: AnalyticsRecord) => { id: string; label: string },
+    selector: (record: AnalyticsRecord) => PerformanceSelector,
   ) {
     return Array.from(
       records.reduce((map, record) => {
         const key = selector(record);
+        if (!validSelector(key)) {
+          return map;
+        }
         const current = map.get(key.id) ?? {
           id: key.id,
           label: key.label,

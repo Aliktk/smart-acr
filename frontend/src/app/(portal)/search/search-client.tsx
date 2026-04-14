@@ -41,9 +41,10 @@ export function SearchClientPage() {
   const employeeItems = employeesQuery.data?.items ?? [];
   const acrItems = sortAcrsByUrgency(acrQuery.data?.items ?? []);
   const statusCounts = countStatuses(acrItems);
+  const wingLabel = (value?: string | null) => value ?? "Unassigned";
 
   const wingOptions = useMemo(
-    () => ["All", ...new Set([...acrItems.map((item) => item.wing), ...employeeItems.map((item) => item.wing)])],
+    () => ["All", ...new Set([...acrItems.map((item) => wingLabel(item.wing)), ...employeeItems.map((item) => wingLabel(item.wing))])],
     [acrItems, employeeItems],
   );
 
@@ -55,7 +56,7 @@ export function SearchClientPage() {
   const filteredAcrs = useMemo(
     () =>
       acrItems.filter((item) => {
-        const wingMatches = wingFilter === "All" || item.wing === wingFilter;
+        const wingMatches = wingFilter === "All" || wingLabel(item.wing) === wingFilter;
         const statusMatches = statusFilter === "All" || item.status === statusFilter;
         return wingMatches && statusMatches;
       }),
@@ -65,7 +66,7 @@ export function SearchClientPage() {
   const filteredEmployees = useMemo(
     () =>
       employeeItems.filter((item) => {
-        return wingFilter === "All" || item.wing === wingFilter;
+        return wingFilter === "All" || wingLabel(item.wing) === wingFilter;
       }),
     [employeeItems, wingFilter],
   );
@@ -143,7 +144,7 @@ export function SearchClientPage() {
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <StatCard title="ACR Results" value={filteredAcrs.length} subtitle="Records matched after local filters" icon={<Search size={18} />} accent="navy" />
                 <StatCard title="Employee Results" value={filteredEmployees.length} subtitle="Directory matches after local filters" icon={<Users size={18} />} accent="cyan" />
-                <StatCard title="Needs Attention" value={filteredAcrs.filter((item) => item.isPriority || item.isOverdue || item.status === "Returned").length} subtitle="Priority, overdue, or returned" icon={<ShieldCheck size={18} />} accent="amber" />
+                <StatCard title="Needs Attention" value={filteredAcrs.filter((item) => item.isPriority || item.isOverdue || item.status.startsWith("Returned")).length} subtitle="Priority, overdue, or returned" icon={<ShieldCheck size={18} />} accent="amber" />
                 <StatCard title="Closed Records" value={statusCounts.closed} subtitle="Archived or completed matches" icon={<Archive size={18} />} accent="green" />
               </div>
 
@@ -173,7 +174,7 @@ export function SearchClientPage() {
                               <div>
                                 <p className="text-base font-semibold text-[var(--fia-gray-950)]">{record.employee.name}</p>
                                 <p className="mt-0.5 text-sm text-[var(--fia-gray-500)]">
-                                  {record.employee.rank} · {record.wing} · {record.reportingPeriod}
+                                  {record.employee.rank} · {wingLabel(record.wing)} · {record.reportingPeriod}
                                 </p>
                               </div>
                             </div>
@@ -205,10 +206,10 @@ export function SearchClientPage() {
                         >
                           <p className="text-base font-semibold text-[var(--fia-gray-950)]">{employee.name}</p>
                           <p className="mt-1 text-sm text-[var(--fia-gray-500)]">
-                            {employee.rank} · BPS-{employee.bps} · {employee.wing}
+                            {employee.rank} · BPS-{employee.bps} · {wingLabel(employee.wing)}
                           </p>
                           <div className="mt-3 grid gap-1.5 text-sm text-[var(--fia-gray-600)]">
-                            <p>Office: <span className="font-medium text-[var(--fia-gray-800)]">{employee.office}</span></p>
+                            <p>Office: <span className="font-medium text-[var(--fia-gray-800)]">{employee.office ?? "Not assigned"}</span></p>
                             <p>CNIC: <span className="font-medium text-[var(--fia-gray-800)]">{employee.cnic}</span></p>
                             <p>Mobile: <span className="font-medium text-[var(--fia-gray-800)]">{employee.mobile}</span></p>
                             <p>Reporting Officer: <span className="font-medium text-[var(--fia-gray-800)]">{employee.reportingOfficer ?? "Not assigned"}</span></p>

@@ -16,7 +16,10 @@
     "src/components/forms/FormB_S121E.tsx",
     "src/components/forms/FormC_Inspector.tsx",
     "src/components/forms/FormD_Superintendent.tsx",
-    "src/components/forms/FormPrimitives.tsx"
+    "src/components/forms/FormE_CarDriversDespatchRiders.tsx",
+    "src/components/forms/FormF_Per1718Officers.tsx",
+    "src/components/forms/FormPrimitives.tsx",
+    "src/components/forms/templateFieldSchemas.ts"
   ],
   "exclude": [
     "node_modules",

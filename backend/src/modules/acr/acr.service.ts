@@ -412,11 +412,11 @@ export class AcrService {
     };
   }
 
-  private async ensureArchiveRecord(acr: AcrSummaryRecord, archivedById: string) {
+  private async ensureArchiveRecord(acr: AcrSummaryRecord, archivedById: string, tx: Prisma.TransactionClient) {
     const employeeSnapshot = (acr.employeeMetadataSnapshot as Record<string, unknown> | null) ?? this.buildEmployeeMetadataSnapshot(acr.employee);
     const documentPath = acr.archiveRecord?.documentPath ?? `archive/${acr.acrNo.replaceAll("/", "-")}.pdf`;
 
-    const archiveRecord = await this.prisma.archiveRecord.upsert({
+    const archiveRecord = await tx.archiveRecord.upsert({
       where: {
         acrRecordId: acr.id,
       },
@@ -479,7 +479,7 @@ export class AcrService {
       },
     });
 
-    await this.prisma.fileAsset.updateMany({
+    await tx.fileAsset.updateMany({
       where: {
         acrRecordId: acr.id,
         kind: "DOCUMENT",
@@ -489,7 +489,7 @@ export class AcrService {
       },
     });
 
-    await this.prisma.archiveSnapshot.upsert({
+    await tx.archiveSnapshot.upsert({
       where: { acrRecordId: acr.id },
       create: {
         acrRecordId: acr.id,
@@ -505,7 +505,7 @@ export class AcrService {
     });
 
     const submissionCertPath = `certificates/${acr.acrNo.replaceAll("/", "-")}-submission-cert.pdf`;
-    await this.prisma.acrRecord.update({
+    await tx.acrRecord.update({
       where: { id: acr.id },
       data: { submissionCertificatePath: submissionCertPath },
     });
@@ -627,7 +627,7 @@ export class AcrService {
     };
   }
 
-  async create(userId: string, activeRole: UserRole, dto: { employeeId: string; reportingPeriodFrom: string; reportingPeriodTo: string; isPriority?: boolean; formData?: Record<string, unknown>; }, ipAddress = "0.0.0.0") {
+  async create(userId: string, activeRole: UserRole, dto: { employeeId: string; reportingPeriodFrom: string; reportingPeriodTo: string; isPriority?: boolean; formData?: Record<string, unknown>; templateFamilyOverride?: import("@prisma/client").TemplateFamilyCode; }, ipAddress = "0.0.0.0") {
     const user = await loadScopedUser(this.prisma, userId, activeRole);
 
     if (!canCreateAcr(user)) {
@@ -688,9 +688,10 @@ export class AcrService {
       throw new BadRequestException(periodValidation);
     }
 
+    const resolvedFamily = dto.templateFamilyOverride ?? employee.templateFamily;
     const template = await this.prisma.templateVersion.findFirst({
       where: {
-        family: employee.templateFamily,
+        family: resolvedFamily,
         isActive: true,
       },
       orderBy: { createdAt: "desc" },
@@ -731,37 +732,41 @@ export class AcrService {
       );
     }
 
-    const acr = await this.prisma.acrRecord.create({
-      data: {
-        acrNo: `FIA/ACR/${new Date(dto.reportingPeriodFrom).getFullYear()}-${new Date(dto.reportingPeriodTo).getFullYear().toString().slice(-2)}/${employee.templateFamily}/${Date.now().toString().slice(-4)}`,
-        employeeId: employee.id,
-        initiatedById: user.id,
-        reportingOfficerId: employee.reportingOfficerId,
-        countersigningOfficerId: template.requiresCountersigning ? employee.countersigningOfficerId : null,
-        currentHolderId: user.id,
-        templateVersionId: template.id,
-        workflowState: AcrWorkflowState.DRAFT,
-        statusLabel: "Draft",
-        reportingPeriodFrom: new Date(dto.reportingPeriodFrom),
-        reportingPeriodTo: new Date(dto.reportingPeriodTo),
-        calendarYear,
-        gradeDueDate,
-        dueDate,
-        isPriority: Boolean(dto.isPriority),
-        formData: initialFormData as Prisma.InputJsonValue | undefined,
-        employeeMetadataSnapshot: employeeSnapshot as Prisma.InputJsonValue,
-      },
-      include: ACR_SUMMARY_INCLUDE,
-    });
+    const acr = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.acrRecord.create({
+        data: {
+          acrNo: `FIA/ACR/${new Date(dto.reportingPeriodFrom).getFullYear()}-${new Date(dto.reportingPeriodTo).getFullYear().toString().slice(-2)}/${resolvedFamily}/${Date.now().toString().slice(-4)}`,
+          employeeId: employee.id,
+          initiatedById: user.id,
+          reportingOfficerId: employee.reportingOfficerId!,
+          countersigningOfficerId: template.requiresCountersigning ? employee.countersigningOfficerId : null,
+          currentHolderId: user.id,
+          templateVersionId: template.id,
+          workflowState: AcrWorkflowState.DRAFT,
+          statusLabel: "Draft",
+          reportingPeriodFrom: new Date(dto.reportingPeriodFrom),
+          reportingPeriodTo: new Date(dto.reportingPeriodTo),
+          calendarYear,
+          gradeDueDate,
+          dueDate,
+          isPriority: Boolean(dto.isPriority),
+          formData: initialFormData as Prisma.InputJsonValue | undefined,
+          employeeMetadataSnapshot: employeeSnapshot as Prisma.InputJsonValue,
+        },
+        include: ACR_SUMMARY_INCLUDE,
+      });
 
-    await this.prisma.acrTimelineEntry.create({
-      data: {
-        acrRecordId: acr.id,
-        actorId: user.id,
-        actorRole: displayRole(user.activeRole),
-        action: "Draft Created",
-        status: "completed",
-      },
+      await tx.acrTimelineEntry.create({
+        data: {
+          acrRecordId: created.id,
+          actorId: user.id,
+          actorRole: displayRole(user.activeRole),
+          action: "Draft Created",
+          status: "completed",
+        },
+      });
+
+      return created as AcrSummaryRecord;
     });
 
     await this.auditWriter.write({
@@ -1005,61 +1010,63 @@ export class AcrService {
       nextDueDate = getRoDeadline(now, gradeDue);
     }
 
-    const updated = await this.prisma.acrRecord.update({
-      where: { id: acr.id },
-      data: {
-        workflowState: next.workflowState,
-        statusLabel: next.statusLabel,
-        correctionRemarks: action.startsWith("return_") || action === "intake_return"
-          ? remarks ?? acr.correctionRemarks
-          : action === "intake_accept" ? null : acr.correctionRemarks,
-        currentHolderId: nextHolderId,
-        dueDate: nextDueDate,
-        adminForwardedAt: action === "admin_forward_to_piab" ? new Date() : acr.adminForwardedAt,
-        adminForwardedById: action === "admin_forward_to_piab" ? user.id : acr.adminForwardedById,
-        intakeVerifiedAt: action === "intake_accept" ? new Date() : acr.intakeVerifiedAt,
-        intakeVerifiedById: action === "intake_accept" ? user.id : acr.intakeVerifiedById,
-        intakeDiscrepancies: action === "intake_return" ? remarks ?? null : action === "intake_accept" ? null : acr.intakeDiscrepancies,
-        archivedAt: action === "verify_secret_branch" ? new Date() : acr.archivedAt,
-        completedDate: action === "verify_secret_branch" ? new Date() : acr.completedDate,
-        secretBranchDeskCode: action === "complete_secret_branch_review"
-          ? targetDeskCode ?? acr.secretBranchDeskCode
-          : acr.secretBranchDeskCode,
-        secretBranchAllocatedToId: action === "complete_secret_branch_review"
-          ? assignedDaUser?.id ?? acr.secretBranchAllocatedToId
-          : acr.secretBranchAllocatedToId,
-        secretBranchVerifiedById: action === "complete_secret_branch_review" ? user.id : acr.secretBranchVerifiedById,
-        secretBranchSubmittedAt: action === "submit_to_secret_branch" ? new Date() : acr.secretBranchSubmittedAt,
-        secretBranchReviewedAt: action === "verify_secret_branch" ? new Date() : acr.secretBranchReviewedAt,
-        secretBranchVerifiedAt: action === "complete_secret_branch_review" ? new Date() : acr.secretBranchVerifiedAt,
-        secretBranchVerificationNotes: action === "verify_secret_branch" ? remarks ?? acr.secretBranchVerificationNotes : acr.secretBranchVerificationNotes,
-        returnToRole:
-          action === "return_to_clerk"
-            ? UserRole.CLERK
-            : action === "return_to_reporting"
-              ? UserRole.REPORTING_OFFICER
-              : action === "return_to_countersigning"
-                ? UserRole.COUNTERSIGNING_OFFICER
-                : null,
-        returnedByRole: action.startsWith("return_") ? user.activeRole : null,
-        ...(formData ? { formData: nextFormData as Prisma.InputJsonValue } : {}),
-      },
-      include: ACR_SUMMARY_INCLUDE,
-    });
+    await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.acrRecord.update({
+        where: { id: acr.id },
+        data: {
+          workflowState: next.workflowState,
+          statusLabel: next.statusLabel,
+          correctionRemarks: action.startsWith("return_") || action === "intake_return"
+            ? remarks ?? acr.correctionRemarks
+            : action === "intake_accept" ? null : acr.correctionRemarks,
+          currentHolderId: nextHolderId,
+          dueDate: nextDueDate,
+          adminForwardedAt: action === "admin_forward_to_piab" ? new Date() : acr.adminForwardedAt,
+          adminForwardedById: action === "admin_forward_to_piab" ? user.id : acr.adminForwardedById,
+          intakeVerifiedAt: action === "intake_accept" ? new Date() : acr.intakeVerifiedAt,
+          intakeVerifiedById: action === "intake_accept" ? user.id : acr.intakeVerifiedById,
+          intakeDiscrepancies: action === "intake_return" ? remarks ?? null : action === "intake_accept" ? null : acr.intakeDiscrepancies,
+          archivedAt: action === "verify_secret_branch" ? new Date() : acr.archivedAt,
+          completedDate: action === "verify_secret_branch" ? new Date() : acr.completedDate,
+          secretBranchDeskCode: action === "complete_secret_branch_review"
+            ? targetDeskCode ?? acr.secretBranchDeskCode
+            : acr.secretBranchDeskCode,
+          secretBranchAllocatedToId: action === "complete_secret_branch_review"
+            ? assignedDaUser?.id ?? acr.secretBranchAllocatedToId
+            : acr.secretBranchAllocatedToId,
+          secretBranchVerifiedById: action === "complete_secret_branch_review" ? user.id : acr.secretBranchVerifiedById,
+          secretBranchSubmittedAt: action === "submit_to_secret_branch" ? new Date() : acr.secretBranchSubmittedAt,
+          secretBranchReviewedAt: action === "verify_secret_branch" ? new Date() : acr.secretBranchReviewedAt,
+          secretBranchVerifiedAt: action === "complete_secret_branch_review" ? new Date() : acr.secretBranchVerifiedAt,
+          secretBranchVerificationNotes: action === "verify_secret_branch" ? remarks ?? acr.secretBranchVerificationNotes : acr.secretBranchVerificationNotes,
+          returnToRole:
+            action === "return_to_clerk"
+              ? UserRole.CLERK
+              : action === "return_to_reporting"
+                ? UserRole.REPORTING_OFFICER
+                : action === "return_to_countersigning"
+                  ? UserRole.COUNTERSIGNING_OFFICER
+                  : null,
+          returnedByRole: action.startsWith("return_") ? user.activeRole : null,
+          ...(formData ? { formData: nextFormData as Prisma.InputJsonValue } : {}),
+        },
+        include: ACR_SUMMARY_INCLUDE,
+      });
 
-    if (action === "verify_secret_branch") {
-      await this.ensureArchiveRecord(updated, user.id);
-    }
+      if (action === "verify_secret_branch") {
+        await this.ensureArchiveRecord(updated, user.id, tx);
+      }
 
-    await this.prisma.acrTimelineEntry.create({
-      data: {
-        acrRecordId: acr.id,
-        actorId: user.id,
-        actorRole: displayRole(user.activeRole),
-        action: wasReturnedRecord && action === "submit_to_reporting" ? "Resubmitted to Reporting Officer" : this.actionTimelineLabel(action),
-        status: next.workflowState === AcrWorkflowState.ARCHIVED ? "completed" : action.startsWith("return_") ? "returned" : "completed",
-        remarks: action.startsWith("return_") ? remarks : undefined,
-      },
+      await tx.acrTimelineEntry.create({
+        data: {
+          acrRecordId: acr.id,
+          actorId: user.id,
+          actorRole: displayRole(user.activeRole),
+          action: wasReturnedRecord && action === "submit_to_reporting" ? "Resubmitted to Reporting Officer" : this.actionTimelineLabel(action),
+          status: next.workflowState === AcrWorkflowState.ARCHIVED ? "completed" : action.startsWith("return_") ? "returned" : "completed",
+          remarks: action.startsWith("return_") ? remarks : undefined,
+        },
+      });
     });
 
     await this.auditWriter.write({

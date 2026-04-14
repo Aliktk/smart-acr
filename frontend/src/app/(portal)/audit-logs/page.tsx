@@ -93,7 +93,7 @@ function FilterInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-2xl border border-[#D8DEE8] bg-[#F8FAFC] py-2.5 pl-10 pr-4 text-sm text-[#111827] outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10"
+        className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 py-2.5 pl-10 pr-4 text-sm text-[#111827] dark:text-slate-100 outline-none transition focus:border-[#0095D9] focus:bg-white focus:ring-4 focus:ring-[#0095D9]/10"
       />
     </label>
   );
@@ -112,7 +112,7 @@ function FilterSelect({
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="w-full rounded-2xl border border-[#D8DEE8] bg-[#F8FAFC] px-4 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#0095D9] focus:bg-white"
+      className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 px-4 py-2.5 text-sm text-[#111827] dark:text-slate-100 outline-none transition focus:border-[#0095D9] focus:bg-white"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -262,7 +262,7 @@ export default function AuditLogsPage() {
                 type="date"
                 value={dateFrom}
                 onChange={(event) => setDateFrom(event.target.value)}
-                className="w-full rounded-2xl border border-[#D8DEE8] bg-white px-4 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#0095D9]"
+                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white px-4 py-2.5 text-sm text-[#111827] dark:text-slate-100 outline-none transition focus:border-[#0095D9]"
               />
             </label>
             <label className="block">
@@ -271,7 +271,7 @@ export default function AuditLogsPage() {
                 type="date"
                 value={dateTo}
                 onChange={(event) => setDateTo(event.target.value)}
-                className="w-full rounded-2xl border border-[#D8DEE8] bg-white px-4 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#0095D9]"
+                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white px-4 py-2.5 text-sm text-[#111827] dark:text-slate-100 outline-none transition focus:border-[#0095D9]"
               />
             </label>
             <label className="block">
@@ -279,7 +279,7 @@ export default function AuditLogsPage() {
               <select
                 value={String(pageSize)}
                 onChange={(event) => setPageSize(Number(event.target.value))}
-                className="w-full rounded-2xl border border-[#D8DEE8] bg-white px-4 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#0095D9]"
+                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white px-4 py-2.5 text-sm text-[#111827] dark:text-slate-100 outline-none transition focus:border-[#0095D9]"
               >
                 {[10, 25, 50, 100].map((size) => (
                   <option key={size} value={size}>
@@ -309,15 +309,15 @@ export default function AuditLogsPage() {
                   [...Array(8)].map((_, index) => (
                     <tr key={index} className="border-t border-[#EEF2F7]">
                       <td colSpan={6} className="px-5 py-4">
-                        <div className="h-16 animate-pulse rounded-2xl bg-[#F8FAFC]" />
+                        <div className="h-16 animate-pulse rounded-2xl bg-[#F8FAFC] dark:bg-slate-800" />
                       </td>
                     </tr>
                   ))
                 ) : items.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-5 py-12">
-                      <div className="rounded-[22px] border border-dashed border-[#D8DEE8] bg-[#F8FAFC] px-6 py-10 text-center">
-                        <p className="text-base font-semibold text-[#111827]">No audit events match the current filters</p>
+                      <div className="rounded-[22px] border border-dashed border-[#D8DEE8] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 px-6 py-10 text-center">
+                        <p className="text-base font-semibold text-[#111827] dark:text-slate-100">No audit events match the current filters</p>
                         <p className="mt-2 text-sm text-[#64748B]">Adjust the filters or clear the search inputs to widen the audit stream.</p>
                       </div>
                     </td>
@@ -344,7 +344,7 @@ export default function AuditLogsPage() {
                           </td>
                           <td className="px-5 py-4">
                             <div className="min-w-[180px]">
-                              <p className="font-semibold text-[#111827]">{item.actorName}</p>
+                              <p className="font-semibold text-[#111827] dark:text-slate-100">{item.actorName}</p>
                               <p className="mt-1 text-xs text-[#64748B]">{item.actorRole}</p>
                               {item.actorId ? <p className="mt-1 text-xs text-[#94A3B8]">{item.actorId}</p> : null}
                             </div>
@@ -353,11 +353,11 @@ export default function AuditLogsPage() {
                             {item.recordLabel || item.recordId ? (
                               <div className="min-w-[200px]">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-mono text-xs font-semibold text-[#111827]">{item.recordLabel ?? item.recordId}</span>
+                                  <span className="font-mono text-xs font-semibold text-[#111827] dark:text-slate-100">{item.recordLabel ?? item.recordId}</span>
                                   <button
                                     type="button"
                                     onClick={() => void copyText(item.recordLabel ?? item.recordId)}
-                                    className="rounded-full p-1 text-[#94A3B8] transition hover:bg-[#F1F5F9] hover:text-[#111827]"
+                                    className="rounded-full p-1 text-[#94A3B8] transition hover:bg-[#F1F5F9] hover:text-[#111827] dark:text-slate-100"
                                     aria-label="Copy record reference"
                                   >
                                     <Copy size={14} />
@@ -371,7 +371,7 @@ export default function AuditLogsPage() {
                           </td>
                           <td className="px-5 py-4">
                             <div className="min-w-[170px]">
-                              <p className="font-medium text-[#111827]">{formatTimestamp(item.timestamp)}</p>
+                              <p className="font-medium text-[#111827] dark:text-slate-100">{formatTimestamp(item.timestamp)}</p>
                               <p className="mt-1 text-xs text-[#94A3B8]">{item.eventType}</p>
                             </div>
                           </td>
@@ -384,7 +384,7 @@ export default function AuditLogsPage() {
                             <button
                               type="button"
                               onClick={() => setExpandedId((current) => (current === item.id ? null : item.id))}
-                              className="inline-flex items-center gap-2 rounded-full border border-[#D8DEE8] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155] transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+                              className="inline-flex items-center gap-2 rounded-full border border-[#D8DEE8] dark:border-slate-700 bg-white px-3 py-1.5 text-xs font-semibold text-[#334155] transition hover:border-[#CBD5E1] dark:border-slate-600 hover:bg-[#F8FAFC] dark:bg-slate-800"
                             >
                               {expanded ? "Hide" : "View"}
                               <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -399,24 +399,24 @@ export default function AuditLogsPage() {
                                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">Full description</p>
                                   <p className="mt-2 text-sm leading-6 text-[#334155]">{item.details}</p>
                                 </div>
-                                <div className="rounded-[18px] bg-[#F8FAFC] p-4">
+                                <div className="rounded-[18px] bg-[#F8FAFC] dark:bg-slate-800 p-4">
                                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">Event metadata</p>
                                   <dl className="mt-3 space-y-2 text-sm">
                                     <div className="flex justify-between gap-3">
                                       <dt className="text-[#64748B]">Module</dt>
-                                      <dd className="font-semibold text-[#111827]">{item.module}</dd>
+                                      <dd className="font-semibold text-[#111827] dark:text-slate-100">{item.module}</dd>
                                     </div>
                                     <div className="flex justify-between gap-3">
                                       <dt className="text-[#64748B]">Type</dt>
-                                      <dd className="font-semibold text-[#111827]">{item.eventType}</dd>
+                                      <dd className="font-semibold text-[#111827] dark:text-slate-100">{item.eventType}</dd>
                                     </div>
                                     <div className="flex justify-between gap-3">
                                       <dt className="text-[#64748B]">Event ID</dt>
-                                      <dd className="font-mono text-xs text-[#111827]">{item.id}</dd>
+                                      <dd className="font-mono text-xs text-[#111827] dark:text-slate-100">{item.id}</dd>
                                     </div>
                                     <div className="flex justify-between gap-3">
                                       <dt className="text-[#64748B]">ACR link</dt>
-                                      <dd className="font-semibold text-[#111827]">{item.acrNo ?? "Not linked"}</dd>
+                                      <dd className="font-semibold text-[#111827] dark:text-slate-100">{item.acrNo ?? "Not linked"}</dd>
                                     </div>
                                   </dl>
                                 </div>
@@ -435,8 +435,8 @@ export default function AuditLogsPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E6EBF2] bg-white px-5 py-4">
           <div className="text-sm text-[#64748B]">
-            Showing <span className="font-semibold text-[#111827]">{items.length}</span> of{" "}
-            <span className="font-semibold text-[#111827]">{data?.total ?? 0}</span> events
+            Showing <span className="font-semibold text-[#111827] dark:text-slate-100">{items.length}</span> of{" "}
+            <span className="font-semibold text-[#111827] dark:text-slate-100">{data?.total ?? 0}</span> events
             {isFetching && !isLoading ? <span className="ml-2 text-[#0095D9]">Refreshing…</span> : null}
           </div>
 
@@ -445,19 +445,19 @@ export default function AuditLogsPage() {
               type="button"
               disabled={(data?.page ?? 1) <= 1}
               onClick={() => setPage((current) => Math.max(1, current - 1))}
-              className="inline-flex items-center gap-1 rounded-full border border-[#D8DEE8] bg-white px-3 py-2 text-sm font-semibold text-[#334155] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-full border border-[#D8DEE8] dark:border-slate-700 bg-white px-3 py-2 text-sm font-semibold text-[#334155] transition hover:bg-[#F8FAFC] dark:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronLeft size={14} />
               Previous
             </button>
-            <span className="rounded-full bg-[#F8FAFC] px-3.5 py-2 text-sm font-semibold text-[#111827]">
+            <span className="rounded-full bg-[#F8FAFC] dark:bg-slate-800 px-3.5 py-2 text-sm font-semibold text-[#111827] dark:text-slate-100">
               Page {data?.page ?? 1} of {data?.totalPages ?? 1}
             </span>
             <button
               type="button"
               disabled={(data?.page ?? 1) >= (data?.totalPages ?? 1)}
               onClick={() => setPage((current) => current + 1)}
-              className="inline-flex items-center gap-1 rounded-full border border-[#D8DEE8] bg-white px-3 py-2 text-sm font-semibold text-[#334155] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-full border border-[#D8DEE8] dark:border-slate-700 bg-white px-3 py-2 text-sm font-semibold text-[#334155] transition hover:bg-[#F8FAFC] dark:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
               <ChevronRight size={14} />

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -13,14 +14,14 @@ import {
 import { UserRole } from "@prisma/client";
 import type { Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { diskStorage } from "multer";
-import * as fs from "node:fs";
-import * as path from "node:path";
+import { memoryStorage } from "multer";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import type { AuthenticatedUser } from "../../@types/authenticated-user.interface";
+import { PROFILE_IMAGE_MAX_BYTES, isSupportedProfileImageMimeType } from "../../common/upload.constants";
+import { UpdateEmployeeProfileDto } from "./dto/update-employee-profile.dto";
 import { UpdatePasswordDto } from "./dto/update-password.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { UpdateSettingDto } from "./dto/update-setting.dto";
@@ -45,22 +46,17 @@ export class SettingsController {
   @Post("profile/avatar")
   @UseInterceptors(
     FileInterceptor("file", {
-      storage: diskStorage({
-        destination: (_request, _file, callback) => {
-          const destination = path.join(process.cwd(), process.env.STORAGE_PATH ?? "storage", "avatars");
-          fs.mkdirSync(destination, { recursive: true });
-          callback(null, destination);
-        },
-        filename: (_request, file, callback) => {
-          const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "-");
-          callback(null, `${Date.now()}-${sanitizedName}`);
-        },
-      }),
+      storage: memoryStorage(),
       limits: {
-        fileSize: 2 * 1024 * 1024,
+        fileSize: PROFILE_IMAGE_MAX_BYTES,
       },
       fileFilter: (_request, file, callback) => {
-        callback(null, ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype));
+        if (!isSupportedProfileImageMimeType(file.mimetype)) {
+          callback(new BadRequestException("Please upload a JPG, PNG, or WEBP image.") as never, false);
+          return;
+        }
+
+        callback(null, true);
       },
     }),
   )
@@ -76,6 +72,11 @@ export class SettingsController {
     return response.sendFile(file.absolutePath);
   }
 
+  @Patch("employee-profile")
+  updateEmployeeProfile(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateEmployeeProfileDto, @Ip() ipAddress: string) {
+    return this.settingsService.updateEmployeeProfile(user.id, user.activeRole, dto, ipAddress);
+  }
+
   @Patch("preferences")
   updatePreferences(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateSettingsPreferencesDto, @Ip() ipAddress: string) {
     return this.settingsService.updatePreferences(user.id, user.activeRole, dto, ipAddress);
@@ -84,6 +85,16 @@ export class SettingsController {
   @Patch("security/password")
   updatePassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdatePasswordDto, @Ip() ipAddress: string) {
     return this.settingsService.updatePassword(user.id, user.activeRole, dto, ipAddress);
+  }
+
+  @Get("reference/postings")
+  async referencePostings() {
+    return this.settingsService.getReferencePostings();
+  }
+
+  @Get("reference/zones-circles")
+  async referenceZonesCircles() {
+    return this.settingsService.getReferenceZonesCircles();
   }
 
   @Get()
