@@ -488,12 +488,16 @@ function resolveTextPrefill(element: HTMLElement, formData?: AcrFormData | null,
     return clerkSection?.directDeputationist ?? null;
   }
 
-  if ((context.includes(" name ") || context.startsWith("name ") || context.endsWith(" name")) && !context.includes("ministry") && !context.includes("officer")) {
+  if ((context === "name" || context.includes(" name ") || context.startsWith("name ") || context.endsWith(" name")) && !context.includes("ministry") && !context.includes("officer")) {
     return readRecordString(employee, "name");
   }
 
   if (context.includes("s/o") || context.includes("father") || context.includes("spouse")) {
     return clerkSection?.fatherName ?? null;
+  }
+
+  if (context.includes("date of birth")) {
+    return readRecordString(employee, "dateOfBirth");
   }
 
   if (context.includes("designation")) {
@@ -517,6 +521,10 @@ function resolveTextPrefill(element: HTMLElement, formData?: AcrFormData | null,
 
   if (context.includes("date of entry into government service") || context.includes("date of entry into govt service")) {
     return readRecordString(employee, "joiningDate");
+  }
+
+  if (context.includes("qualification")) {
+    return readRecordString(employee, "qualifications");
   }
 
   if (context.includes("training course")) {

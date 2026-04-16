@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, BarChart3, ClipboardCheck, FileText, Lock, Shield, UserCog } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -25,7 +26,7 @@ const roleIcons: Record<UserRoleCode, typeof FileText> = {
   EMPLOYEE: Lock,
 };
 
-export default function RoleSelectionPage() {
+function RoleSelectionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectAfterLogin = searchParams.get("redirect");
@@ -108,5 +109,13 @@ export default function RoleSelectionPage() {
         </button>
       </div>
     </AuthShell>
+  );
+}
+
+export default function RoleSelectionPage() {
+  return (
+    <Suspense fallback={null}>
+      <RoleSelectionForm />
+    </Suspense>
   );
 }

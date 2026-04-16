@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Eye, EyeOff, Lock, ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
@@ -11,7 +12,7 @@ import { useShell } from "@/hooks/useShell";
 import { getDefaultPortalRoute } from "@/utils/portal-access";
 import { loginSchema } from "@/validators/login.validator";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectAfterLogin = searchParams.get("redirect");
@@ -161,5 +162,13 @@ export default function LoginPage() {
         </div>
       </form>
     </AuthShell>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
