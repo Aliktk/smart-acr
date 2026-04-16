@@ -354,9 +354,10 @@ export default function AcrDetailPage() {
       ? `${data.currentHolderName} · ${data.currentHolderRole}`
       : data.currentHolderName
     : "Unassigned";
-  const latestReturnEntry = [...timeline]
-    .reverse()
-    .find((entry) => entry.status === "returned" || entry.action.toLowerCase().includes("returned to"));
+  const returnEntries = [...timeline]
+    .filter((entry) => entry.status === "returned" || entry.action.toLowerCase().includes("returned to"))
+    .reverse();
+  const latestReturnEntry = returnEntries[0] ?? null;
 
   if (isEmployeeSafeView) {
     return (
@@ -793,22 +794,37 @@ export default function AcrDetailPage() {
         </div>
       ) : null}
 
-      {(latestReturnEntry?.remarks || data.remarks) ? (
-        <div className={`rounded-[20px] px-4 py-3.5 text-sm ${
+      {returnEntries.length > 0 ? (
+        <div className={`rounded-[20px] text-sm ${
           data.workflowState.startsWith("Returned")
-            ? "border border-[var(--fia-warning-bg)] bg-[var(--fia-warning-bg)] text-[var(--fia-warning)]"
-            : "border border-[var(--fia-navy-100)] bg-[var(--fia-navy-50)] text-[var(--fia-text-primary)]"
+            ? "border-2 border-[var(--fia-warning)] bg-[var(--fia-warning-bg)]"
+            : "border border-[var(--fia-navy-100)] bg-[var(--fia-navy-50)]"
         }`}>
-          <div className="flex items-start gap-2">
-            <RotateCcw size={15} className="mt-0.5 shrink-0" />
-            <div>
-              <p className={`font-semibold ${data.workflowState.startsWith("Returned") ? "text-[var(--fia-warning)]" : "text-[var(--fia-navy-500)]"}`}>
-                {data.workflowState.startsWith("Returned") ? "Returned for correction" : "Previously returned — correction note"}
+          <div className="flex items-start gap-3 px-4 py-3.5">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ${
+              data.workflowState.startsWith("Returned") ? "bg-[var(--fia-warning)]/15" : "bg-[var(--fia-navy-100)]"
+            }`}>
+              <RotateCcw size={16} className={data.workflowState.startsWith("Returned") ? "text-[var(--fia-warning)]" : "text-[var(--fia-navy-500)]"} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`font-semibold text-base ${data.workflowState.startsWith("Returned") ? "text-[var(--fia-warning)]" : "text-[var(--fia-navy-700,#1e3a5f)]"}`}>
+                {data.workflowState.startsWith("Returned") ? data.workflowState : "Return History"}
               </p>
-              <p className="mt-1 leading-6">{latestReturnEntry?.remarks ?? data.remarks}</p>
-              <p className={`mt-2 text-xs ${data.workflowState.startsWith("Returned") ? "text-[var(--fia-gray-600)]" : "text-[var(--fia-gray-600)]"}`}>
-                Returned by {latestReturnEntry?.actor ?? "Workflow reviewer"} · {latestReturnEntry?.role ?? "Reviewer"} · {latestReturnEntry?.timestamp ?? "Recorded in workflow history"}
-              </p>
+              {returnEntries.map((entry, idx) => (
+                <div key={entry.id ?? idx} className={idx > 0 ? "mt-3 pt-3 border-t border-[var(--fia-border)]" : "mt-2"}>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                    <span className="font-semibold text-[var(--fia-gray-800)]">{entry.action}</span>
+                    <span className="text-[var(--fia-gray-500)]">by {entry.actor ?? entry.role}</span>
+                    <span className="text-[var(--fia-gray-400)]">·</span>
+                    <span className="text-[var(--fia-gray-500)]">{entry.timestamp}</span>
+                  </div>
+                  {entry.remarks ? (
+                    <p className="mt-1.5 leading-6 text-[var(--fia-gray-800)]">{entry.remarks}</p>
+                  ) : (
+                    <p className="mt-1 text-xs italic text-[var(--fia-gray-400)]">No correction note provided</p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -930,6 +946,19 @@ export default function AcrDetailPage() {
 
       <section className="portal-floating-action-bar">
         <div className="rounded-[24px] border border-[var(--fia-border)] bg-[var(--card)]/96 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur">
+        {data.workflowState.startsWith("Returned") && latestReturnEntry ? (
+          <div className="mb-3 flex items-start gap-2.5 rounded-2xl border border-[var(--fia-warning)]/40 bg-[var(--fia-warning-bg)] px-4 py-2.5">
+            <RotateCcw size={14} className="mt-0.5 shrink-0 text-[var(--fia-warning)]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-[var(--fia-warning)]">
+                {latestReturnEntry.action} · by {latestReturnEntry.role} · {latestReturnEntry.timestamp}
+              </p>
+              {latestReturnEntry.remarks ? (
+                <p className="mt-0.5 line-clamp-2 text-xs text-[var(--fia-gray-700)]">{latestReturnEntry.remarks}</p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5 xl:justify-end">
