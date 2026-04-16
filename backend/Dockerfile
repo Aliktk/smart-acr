@@ -4,26 +4,22 @@ ENV PATH="${PNPM_HOME}:${PATH}"
 RUN corepack enable
 WORKDIR /workspace
 
-FROM base AS deps
+FROM base AS build
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY backend/package.json backend/package.json
 COPY frontend/package.json frontend/package.json
-RUN pnpm install --frozen-lockfile
-
-FROM deps AS build
 COPY backend ./backend
 COPY frontend ./frontend
-# express is a peerDependency of @nestjs/platform-express — pnpm deploy skips
-# peer deps. Add it as a direct dep here so the deploy stage picks it up.
-RUN pnpm --filter @smart-acr/backend add express@^4.21.2
+# node-linker=hoisted gives a flat node_modules like npm/yarn.
+# All packages including peer deps (express etc.) are hoisted to root.
+# --no-frozen-lockfile tolerates any lockfile drift from local edits.
+RUN echo "node-linker=hoisted" > .npmrc && \
+    pnpm install --no-frozen-lockfile
+# Prisma generate runs after install so the generated client lands in
+# the flat node_modules/@prisma/client and node_modules/.prisma — no
+# extra copy step needed.
 RUN pnpm --filter @smart-acr/backend prisma:generate
 RUN pnpm --filter @smart-acr/backend build
-# --legacy required for pnpm v10+ in non-injected workspaces.
-# Produces a flat node_modules with real files (no symlinks) safe to copy.
-RUN pnpm deploy --legacy --filter @smart-acr/backend --prod /workspace/deployed
-# Overwrite @prisma/client with the generated version (has UserRole enums etc.)
-RUN cp -r /workspace/node_modules/.pnpm/@prisma+client*/node_modules/@prisma/client/. /workspace/deployed/node_modules/@prisma/client/ \
- && cp -r /workspace/node_modules/.pnpm/@prisma+client*/node_modules/.prisma /workspace/deployed/node_modules/.prisma
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV="production"
@@ -31,7 +27,9 @@ RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists
 WORKDIR /app
 RUN addgroup --system --gid 1001 smartacr \
   && adduser --system --uid 1001 --ingroup smartacr smartacr
-COPY --from=build /workspace/deployed/node_modules ./node_modules
+# Flat hoisted node_modules already includes express, @nestjs/*, @prisma/client,
+# and the generated .prisma binaries — copy it all in one step.
+COPY --from=build /workspace/node_modules ./node_modules
 COPY --from=build /workspace/backend/dist ./dist
 COPY --from=build /workspace/backend/prisma ./prisma
 RUN mkdir -p /var/lib/smart-acr/storage \
