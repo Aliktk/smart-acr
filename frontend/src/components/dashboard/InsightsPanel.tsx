@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock, Lightbulb, TrendingDown, TrendingUp, Zap, ShieldAlert, BarChart3 } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Lightbulb, TrendingDown, TrendingUp, Zap, ShieldAlert, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import type { DashboardKpi } from "@/types/contracts";
 
@@ -169,35 +169,40 @@ const typeConfig = {
     icon: ShieldAlert,
     iconColor: "text-red-500",
     bg: "bg-red-50 dark:bg-[rgba(239,68,68,0.08)]",
-    border: "border-red-200 dark:border-[rgba(239,68,68,0.25)]",
+    border: "ring-red-200 dark:ring-[rgba(239,68,68,0.25)]",
+    leftBorder: "border-l-red-500",
     metricColor: "text-red-600 dark:text-red-400",
   },
   warning: {
     icon: AlertTriangle,
     iconColor: "text-amber-500",
     bg: "bg-amber-50 dark:bg-[rgba(217,119,6,0.08)]",
-    border: "border-amber-200 dark:border-[rgba(217,119,6,0.2)]",
+    border: "ring-amber-200 dark:ring-[rgba(217,119,6,0.2)]",
+    leftBorder: "border-l-amber-500",
     metricColor: "text-amber-600 dark:text-amber-400",
   },
   success: {
     icon: CheckCircle2,
     iconColor: "text-emerald-500",
     bg: "bg-emerald-50 dark:bg-[rgba(16,185,129,0.08)]",
-    border: "border-emerald-200 dark:border-[rgba(16,185,129,0.2)]",
+    border: "ring-emerald-200 dark:ring-[rgba(16,185,129,0.2)]",
+    leftBorder: "border-l-emerald-500",
     metricColor: "text-emerald-600 dark:text-emerald-400",
   },
   action: {
     icon: Zap,
     iconColor: "text-[var(--fia-cyan)]",
     bg: "bg-[var(--fia-cyan-bg,rgba(0,149,217,0.05))] dark:bg-[rgba(0,149,217,0.08)]",
-    border: "border-[var(--fia-cyan-100,rgba(0,149,217,0.2))] dark:border-[rgba(0,149,217,0.2)]",
+    border: "ring-[var(--fia-cyan-100,rgba(0,149,217,0.2))] dark:ring-[rgba(0,149,217,0.2)]",
+    leftBorder: "border-l-[var(--fia-cyan)]",
     metricColor: "text-[var(--fia-cyan)]",
   },
   info: {
     icon: Lightbulb,
     iconColor: "text-violet-500",
     bg: "bg-violet-50 dark:bg-[rgba(139,92,246,0.08)]",
-    border: "border-violet-200 dark:border-[rgba(139,92,246,0.2)]",
+    border: "ring-violet-200 dark:ring-[rgba(139,92,246,0.2)]",
+    leftBorder: "border-l-violet-500",
     metricColor: "text-violet-600 dark:text-violet-400",
   },
 };
@@ -219,23 +224,18 @@ export function InsightsPanel({ kpis, mode }: InsightsPanelProps) {
   const insights = deriveInsights(kpis, mode);
 
   return (
-    <div className="rounded-2xl border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--fia-navy)] text-white">
-            <Lightbulb size={14} />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-[var(--fia-gray-900)]">Insights</h3>
-            <p className="text-[10px] text-[var(--fia-gray-500)]">Automated recommendations</p>
-          </div>
+    <div className="rounded-2xl border border-[var(--fia-gray-200)] bg-[var(--card)] p-3 shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Lightbulb size={13} className="text-[var(--fia-navy)]" />
+          <h3 className="text-xs font-bold text-[var(--fia-gray-900)]">Insights</h3>
         </div>
-        <span className="rounded-full bg-[var(--fia-gray-100)] px-2 py-0.5 text-[10px] font-semibold text-[var(--fia-gray-500)]">
-          {insights.length} active
+        <span className="rounded-full bg-[var(--fia-gray-100)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--fia-gray-500)]">
+          {insights.length}
         </span>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {insights.map((insight, index) => {
           const config = typeConfig[insight.type];
           const Icon = config.icon;
@@ -243,38 +243,30 @@ export function InsightsPanel({ kpis, mode }: InsightsPanelProps) {
           return (
             <div
               key={index}
-              className={`rounded-xl border ${config.border} ${config.bg} p-3 transition-all hover:shadow-sm`}
+              className={`flex items-center gap-2 rounded-lg border-l-[3px] ${config.leftBorder} ${config.bg} px-2.5 py-2`}
             >
-              <div className="flex gap-2.5">
-                <Icon size={15} className={`mt-0.5 shrink-0 ${config.iconColor}`} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-start justify-between gap-1">
-                    <p className="text-xs font-semibold text-[var(--fia-gray-900)]">{insight.title}</p>
-                    {insight.metric ? (
-                      <MetricPill metric={insight.metric} typeKey={insight.type} />
-                    ) : null}
-                  </div>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--fia-gray-600)]">{insight.description}</p>
-                  {insight.link ? (
-                    <Link
-                      href={insight.link}
-                      className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--fia-cyan)] hover:underline"
-                    >
-                      {insight.linkLabel ?? "View"} <ArrowRight size={10} />
-                    </Link>
+              <Icon size={12} className={`shrink-0 ${config.iconColor}`} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-[11px] font-semibold leading-tight text-[var(--fia-gray-900)]">{insight.title}</p>
+                  {insight.metric ? (
+                    <MetricPill metric={insight.metric} typeKey={insight.type} />
                   ) : null}
                 </div>
               </div>
+              {insight.link ? (
+                <Link
+                  href={insight.link}
+                  className="shrink-0 text-[var(--fia-cyan)] hover:text-[var(--fia-navy)]"
+                  title={insight.linkLabel ?? "View"}
+                >
+                  <ArrowRight size={11} />
+                </Link>
+              ) : null}
             </div>
           );
         })}
       </div>
-
-      {/* Footer hint */}
-      <p className="mt-3 text-center text-[10px] text-[var(--fia-gray-400)]">
-        <Clock size={8} className="inline mr-1 mb-0.5" />
-        Insights update with each filter change
-      </p>
     </div>
   );
 }

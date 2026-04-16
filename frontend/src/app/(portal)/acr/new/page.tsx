@@ -47,8 +47,8 @@ const actionButtonBase =
   "group inline-flex cursor-pointer items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 [&_svg]:transition-transform hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)] hover:[&_svg]:scale-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none";
 const actionButtonSecondary = `${actionButtonBase} border border-[var(--fia-border,#D8DEE8)] bg-white dark:bg-slate-800 dark:border-slate-700 text-[var(--fia-text-secondary,#475569)] dark:text-slate-300`;
 const actionButtonInfo = `${actionButtonBase} border border-[var(--fia-cyan,#0095D9)] bg-[var(--fia-cyan-bg,#EEF8FF)] text-[var(--fia-info-text,#0369A1)]`;
-const actionButtonPrimary = `${actionButtonBase} bg-[var(--fia-navy,#1A1C6E)] text-white hover:bg-[var(--fia-navy-hover,#2D308F)]`;
-const actionButtonAccent = `${actionButtonBase} bg-[var(--fia-cyan,#0095D9)] text-white hover:bg-[var(--fia-cyan-hover,#0077B6)]`;
+const actionButtonPrimary = `${actionButtonBase} bg-gradient-to-r from-[#1A1C6E] to-[#2D308F] text-white shadow-[0_4px_14px_rgba(26,28,110,0.30)] hover:shadow-[0_6px_20px_rgba(26,28,110,0.40)] hover:from-[#2D308F] hover:to-[#3D40B0]`;
+const actionButtonAccent = `${actionButtonBase} bg-gradient-to-r from-[#0095D9] to-[#0077B6] text-white shadow-[0_4px_14px_rgba(0,149,217,0.30)] hover:shadow-[0_6px_20px_rgba(0,149,217,0.40)] hover:from-[#0077B6] hover:to-[#005F96]`;
 
 const initialManualState: ManualEmployeePayload = {
   name: "",
@@ -99,6 +99,15 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
+}
+
+function getAvatarColor(name: string): string {
+  const palette = [
+    "#1A1C6E", "#0095D9", "#7C3AED", "#BE185D", "#059669",
+    "#D97706", "#0891B2", "#DC2626", "#7E22CE", "#0369A1",
+  ];
+  const sum = name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return palette[sum % palette.length];
 }
 
 function digitsOnly(value: string) {
@@ -153,12 +162,12 @@ function isValidEmail(value: string) {
 }
 
 function getFieldClasses(invalid: boolean, muted = false) {
-  return `mt-2 w-full rounded-2xl border px-4 py-3 outline-none transition-all dark:bg-slate-800 dark:text-slate-100 ${
-    muted ? "bg-[#F8FAFC]" : "bg-white"
+  return `mt-2 w-full rounded-2xl border px-4 py-3 outline-none transition-all text-[var(--fia-gray-900)] ${
+    muted ? "bg-[var(--fia-gray-50)]" : "bg-[var(--card)]"
   } ${
     invalid
-      ? "border-[#DC2626] focus:border-[#DC2626] focus:ring-4 focus:ring-[#DC2626]/10"
-      : "border-[#D8DEE8] dark:border-slate-700 focus:border-[#0095D9] focus:ring-4 focus:ring-[#0095D9]/10"
+      ? "border-[var(--fia-danger)] focus:border-[var(--fia-danger)] focus:ring-4 focus:ring-[var(--fia-danger-bg)]"
+      : "border-[var(--fia-border)] focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[var(--fia-cyan-50)]"
   }`;
 }
 
@@ -871,10 +880,10 @@ export default function NewAcrPage() {
   if (!canInitiate) {
     return (
       <div className="mx-auto flex max-w-4xl flex-col gap-4 p-5">
-        <h1 className="text-[1.75rem] font-semibold text-[#111827] dark:text-slate-100">Initiate New ACR / PER</h1>
-        <div className="rounded-[24px] border border-[#FDE68A] bg-[#FFFBEB] px-5 py-4">
-          <p className="text-base font-semibold text-[#92400E]">Initiation is restricted to the clerk stage.</p>
-          <p className="mt-2 text-sm text-[#B45309]">
+        <h1 className="text-[1.75rem] font-semibold text-[var(--fia-gray-900)]">Initiate New ACR / PER</h1>
+        <div className="rounded-[24px] border border-[var(--fia-warning-bg)] bg-[var(--fia-warning-bg)] px-5 py-4">
+          <p className="text-base font-semibold text-[var(--fia-warning)]">Initiation is restricted to the clerk stage.</p>
+          <p className="mt-2 text-sm text-[var(--fia-warning)]">
             Your active role can review or process records in its own queue, but only Clerk or system administration roles can start a new ACR.
           </p>
         </div>
@@ -891,38 +900,47 @@ export default function NewAcrPage() {
         tone={pageToast?.tone}
       />
       <div data-testid="acr-creation-header">
-        <h1 className="text-[1.75rem] font-semibold text-[#111827] dark:text-slate-100">Initiate New ACR / PER</h1>
-        <p className="mt-0.5 text-sm text-[#6B7280] dark:text-slate-400">
+        <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[var(--fia-navy-50)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--fia-navy-500)] dark:text-[var(--fia-cyan)]">
+          New Submission
+        </span>
+        <h1 className="text-[1.75rem] font-bold text-[var(--fia-gray-900)]">Initiate New ACR / PER</h1>
+        <p className="mt-1 text-sm text-[var(--fia-text-secondary)]">
           Annual Confidential Report — {user?.scope.wingName ?? "Immigration Wing"}
         </p>
       </div>
 
-      <section className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] px-4 py-3.5 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <section className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] px-5 py-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
           {stepMeta.map((entry, index) => {
             const state = step > entry.key ? "complete" : step === entry.key ? "active" : "upcoming";
-            const circleClass =
+            const subtitles = ["Find employee record", "Enter clerk-stage data", "Confirm & forward"];
+            const circleStyle: React.CSSProperties =
               state === "complete"
-                ? "bg-[#22C55E] text-white"
+                ? { background: "linear-gradient(135deg,#22C55E,#16A34A)", boxShadow: "0 2px 10px rgba(34,197,94,0.35)" }
                 : state === "active"
-                  ? "bg-[#1A1C6E] text-white"
-                  : "bg-[#EEF2F7] dark:bg-slate-800 text-[#9CA3AF] dark:text-slate-500";
-            const textClass =
-              state === "complete" ? "text-[#16A34A]" : state === "active" ? "text-[#1A1C6E]" : "text-[#9CA3AF] dark:text-slate-500";
+                  ? { background: "linear-gradient(135deg,#1A1C6E,#2D308F)", boxShadow: "0 2px 14px rgba(26,28,110,0.38)" }
+                  : {};
+            const circleClass = state !== "upcoming" ? "text-white" : "bg-[#EEF2F7] dark:bg-slate-800 text-[#9CA3AF] dark:text-slate-500";
+            const labelClass = state === "active" ? "font-bold text-[#1A1C6E] dark:text-indigo-300" : state === "complete" ? "font-semibold text-[#16A34A]" : "font-medium text-[#9CA3AF] dark:text-slate-500";
 
             return (
               <div key={entry.key} className="flex flex-1 items-center gap-3">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${circleClass}`}>
-                  {state === "complete" ? <Check size={16} /> : entry.key}
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${circleClass}`}
+                  style={circleStyle}
+                >
+                  {state === "complete" ? <Check size={16} strokeWidth={2.5} /> : entry.key}
                 </div>
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <p className={`text-sm font-semibold ${textClass}`}>{entry.title}</p>
+                  <div className="min-w-0">
+                    <p className={`text-sm leading-tight ${labelClass}`}>{entry.title}</p>
+                    <p className="mt-0.5 text-[10px] font-medium text-[#94A3B8] dark:text-slate-500">{subtitles[index]}</p>
+                  </div>
                   {index < stepMeta.length - 1 ? (
-                    <div className="hidden h-[2px] flex-1 rounded-full bg-[#E5E7EB] lg:block">
+                    <div className="hidden h-[3px] flex-1 overflow-hidden rounded-full bg-[#EEF2F7] dark:bg-slate-700 lg:block">
                       <div
-                        className={`h-full rounded-full ${
-                          step > entry.key ? "w-full bg-[#22C55E]" : step === entry.key ? "w-1/2 bg-[#22C55E]" : "w-0"
-                        }`}
+                        className="h-full rounded-full bg-gradient-to-r from-[#22C55E] to-[#10B981] transition-all duration-500"
+                        style={{ width: step > entry.key ? "100%" : step === entry.key ? "50%" : "0%" }}
                       />
                     </div>
                   ) : null}
@@ -933,18 +951,35 @@ export default function NewAcrPage() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] shadow-sm">
-        <div className="border-b border-[#EEF2F7] px-5 py-4">
-          <h2 className="text-[1.2rem] font-semibold text-[#1A1C6E]">
-            Step {step}: {step === 1 ? "Search & Select Employee" : step === 2 ? "Fill ACR Form" : "Review & Submit"}
-          </h2>
-          <p className="mt-1 text-sm text-[#6B7280] dark:text-slate-400">
-            {step === 1
-              ? "Search by name, CNIC, rank, or service number."
-              : step === 2
-                ? "Edit only the fields assigned to the clerk stage."
-                : "Verify all information before submission."}
-          </p>
+      <section className="overflow-hidden rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] shadow-sm">
+        <div className={`border-b border-[var(--fia-gray-100)] px-5 py-4 ${
+          step === 1
+            ? "bg-gradient-to-r from-[var(--fia-navy-50)] via-[var(--fia-gray-50)] to-transparent"
+            : step === 2
+              ? "bg-gradient-to-r from-[var(--fia-success-bg)] via-[var(--fia-gray-50)] to-transparent"
+              : "bg-gradient-to-r from-[var(--fia-warning-bg)] via-[var(--fia-gray-50)] to-transparent"
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm ${
+              step === 1 ? "bg-[var(--fia-navy)]" : step === 2 ? "bg-[var(--fia-success)]" : "bg-[var(--fia-warning)]"
+            }`}>
+              {step}
+            </div>
+            <div>
+              <h2 className={`text-[1.1rem] font-bold ${
+                step === 1 ? "text-[var(--fia-navy)]" : step === 2 ? "text-[var(--fia-success)]" : "text-[var(--fia-warning)]"
+              }`}>
+                {step === 1 ? "Search & Select Employee" : step === 2 ? "Fill ACR Form" : "Review & Submit"}
+              </h2>
+              <p className="mt-0.5 text-xs text-[var(--fia-text-secondary)]">
+                {step === 1
+                  ? "Search by name, CNIC, rank, or service number."
+                  : step === 2
+                    ? "Edit only the fields assigned to the clerk stage."
+                    : "Verify all information before submission."}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="p-4">
@@ -970,7 +1005,7 @@ export default function NewAcrPage() {
                 <button
                   type="button"
                   onClick={openManualMode}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-semibold text-[#1A1C6E] dark:text-slate-200"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#C7D2FE] bg-[#EEF2FF] px-4 py-2.5 text-sm font-semibold text-[#4F46E5] transition-all hover:-translate-y-0.5 hover:bg-[#E0E7FF] hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)] dark:border-indigo-800/50 dark:bg-indigo-950/40 dark:text-indigo-400"
                 >
                   <UserPlus size={16} />
                   Add Employee Manually
@@ -1004,7 +1039,10 @@ export default function NewAcrPage() {
                       }`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1A1C6E] text-sm font-semibold text-white">
+                        <div
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white shadow-sm"
+                          style={{ background: getAvatarColor(employee.name) }}
+                        >
                           {getInitials(employee.name)}
                         </div>
                         <div>
@@ -1036,7 +1074,10 @@ export default function NewAcrPage() {
                     className="flex w-full flex-col gap-3 rounded-[20px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] px-4 py-3.5 text-left transition-all hover:border-[#CBD5E1] md:flex-row md:items-center md:justify-between"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#64748B] text-sm font-semibold text-white">
+                      <div
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white shadow-sm"
+                        style={{ background: getAvatarColor(userAccount.displayName) }}
+                      >
                         {getInitials(userAccount.displayName)}
                       </div>
                       <div>
@@ -1076,7 +1117,7 @@ export default function NewAcrPage() {
               {manualMode ? (
                 <div className="rounded-[20px] border border-[#E5E7EB] dark:border-slate-700 bg-[#FCFCFD] p-3">
                   <div className="mb-3 flex items-start gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EEF6FC] dark:bg-blue-950/40 text-[#0095D9]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF] dark:bg-indigo-950/40 text-[#4F46E5]">
                       <UserPlus size={16} />
                     </div>
                     <div>
@@ -1706,7 +1747,7 @@ export default function NewAcrPage() {
                   </p>
                 </div>
 
-                <div className="mt-3 overflow-x-auto rounded-[20px] bg-[#EDF2F7] p-3 sm:p-3 lg:p-4">
+                <div className="mt-3 overflow-x-auto rounded-[20px] bg-[#EDF2F7] dark:bg-[#0F1117] p-3 sm:p-3 lg:p-4">
                   <div className="mx-auto w-full max-w-[1120px]">
                     <FormPreview
                       templateFamily={previewTemplateFamily}
@@ -1729,7 +1770,7 @@ export default function NewAcrPage() {
               <div className="overflow-hidden rounded-[20px] border border-[#E5E7EB] dark:border-slate-700 bg-white">
                 <div className="grid gap-4 px-4 py-3 lg:grid-cols-2">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#94A3B8]">Employee Information</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0095D9]">Employee Information</p>
                     <div className="mt-3 space-y-2">
                       {[
                         { label: "Full Name", value: employeeName },
@@ -1748,7 +1789,7 @@ export default function NewAcrPage() {
                   </div>
 
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#94A3B8]">ACR Details</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7C3AED]">ACR Details</p>
                     <div className="mt-3 space-y-2">
                       {[
                         { label: "Template", value: overrideIsDeviation ? `${templateLabels[previewTemplateFamily]} (overridden)` : templateLabels[previewTemplateFamily] },
@@ -1786,7 +1827,10 @@ export default function NewAcrPage() {
       </section>
 
       {validationMessage ? (
-        <div className="rounded-2xl border border-[#FECACA] bg-[#FFF1F2] px-4 py-2.5 text-sm text-[#BE123C]">{validationMessage}</div>
+        <div className="flex items-start gap-3 rounded-2xl border border-[#FECACA] bg-[#FFF1F2] px-4 py-3 text-sm text-[#BE123C]">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <span>{validationMessage}</span>
+        </div>
       ) : null}
 
       <div className="portal-floating-action-bar">

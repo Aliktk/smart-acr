@@ -26,8 +26,9 @@ type QueueView = "attention" | "open" | "returned" | "closed" | "all";
 function deriveInitialView(searchParams: URLSearchParams): QueueView {
   const explicitStatus = searchParams.get("status");
   const priorityOnly = searchParams.get("priority") === "true";
+  const overdueOnly = searchParams.get("overdue") === "true";
 
-  if (priorityOnly || explicitStatus === "Overdue") {
+  if (priorityOnly || overdueOnly || explicitStatus === "Overdue") {
     return "attention";
   }
   if (explicitStatus?.startsWith("Returned")) {
@@ -49,6 +50,7 @@ export function QueueClientPage() {
   const { user } = useShell();
   const explicitStatus = searchParams.get("status") ?? undefined;
   const priorityFromQuery = searchParams.get("priority") === "true";
+  const overdueFromQuery = searchParams.get("overdue") === "true";
   const [view, setView] = useState<QueueView>(() => deriveInitialView(searchParams));
   const [queryText, setQueryText] = useState(searchParams.get("query") ?? "");
   const [actionError, setActionError] = useState<string | null>(null);
@@ -118,6 +120,8 @@ export function QueueClientPage() {
     user?.activeRoleCode === "REPORTING_OFFICER" ||
     user?.activeRoleCode === "COUNTERSIGNING_OFFICER" ||
     user?.activeRoleCode === "SECRET_BRANCH";
+  // ownedItems = records currently assigned to this user (need action now)
+  // allParticipatedItems = all records the user has ever been involved with (submitted, forwarded, etc.)
   const ownedItems = useMemo(() => {
     if (!operationalRole || !user?.id) {
       return items;
@@ -128,7 +132,10 @@ export function QueueClientPage() {
   const counts = countStatuses(ownedItems);
 
   const filtered = useMemo(() => {
-    let next = ownedItems;
+    // "all" and "closed" views show every record the user participated in,
+    // not just those currently assigned to them, so submitted/forwarded ACRs remain visible.
+    const baseItems = (view === "all" || view === "closed") ? items : ownedItems;
+    let next = baseItems;
 
     if (view === "attention") {
       next = next.filter((item) => !isClosedStatus(item.status) && (item.isPriority || isOverdueStatus(item) || item.status.startsWith("Returned")));
@@ -140,12 +147,19 @@ export function QueueClientPage() {
       next = next.filter((item) => isClosedStatus(item.status));
     }
 
-    if (explicitStatus) {
+    // Only apply the URL-driven status filter when the view matches what the URL dictates.
+    // If the user manually switched tabs, the current view will differ from the URL-derived one
+    // and the explicit status should not restrict results within the new view.
+    if (explicitStatus && view === deriveInitialView(searchParams)) {
       next = next.filter((item) => item.status === explicitStatus);
     }
 
     if (priorityFromQuery) {
       next = next.filter((item) => item.isPriority);
+    }
+
+    if (overdueFromQuery) {
+      next = next.filter((item) => item.isOverdue);
     }
 
     if (user?.activeRoleCode === "EMPLOYEE" && deferredQuery) {
@@ -163,14 +177,14 @@ export function QueueClientPage() {
     }
 
     return sortAcrsByUrgency(next);
-  }, [deferredQuery, explicitStatus, ownedItems, priorityFromQuery, user?.activeRoleCode, view]);
+  }, [deferredQuery, explicitStatus, items, overdueFromQuery, ownedItems, priorityFromQuery, user?.activeRoleCode, view]);
 
   const tabs: Array<{ key: QueueView; label: string; count: number }> = [
     { key: "attention", label: "Needs attention", count: ownedItems.filter((item) => !isClosedStatus(item.status) && (item.isPriority || isOverdueStatus(item) || item.status.startsWith("Returned"))).length },
     { key: "open", label: "Open work", count: counts.open - counts.returned },
     { key: "returned", label: "Returned", count: counts.returned },
-    { key: "closed", label: "Closed", count: counts.closed },
-    { key: "all", label: "All records", count: counts.total },
+    { key: "closed", label: "Closed", count: items.filter((item) => isClosedStatus(item.status)).length },
+    { key: "all", label: "All records", count: items.length },
   ];
 
   const recentHistoricalItems = useMemo(
@@ -229,9 +243,12 @@ export function QueueClientPage() {
 
                 return (
                   <div key={group.key} className="rounded-2xl border border-[var(--fia-gray-100)] bg-[var(--fia-gray-50)] px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Service period</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="h-3 w-1 rounded-full bg-[#1A1C6E]" />
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Service period</p>
+                    </div>
                     <p className="mt-2 text-lg font-semibold text-[var(--fia-gray-950)]">{group.label}</p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3 bg-[var(--card)] rounded-xl px-3 py-3">
                       <div>
                         <p className="text-xs text-[var(--fia-gray-500)]">Records</p>
                         <p className="mt-1 text-base font-semibold text-[var(--fia-gray-900)]">{group.items.length}</p>
@@ -246,7 +263,7 @@ export function QueueClientPage() {
                       </div>
                     </div>
                     {latestRecord ? (
-                      <div className="mt-4 rounded-2xl bg-white px-3 py-3">
+                      <div className="mt-4 rounded-2xl bg-[var(--card)] px-3 py-3">
                         <p className="text-xs text-[var(--fia-gray-500)]">Latest record</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <StatusChip status={latestRecord.status} />
@@ -284,7 +301,7 @@ export function QueueClientPage() {
                 </div>
                 <Link
                   href="/archive"
-                  className="inline-flex items-center justify-center rounded-full border border-[var(--fia-gray-200)] bg-white px-4 py-2 text-sm font-semibold text-[var(--fia-navy)] transition-colors hover:border-[var(--fia-cyan)] hover:text-[var(--fia-cyan)]"
+                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#EEF8FF] to-[#D7EFFB] border border-[#BAE6FD] px-4 py-2 text-sm font-semibold text-[#0369A1] transition-colors hover:border-[#0095D9] hover:text-[#0095D9]"
                 >
                   Open archive history
                 </Link>
@@ -292,7 +309,7 @@ export function QueueClientPage() {
 
               <div className="grid gap-3 lg:grid-cols-3">
                 {recentHistoricalItems.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-[var(--fia-gray-100)] bg-white px-4 py-4">
+                  <div key={item.id} className="rounded-2xl border border-[var(--fia-gray-100)] bg-[var(--card)] px-4 py-4">
                     <p className="text-sm font-semibold text-[var(--fia-gray-950)]">{item.reportingPeriod ?? "Historical period not recorded"}</p>
                     <p className="mt-1 text-sm text-[var(--fia-gray-600)]">{item.templateFamily ?? "Template not recorded"}</p>
                     <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Archive reference</p>
@@ -307,7 +324,7 @@ export function QueueClientPage() {
 
       <PortalSurface title={user?.activeRoleCode === "EMPLOYEE" ? "My ACR metadata history" : "Working records"}>
         {actionError ? (
-          <div className="mb-3 rounded-2xl border border-[var(--fia-danger-soft)] bg-[#FFF1F2] px-4 py-3 text-sm text-[var(--fia-danger)]">
+          <div className="mb-3 rounded-2xl border border-[var(--fia-danger-bg)] bg-[var(--fia-danger-bg)] px-4 py-3 text-sm text-[var(--fia-danger)]">
             {actionError}
           </div>
         ) : null}
@@ -325,7 +342,7 @@ export function QueueClientPage() {
         ) : user?.activeRoleCode === "EMPLOYEE" ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="border-b border-[var(--fia-gray-100)] bg-[var(--fia-gray-50)] text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
+              <thead className="border-b border-[var(--fia-gray-100)] bg-gradient-to-r from-[var(--fia-gray-50)] to-white dark:from-slate-800/50 dark:to-transparent text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
                 <tr>
                   <th className="px-3.5 py-3">ACR</th>
                   <th className="px-3.5 py-3">Template / Period</th>
@@ -386,7 +403,7 @@ export function QueueClientPage() {
                     <td className="px-3.5 py-3.5 text-right align-top">
                       <Link
                         href={`/acr/${item.id}`}
-                        className="inline-flex items-center gap-2 rounded-full bg-[var(--fia-cyan-100)] px-3.5 py-1.5 font-semibold text-[var(--fia-cyan)] transition-colors hover:bg-[#D7EFFB]"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#EEF8FF] to-[#D7EFFB] px-3.5 py-1.5 text-xs font-semibold text-[#0369A1] border border-[#BAE6FD] transition-colors hover:border-[#0095D9] hover:text-[#0095D9]"
                       >
                         View
                       </Link>
@@ -399,7 +416,7 @@ export function QueueClientPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="border-b border-[var(--fia-gray-100)] bg-[var(--fia-gray-50)] text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
+              <thead className="border-b border-[var(--fia-gray-100)] bg-gradient-to-r from-[var(--fia-gray-50)] to-white dark:from-slate-800/50 dark:to-transparent text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
                 <tr>
                 <th className="px-3.5 py-3">Record</th>
                 <th className="px-3.5 py-3">Employee</th>
@@ -458,14 +475,19 @@ export function QueueClientPage() {
                         </div>
                       </td>
                       <td className={`px-3.5 py-3.5 ${item.isOverdue ? "font-semibold text-[var(--fia-danger)]" : "text-[var(--fia-gray-700)]"}`}>
-                        {item.dueDate}
+                        {item.isOverdue ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#BE123C] animate-pulse" />
+                            {item.dueDate}
+                          </span>
+                        ) : item.dueDate}
                       </td>
                       <td className="px-3.5 py-3.5 text-[var(--fia-gray-700)]">{getCurrentOwnerLabel(item)}</td>
                       <td className="px-3.5 py-3.5 text-right">
                         <div className="inline-flex items-center gap-2">
                           <Link
                             href={href}
-                            className="inline-flex items-center gap-2 rounded-full bg-[var(--fia-cyan-100)] px-3.5 py-1.5 font-semibold text-[var(--fia-cyan)] transition-colors hover:bg-[#D7EFFB]"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#EEF8FF] to-[#D7EFFB] px-3.5 py-1.5 text-xs font-semibold text-[#0369A1] border border-[#BAE6FD] transition-colors hover:border-[#0095D9] hover:text-[#0095D9]"
                           >
                             {primaryAction}
                           </Link>
@@ -474,7 +496,7 @@ export function QueueClientPage() {
                               type="button"
                               disabled={mutation.isPending}
                               onClick={() => mutation.mutate({ id: item.id, action: "submit_to_reporting" })}
-                              className="rounded-full bg-[var(--fia-navy)] px-3.5 py-1.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-full bg-gradient-to-r from-[#1A1C6E] to-[#2D308F] px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_2px_8px_rgba(26,28,110,0.25)] hover:shadow-[0_4px_14px_rgba(26,28,110,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               Submit
                             </button>

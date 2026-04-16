@@ -29,6 +29,7 @@ export type AcrStatus =
   | "Returned to Clerk"
   | "Returned to Reporting Officer"
   | "Returned to Countersigning Officer"
+  | "Returned to Admin Office"
   | "Archived"
   | "Returned"
   | "Completed";
@@ -1217,4 +1218,13 @@ export interface OrganizationMasterData {
     cellId?: string | null;
   }>;
   departments: Array<{ id: string; name: string; code: string; officeId: string }>;
+}
+
+export interface HeatmapPoint {
+  city: string;
+  lat: number;
+  lng: number;
+  intensity: number;
+  overdue: number;
+  total: number;
 }

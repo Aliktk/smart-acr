@@ -12,6 +12,19 @@ import { countStatuses, sortAcrsByUrgency } from "@/utils/acr";
 
 type ResultMode = "all" | "acrs" | "employees";
 
+function getAvatarColor(name: string): string {
+  const palette = [
+    "#1A1C6E", "#0095D9", "#7C3AED", "#BE185D", "#059669",
+    "#D97706", "#0891B2", "#DC2626", "#7E22CE", "#0369A1",
+  ];
+  const sum = name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return palette[sum % palette.length];
+}
+
+function getInitials(name: string) {
+  return name.split(" ").slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("");
+}
+
 export function SearchClientPage() {
   const searchParams = useSearchParams();
   const searchKey = searchParams.toString();
@@ -180,7 +193,16 @@ export function SearchClientPage() {
                             </div>
                             <div className="grid gap-1.5 text-sm text-[var(--fia-gray-600)] xl:text-right">
                               <p>Reporting Officer: <span className="font-medium text-[var(--fia-gray-800)]">{record.reportingOfficer}</span></p>
-                              <p>Due: <span className={`font-medium ${record.isOverdue ? "text-[var(--fia-danger)]" : "text-[var(--fia-gray-800)]"}`}>{record.dueDate}</span></p>
+                              <p>Due:{" "}
+                                <span className={`font-medium ${record.isOverdue ? "text-[var(--fia-danger)]" : "text-[var(--fia-gray-800)]"}`}>
+                                  {record.isOverdue ? (
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#BE123C] animate-pulse" />
+                                      {record.dueDate}
+                                    </span>
+                                  ) : record.dueDate}
+                                </span>
+                              </p>
                             </div>
                           </div>
                         </Link>
@@ -202,13 +224,23 @@ export function SearchClientPage() {
                       {filteredEmployees.map((employee) => (
                         <div
                           key={employee.id}
-                          className="rounded-[18px] border border-[var(--fia-gray-200)] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFD_100%)] px-4 py-3.5"
+                          className="rounded-[18px] border border-[var(--fia-gray-200)] bg-white dark:bg-[var(--card)] px-4 py-3.5 transition-all hover:border-[var(--fia-gray-300)] hover:shadow-[0_8px_20px_rgba(15,23,42,0.06)]"
                         >
-                          <p className="text-base font-semibold text-[var(--fia-gray-950)]">{employee.name}</p>
-                          <p className="mt-1 text-sm text-[var(--fia-gray-500)]">
-                            {employee.rank} · BPS-{employee.bps} · {wingLabel(employee.wing)}
-                          </p>
-                          <div className="mt-3 grid gap-1.5 text-sm text-[var(--fia-gray-600)]">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white shadow-sm"
+                              style={{ background: getAvatarColor(employee.name) }}
+                            >
+                              {getInitials(employee.name)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-base font-semibold text-[var(--fia-gray-950)]">{employee.name}</p>
+                              <p className="mt-0.5 text-sm text-[var(--fia-gray-500)]">
+                                {employee.rank} · BPS-{employee.bps} · {wingLabel(employee.wing)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-3 grid gap-1.5 border-t border-[var(--fia-gray-100)] pt-3 text-sm text-[var(--fia-gray-600)]">
                             <p>Office: <span className="font-medium text-[var(--fia-gray-800)]">{employee.office ?? "Not assigned"}</span></p>
                             <p>CNIC: <span className="font-medium text-[var(--fia-gray-800)]">{employee.cnic}</span></p>
                             <p>Mobile: <span className="font-medium text-[var(--fia-gray-800)]">{employee.mobile}</span></p>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, ExternalLink, FilePenLine, FileUp, History, Search, ShieldCheck, Trash2 } from "lucide-react";
+import { Archive, Building2, CalendarRange, ChevronDown, ExternalLink, FilePenLine, FileUp, Hash, History, Layers3, MapPin, MessageSquare, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Tag, Trash2, UserSearch, X } from "lucide-react";
 import {
   deleteHistoricalArchive,
   getArchiveRecords,
@@ -356,202 +356,396 @@ export default function ArchivePage() {
       </div>
 
       {canManageArchive ? (
-        <PortalSurface title="Historical Upload" subtitle="Register previous-year PDFs against employees and service periods. PDF only, up to 10 MB.">
-          <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
-            <label className="space-y-2 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Employee search</span>
-              <input
-                value={employeeQuery}
-                onChange={(event) => setEmployeeQuery(event.target.value)}
-                placeholder="Search employee"
-                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-              />
-            </label>
-            <label className="space-y-2 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Employee</span>
-              <select
-                value={uploadForm.employeeId}
-                onChange={(event) => setUploadForm((current) => ({ ...current, employeeId: event.target.value }))}
-                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-              >
-                <option value="">Select employee</option>
-                {(employeesQuery.data?.items ?? []).map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name} · {employee.serviceNumber ?? employee.cnic}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="space-y-2 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Template family</span>
-              <select
-                value={uploadForm.templateFamily}
-                onChange={(event) => setUploadForm((current) => ({ ...current, templateFamily: event.target.value as TemplateFamilyCode }))}
-                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-              >
-                {templateFamilies.map((family) => (
-                  <option key={family} value={family}>
-                    {templateLabel(family)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="space-y-2 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Archive reference</span>
-              <input
-                value={uploadForm.archiveReference}
-                onChange={(event) => setUploadForm((current) => ({ ...current, archiveReference: event.target.value }))}
-                placeholder="Optional reference"
-                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-              />
-            </label>
-            <label className="space-y-2 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Period from</span>
-              <input
-                type="date"
-                value={uploadForm.reportingPeriodFrom}
-                onChange={(event) => setUploadForm((current) => ({ ...current, reportingPeriodFrom: event.target.value }))}
-                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-              />
-            </label>
-            <label className="space-y-2 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Period to</span>
-              <input
-                type="date"
-                value={uploadForm.reportingPeriodTo}
-                onChange={(event) => setUploadForm((current) => ({ ...current, reportingPeriodTo: event.target.value }))}
-                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-              />
-            </label>
-            <label className="space-y-2 text-sm lg:col-span-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Remarks</span>
-              <input
-                value={uploadForm.remarks}
-                onChange={(event) => setUploadForm((current) => ({ ...current, remarks: event.target.value }))}
-                placeholder="Verification or source note"
-                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-              />
-            </label>
-            <label className="space-y-2 text-sm xl:col-span-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Historical PDF</span>
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={(event) => setUploadForm((current) => ({ ...current, file: event.target.files?.[0] ?? null }))}
-                className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white px-4 py-2.5 text-sm outline-none file:mr-3 file:rounded-full file:border-0 file:bg-[#E6F4FB] file:px-3 file:py-1.5 file:font-semibold file:text-[#0369A1]"
-              />
-            </label>
+        <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] shadow-[0_8px_22px_rgba(15,23,42,0.05)] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center gap-3 border-b border-[var(--fia-gray-200)] bg-gradient-to-r from-[var(--fia-navy)]/[0.04] to-transparent px-5 py-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--fia-navy)]/10">
+              <FileUp size={16} className="text-[var(--fia-navy)]" />
+            </div>
+            <div>
+              <h2 className="text-[1.02rem] font-semibold text-[var(--fia-gray-950)]">Historical Upload</h2>
+              <p className="text-sm text-[var(--fia-gray-500)]">Register previous-year PDFs against employees and service periods. PDF only · up to 10 MB.</p>
+            </div>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              disabled={uploadMutation.isPending || !uploadForm.employeeId || !uploadForm.file}
-              onClick={() => uploadMutation.mutate()}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[var(--fia-navy)] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <FileUp size={16} />
-              {uploadMutation.isPending ? "Uploading..." : "Upload historical record"}
-            </button>
-            <p className="text-sm text-[var(--fia-gray-500)]">The uploaded PDF is stored as a restricted historical archive document and audited automatically.</p>
+
+          <div className="px-5 py-5 space-y-5">
+            {/* Section: Employee lookup */}
+            <div>
+              <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
+                <UserSearch size={11} />
+                Employee lookup
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Search by name / CNIC</label>
+                  <div className="relative">
+                    <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--fia-gray-400)]" />
+                    <input
+                      value={employeeQuery}
+                      onChange={(event) => setEmployeeQuery(event.target.value)}
+                      placeholder="Type name or service number…"
+                      className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] py-2.5 pl-9 pr-3.5 text-sm text-[var(--fia-gray-900)] outline-none transition-all placeholder:text-[var(--fia-gray-400)] focus:border-[var(--fia-navy)]/40 focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Select employee</label>
+                  <div className="relative">
+                    <select
+                      value={uploadForm.employeeId}
+                      onChange={(event) => setUploadForm((current) => ({ ...current, employeeId: event.target.value }))}
+                      className="w-full appearance-none rounded-xl border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-3.5 py-2.5 pr-9 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-navy)]/40 focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)] cursor-pointer"
+                    >
+                      <option value="">— Select employee —</option>
+                      {(employeesQuery.data?.items ?? []).map((employee) => (
+                        <option key={employee.id} value={employee.id}>
+                          {employee.name} · {employee.serviceNumber ?? employee.cnic}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--fia-gray-400)]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px bg-[var(--fia-gray-100)]" />
+
+            {/* Section: ACR details */}
+            <div>
+              <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
+                <Tag size={11} />
+                ACR details
+              </p>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="space-y-1.5 xl:col-span-2">
+                  <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Template family</label>
+                  <div className="relative">
+                    <select
+                      value={uploadForm.templateFamily}
+                      onChange={(event) => setUploadForm((current) => ({ ...current, templateFamily: event.target.value as TemplateFamilyCode }))}
+                      className="w-full appearance-none rounded-xl border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-3.5 py-2.5 pr-9 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-navy)]/40 focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)] cursor-pointer"
+                    >
+                      {templateFamilies.map((family) => (
+                        <option key={family} value={family}>{templateLabel(family)}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--fia-gray-400)]" />
+                  </div>
+                </div>
+                <div className="space-y-1.5 xl:col-span-2">
+                  <label className="flex items-center gap-1 text-xs font-semibold text-[var(--fia-gray-600)]">
+                    <Hash size={10} />
+                    Archive reference <span className="font-normal text-[var(--fia-gray-400)]">(optional)</span>
+                  </label>
+                  <input
+                    value={uploadForm.archiveReference}
+                    onChange={(event) => setUploadForm((current) => ({ ...current, archiveReference: event.target.value }))}
+                    placeholder="e.g. HQ/2023/ACR/441"
+                    className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-3.5 py-2.5 text-sm text-[var(--fia-gray-900)] outline-none transition-all placeholder:text-[var(--fia-gray-400)] focus:border-[var(--fia-navy)]/40 focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px bg-[var(--fia-gray-100)]" />
+
+            {/* Section: Reporting period + remarks + file */}
+            <div>
+              <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">
+                <CalendarRange size={11} />
+                Reporting period &amp; document
+              </p>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Period from</label>
+                  <input
+                    type="date"
+                    value={uploadForm.reportingPeriodFrom}
+                    onChange={(event) => setUploadForm((current) => ({ ...current, reportingPeriodFrom: event.target.value }))}
+                    className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-3.5 py-2.5 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-navy)]/40 focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Period to</label>
+                  <input
+                    type="date"
+                    value={uploadForm.reportingPeriodTo}
+                    onChange={(event) => setUploadForm((current) => ({ ...current, reportingPeriodTo: event.target.value }))}
+                    className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-3.5 py-2.5 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-navy)]/40 focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="flex items-center gap-1 text-xs font-semibold text-[var(--fia-gray-600)]">
+                    <MessageSquare size={10} />
+                    Remarks <span className="font-normal text-[var(--fia-gray-400)]">(optional)</span>
+                  </label>
+                  <input
+                    value={uploadForm.remarks}
+                    onChange={(event) => setUploadForm((current) => ({ ...current, remarks: event.target.value }))}
+                    placeholder="Verification note or source reference…"
+                    className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-3.5 py-2.5 text-sm text-[var(--fia-gray-900)] outline-none transition-all placeholder:text-[var(--fia-gray-400)] focus:border-[var(--fia-navy)]/40 focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
+                  />
+                </div>
+
+                {/* File upload */}
+                <div className="space-y-1.5 md:col-span-2 xl:col-span-4">
+                  <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Historical PDF document</label>
+                  <label className={`group flex cursor-pointer items-center gap-4 rounded-xl border-2 border-dashed px-4 py-4 transition-all ${
+                    uploadForm.file
+                      ? "border-[var(--fia-navy)]/30 bg-[var(--fia-navy)]/[0.03]"
+                      : "border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] hover:border-[var(--fia-navy)]/25 hover:bg-white"
+                  }`}>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="sr-only"
+                      onChange={(event) => setUploadForm((current) => ({ ...current, file: event.target.files?.[0] ?? null }))}
+                    />
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${uploadForm.file ? "bg-[var(--fia-navy)]/10" : "bg-[var(--fia-gray-100)] group-hover:bg-[var(--fia-navy)]/8"}`}>
+                      <FileUp size={17} className={uploadForm.file ? "text-[var(--fia-navy)]" : "text-[var(--fia-gray-400)] group-hover:text-[var(--fia-navy)]"} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      {uploadForm.file ? (
+                        <>
+                          <p className="truncate text-sm font-semibold text-[var(--fia-navy)]">{uploadForm.file.name}</p>
+                          <p className="text-xs text-[var(--fia-gray-500)]">{(uploadForm.file.size / 1024).toFixed(0)} KB · PDF</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-semibold text-[var(--fia-gray-700)] group-hover:text-[var(--fia-navy)]">Click to attach a PDF</p>
+                          <p className="text-xs text-[var(--fia-gray-400)]">PDF only · maximum 10 MB · stored securely in restricted archive</p>
+                        </>
+                      )}
+                    </div>
+                    {uploadForm.file ? (
+                      <button
+                        type="button"
+                        onClick={(event) => { event.preventDefault(); setUploadForm((current) => ({ ...current, file: null })); }}
+                        className="shrink-0 rounded-full p-1 text-[var(--fia-gray-400)] hover:bg-red-50 hover:text-red-500"
+                      >
+                        <X size={14} />
+                      </button>
+                    ) : null}
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit */}
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--fia-gray-100)] bg-[var(--fia-gray-50)] px-4 py-3">
+              <button
+                type="button"
+                disabled={uploadMutation.isPending || !uploadForm.employeeId || !uploadForm.file}
+                onClick={() => uploadMutation.mutate()}
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--fia-navy)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:opacity-90"
+              >
+                <FileUp size={15} />
+                {uploadMutation.isPending ? "Uploading…" : "Upload historical record"}
+              </button>
+              <p className="text-xs text-[var(--fia-gray-500)]">Stored as a restricted historical archive document and audited automatically.</p>
+            </div>
           </div>
-        </PortalSurface>
+        </div>
       ) : null}
 
       <PortalSurface title="Archive history" subtitle="Search by employee, posting, period, template family, archive reference, or organization scope.">
-        <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_180px_repeat(5,minmax(0,180px))]">
-          <label className="relative block">
-            <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--fia-gray-400)]" />
+        {/* ── Search + Filter bar ─────────────────────────────────────────── */}
+        <div className="mb-4 space-y-2.5">
+          {/* Search row */}
+          <div className="relative">
+            <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--fia-gray-400)]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search archive history"
-              className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white py-2.5 pl-11 pr-4 outline-none focus:border-[#0095D9]"
+              placeholder="Search by employee name, service number, archive reference, posting…"
+              className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] py-2.5 pl-9 pr-9 text-sm text-[var(--fia-gray-900)] outline-none transition-all placeholder:text-[var(--fia-gray-400)] focus:border-[var(--fia-navy)]/40 focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
             />
-          </label>
-          <select
-            value={source}
-            onChange={(event) => setSource(event.target.value as "" | ArchiveRecordSource)}
-            className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-          >
-            <option value="">All sources</option>
-            <option value="WORKFLOW_FINAL">Workflow final</option>
-            <option value="HISTORICAL_UPLOAD">Historical upload</option>
-          </select>
-          <select
-            value={templateFamilyFilter}
-            onChange={(event) => setTemplateFamilyFilter(event.target.value as "" | TemplateFamilyCode)}
-            className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-          >
-            <option value="">All template families</option>
-            {templateFamilies.map((family) => (
-              <option key={family} value={family}>
-                {templateLabel(family)}
-              </option>
-            ))}
-          </select>
-          <select
-            value={scopeTrack}
-            onChange={(event) => {
-              setScopeTrack(event.target.value as "" | OrgScopeTrack);
-              setRegionId("");
-              setZoneId("");
-              setOfficeId("");
-            }}
-            className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-          >
-            <option value="">All tracks</option>
-            <option value="REGIONAL">Regional</option>
-            <option value="WING">Wing</option>
-          </select>
-          <select
-            value={regionId}
-            onChange={(event) => {
-              setRegionId(event.target.value);
-              setZoneId("");
-              setOfficeId("");
-            }}
-            className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-          >
-            <option value="">All regions</option>
-            {regionOptions.map((region) => (
-              <option key={region.id} value={region.id}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={zoneId}
-            onChange={(event) => {
-              setZoneId(event.target.value);
-              setOfficeId("");
-            }}
-            className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-          >
-            <option value="">All zones</option>
-            {zoneOptions.map((zone) => (
-              <option key={zone.id} value={zone.id}>
-                {zone.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={officeId}
-            onChange={(event) => setOfficeId(event.target.value)}
-            className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-          >
-            <option value="">All offices</option>
-            {officeOptions.map((office) => (
-              <option key={office.id} value={office.id}>
-                {office.name}
-              </option>
-            ))}
-          </select>
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-[var(--fia-gray-400)] hover:text-[var(--fia-gray-600)]"
+              >
+                <X size={13} />
+              </button>
+            ) : null}
+          </div>
+
+          {/* Filter pills row */}
+          {(() => {
+            const activeCount = [source, templateFamilyFilter, scopeTrack, regionId, zoneId, officeId].filter(Boolean).length;
+            return (
+              <div className={`rounded-xl border bg-[var(--card)] transition-all ${activeCount > 0 ? "border-[#1A1C6E]/20" : "border-[var(--fia-gray-200)]"}`}>
+                <div className="flex flex-wrap items-center gap-1.5 px-3 py-2">
+                  {/* Label */}
+                  <div className="flex shrink-0 items-center gap-1.5 mr-1">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-[var(--fia-gray-100)]">
+                      <SlidersHorizontal size={10} className="text-[var(--fia-gray-500)]" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--fia-gray-400)]">Filter</span>
+                  </div>
+                  <div className="h-4 w-px shrink-0 bg-[var(--fia-gray-200)]" />
+
+                  {/* Source */}
+                  <div className="relative shrink-0">
+                    <Tag size={10} className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 ${source ? "text-white/80" : "text-[var(--fia-gray-400)]"}`} />
+                    <select
+                      value={source}
+                      onChange={(event) => setSource(event.target.value as "" | ArchiveRecordSource)}
+                      className={`appearance-none cursor-pointer rounded-full border py-1.5 pl-6 pr-6 text-[11px] font-semibold outline-none transition-all ${source ? "border-[#1A1C6E] bg-[#1A1C6E] text-white shadow-sm" : "border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] text-[var(--fia-gray-600)] hover:bg-white hover:shadow-sm"}`}
+                    >
+                      <option value="">All sources</option>
+                      <option value="WORKFLOW_FINAL">Workflow final</option>
+                      <option value="HISTORICAL_UPLOAD">Historical upload</option>
+                    </select>
+                    <ChevronDown size={9} className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 ${source ? "text-white/70" : "text-[var(--fia-gray-400)]"}`} />
+                  </div>
+
+                  {/* Template family */}
+                  <div className="relative shrink-0">
+                    <Tag size={10} className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 ${templateFamilyFilter ? "text-white/80" : "text-[var(--fia-gray-400)]"}`} />
+                    <select
+                      value={templateFamilyFilter}
+                      onChange={(event) => setTemplateFamilyFilter(event.target.value as "" | TemplateFamilyCode)}
+                      className={`appearance-none cursor-pointer rounded-full border py-1.5 pl-6 pr-6 text-[11px] font-semibold outline-none transition-all ${templateFamilyFilter ? "border-[#1A1C6E] bg-[#1A1C6E] text-white shadow-sm" : "border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] text-[var(--fia-gray-600)] hover:bg-white hover:shadow-sm"}`}
+                    >
+                      <option value="">All templates</option>
+                      {templateFamilies.map((family) => (
+                        <option key={family} value={family}>{templateLabel(family)}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={9} className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 ${templateFamilyFilter ? "text-white/70" : "text-[var(--fia-gray-400)]"}`} />
+                  </div>
+
+                  {/* Track */}
+                  <div className="relative shrink-0">
+                    <Layers3 size={10} className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 ${scopeTrack ? "text-white/80" : "text-[var(--fia-gray-400)]"}`} />
+                    <select
+                      value={scopeTrack}
+                      onChange={(event) => { setScopeTrack(event.target.value as "" | OrgScopeTrack); setRegionId(""); setZoneId(""); setOfficeId(""); }}
+                      className={`appearance-none cursor-pointer rounded-full border py-1.5 pl-6 pr-6 text-[11px] font-semibold outline-none transition-all ${scopeTrack ? "border-[#1A1C6E] bg-[#1A1C6E] text-white shadow-sm" : "border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] text-[var(--fia-gray-600)] hover:bg-white hover:shadow-sm"}`}
+                    >
+                      <option value="">All tracks</option>
+                      <option value="REGIONAL">Regional</option>
+                      <option value="WING">Wing</option>
+                    </select>
+                    <ChevronDown size={9} className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 ${scopeTrack ? "text-white/70" : "text-[var(--fia-gray-400)]"}`} />
+                  </div>
+
+                  {/* Region */}
+                  <div className="relative shrink-0">
+                    <MapPin size={10} className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 ${regionId ? "text-white/80" : "text-[var(--fia-gray-400)]"}`} />
+                    <select
+                      value={regionId}
+                      onChange={(event) => { setRegionId(event.target.value); setZoneId(""); setOfficeId(""); }}
+                      className={`appearance-none cursor-pointer rounded-full border py-1.5 pl-6 pr-6 text-[11px] font-semibold outline-none transition-all ${regionId ? "border-[#1A1C6E] bg-[#1A1C6E] text-white shadow-sm" : "border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] text-[var(--fia-gray-600)] hover:bg-white hover:shadow-sm"}`}
+                    >
+                      <option value="">All regions</option>
+                      {regionOptions.map((region) => (
+                        <option key={region.id} value={region.id}>{region.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={9} className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 ${regionId ? "text-white/70" : "text-[var(--fia-gray-400)]"}`} />
+                  </div>
+
+                  {/* Zone */}
+                  <div className="relative shrink-0">
+                    <MapPin size={10} className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 ${zoneId ? "text-white/80" : "text-[var(--fia-gray-400)]"}`} />
+                    <select
+                      value={zoneId}
+                      onChange={(event) => { setZoneId(event.target.value); setOfficeId(""); }}
+                      className={`appearance-none cursor-pointer rounded-full border py-1.5 pl-6 pr-6 text-[11px] font-semibold outline-none transition-all ${zoneId ? "border-[#1A1C6E] bg-[#1A1C6E] text-white shadow-sm" : "border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] text-[var(--fia-gray-600)] hover:bg-white hover:shadow-sm"}`}
+                    >
+                      <option value="">All zones</option>
+                      {zoneOptions.map((zone) => (
+                        <option key={zone.id} value={zone.id}>{zone.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={9} className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 ${zoneId ? "text-white/70" : "text-[var(--fia-gray-400)]"}`} />
+                  </div>
+
+                  {/* Office */}
+                  <div className="relative shrink-0">
+                    <Building2 size={10} className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 ${officeId ? "text-white/80" : "text-[var(--fia-gray-400)]"}`} />
+                    <select
+                      value={officeId}
+                      onChange={(event) => setOfficeId(event.target.value)}
+                      className={`appearance-none cursor-pointer rounded-full border py-1.5 pl-6 pr-6 text-[11px] font-semibold outline-none transition-all ${officeId ? "border-[#1A1C6E] bg-[#1A1C6E] text-white shadow-sm" : "border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] text-[var(--fia-gray-600)] hover:bg-white hover:shadow-sm"}`}
+                    >
+                      <option value="">All offices</option>
+                      {officeOptions.map((office) => (
+                        <option key={office.id} value={office.id}>{office.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={9} className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 ${officeId ? "text-white/70" : "text-[var(--fia-gray-400)]"}`} />
+                  </div>
+
+                  {activeCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => { setSource(""); setTemplateFamilyFilter(""); setScopeTrack(""); setRegionId(""); setZoneId(""); setOfficeId(""); }}
+                      className="ml-auto shrink-0 inline-flex items-center gap-1.5 rounded-full border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-2.5 py-1 text-[10px] font-semibold text-[var(--fia-gray-500)] transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <RefreshCw size={8} />
+                      Reset
+                    </button>
+                  ) : null}
+                </div>
+
+                {/* Active chips */}
+                {activeCount > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5 border-t border-[#1A1C6E]/10 bg-[#1A1C6E]/[0.03] px-3 py-2">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#1A1C6E]/50 mr-0.5">Active:</span>
+                    {source ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1A1C6E] pl-2.5 pr-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        Source: {source === "WORKFLOW_FINAL" ? "Workflow" : "Historical"}
+                        <button type="button" onClick={() => setSource("")} className="flex h-3 w-3 items-center justify-center rounded-full bg-white/15 hover:bg-white/30"><X size={7} /></button>
+                      </span>
+                    ) : null}
+                    {templateFamilyFilter ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1A1C6E] pl-2.5 pr-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        Template: {templateLabel(templateFamilyFilter).split("(")[0].trim()}
+                        <button type="button" onClick={() => setTemplateFamilyFilter("")} className="flex h-3 w-3 items-center justify-center rounded-full bg-white/15 hover:bg-white/30"><X size={7} /></button>
+                      </span>
+                    ) : null}
+                    {scopeTrack ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1A1C6E] pl-2.5 pr-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        Track: {scopeTrack}
+                        <button type="button" onClick={() => { setScopeTrack(""); setRegionId(""); setZoneId(""); setOfficeId(""); }} className="flex h-3 w-3 items-center justify-center rounded-full bg-white/15 hover:bg-white/30"><X size={7} /></button>
+                      </span>
+                    ) : null}
+                    {regionId ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1A1C6E] pl-2.5 pr-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        Region: {regionOptions.find((r) => r.id === regionId)?.name ?? regionId}
+                        <button type="button" onClick={() => { setRegionId(""); setZoneId(""); setOfficeId(""); }} className="flex h-3 w-3 items-center justify-center rounded-full bg-white/15 hover:bg-white/30"><X size={7} /></button>
+                      </span>
+                    ) : null}
+                    {zoneId ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1A1C6E] pl-2.5 pr-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        Zone: {zoneOptions.find((z) => z.id === zoneId)?.name ?? zoneId}
+                        <button type="button" onClick={() => { setZoneId(""); setOfficeId(""); }} className="flex h-3 w-3 items-center justify-center rounded-full bg-white/15 hover:bg-white/30"><X size={7} /></button>
+                      </span>
+                    ) : null}
+                    {officeId ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1A1C6E] pl-2.5 pr-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        Office: {officeOptions.find((o) => o.id === officeId)?.name ?? officeId}
+                        <button type="button" onClick={() => setOfficeId("")} className="flex h-3 w-3 items-center justify-center rounded-full bg-white/15 hover:bg-white/30"><X size={7} /></button>
+                      </span>
+                    ) : null}
+                    <span className="ml-auto text-[10px] text-[var(--fia-gray-400)]">{items.length} result{items.length !== 1 ? "s" : ""}</span>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })()}
         </div>
 
-        <div className="my-4 flex items-center gap-3">
-          <hr className="flex-1 border-[var(--fia-gray-200)]" />
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">Results</span>
-          <hr className="flex-1 border-[var(--fia-gray-200)]" />
+        {/* Results label */}
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-xs font-semibold text-[var(--fia-gray-500)]">
+            {archiveQuery.isLoading ? "Loading…" : `${items.length} record${items.length !== 1 ? "s" : ""} found`}
+          </span>
         </div>
 
         {archiveQuery.isLoading ? (
@@ -670,72 +864,74 @@ export default function ArchivePage() {
                   </div>
 
                   {canManageArchive && item.source === "HISTORICAL_UPLOAD" && isEditing ? (
-                    <div className="mt-4 rounded-[20px] border border-[#D8DEE8] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 p-4">
-                      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
-                        <label className="space-y-2 text-sm">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Template family</span>
-                          <select
-                            value={editForm.templateFamily}
-                            onChange={(event) => setEditForm((current) => ({ ...current, templateFamily: event.target.value as TemplateFamilyCode }))}
-                            className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
-                          >
-                            {templateFamilies.map((family) => (
-                              <option key={family} value={family}>
-                                {templateLabel(family)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="space-y-2 text-sm">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Period from</span>
+                    <div className="mt-4 rounded-xl border border-[var(--fia-navy)]/15 bg-[var(--fia-navy)]/[0.025] p-4">
+                      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--fia-navy)]/60">Edit metadata</p>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="space-y-1.5 lg:col-span-2">
+                          <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Template family</label>
+                          <div className="relative">
+                            <select
+                              value={editForm.templateFamily}
+                              onChange={(event) => setEditForm((current) => ({ ...current, templateFamily: event.target.value as TemplateFamilyCode }))}
+                              className="w-full appearance-none rounded-xl border border-[var(--fia-gray-200)] bg-white px-3.5 py-2 pr-8 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-navy)]/40 focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)] cursor-pointer"
+                            >
+                              {templateFamilies.map((family) => (
+                                <option key={family} value={family}>{templateLabel(family)}</option>
+                              ))}
+                            </select>
+                            <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--fia-gray-400)]" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Period from</label>
                           <input
                             type="date"
                             value={editForm.reportingPeriodFrom}
                             onChange={(event) => setEditForm((current) => ({ ...current, reportingPeriodFrom: event.target.value }))}
-                            className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
+                            className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-white px-3.5 py-2 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-navy)]/40 focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
                           />
-                        </label>
-                        <label className="space-y-2 text-sm">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Period to</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Period to</label>
                           <input
                             type="date"
                             value={editForm.reportingPeriodTo}
                             onChange={(event) => setEditForm((current) => ({ ...current, reportingPeriodTo: event.target.value }))}
-                            className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
+                            className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-white px-3.5 py-2 text-sm text-[var(--fia-gray-900)] outline-none transition-all focus:border-[var(--fia-navy)]/40 focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
                           />
-                        </label>
-                        <label className="space-y-2 text-sm">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Archive reference</span>
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Archive reference</label>
                           <input
                             value={editForm.archiveReference}
                             onChange={(event) => setEditForm((current) => ({ ...current, archiveReference: event.target.value }))}
                             placeholder="Optional reference"
-                            className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
+                            className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-white px-3.5 py-2 text-sm text-[var(--fia-gray-900)] outline-none transition-all placeholder:text-[var(--fia-gray-400)] focus:border-[var(--fia-navy)]/40 focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
                           />
-                        </label>
-                        <label className="space-y-2 text-sm lg:col-span-2 xl:col-span-4">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Remarks</span>
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+                          <label className="text-xs font-semibold text-[var(--fia-gray-600)]">Remarks</label>
                           <input
                             value={editForm.remarks}
                             onChange={(event) => setEditForm((current) => ({ ...current, remarks: event.target.value }))}
                             placeholder="Verification or source note"
-                            className="w-full rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 px-4 py-2.5 outline-none focus:border-[#0095D9]"
+                            className="w-full rounded-xl border border-[var(--fia-gray-200)] bg-white px-3.5 py-2 text-sm text-[var(--fia-gray-900)] outline-none transition-all placeholder:text-[var(--fia-gray-400)] focus:border-[var(--fia-navy)]/40 focus:shadow-[0_0_0_3px_rgba(26,28,110,0.07)]"
                           />
-                        </label>
+                        </div>
                       </div>
-                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
                         <button
                           type="button"
                           disabled={isSavingMetadata}
                           onClick={() => saveMetadata(item.id)}
-                          className="rounded-2xl bg-[var(--fia-navy)] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center gap-2 rounded-xl bg-[var(--fia-navy)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:opacity-90"
                         >
-                          {isSavingMetadata ? "Saving..." : "Save metadata"}
+                          {isSavingMetadata ? "Saving…" : "Save metadata"}
                         </button>
                         <button
                           type="button"
                           onClick={() => cancelEditing()}
-                          className="rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white px-4 py-2.5 text-sm font-semibold text-[#334155]"
+                          className="rounded-xl border border-[var(--fia-gray-200)] bg-white px-4 py-2 text-sm font-semibold text-[var(--fia-gray-600)] hover:bg-[var(--fia-gray-50)]"
                         >
                           Cancel
                         </button>

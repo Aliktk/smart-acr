@@ -19,4 +19,9 @@ export class AnalyticsController {
   dashboard(@CurrentUser() user: AuthenticatedUser, @Query() query: DashboardAnalyticsQueryDto) {
     return this.analyticsService.dashboard(user.id, user.activeRole, query);
   }
+
+  @Get("heatmap")
+  heatmap(@CurrentUser() user: AuthenticatedUser) {
+    return this.analyticsService.heatmap(user.id, user.activeRole);
+  }
 }

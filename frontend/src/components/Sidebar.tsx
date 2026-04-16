@@ -63,7 +63,7 @@ const navGroups: Array<{ label?: string; items: NavItem[] }> = [
   {
     label: "ACR Management",
     items: [
-      { path: "/acr/new", label: "Initiate ACR", icon: FilePlus, roles: ["CLERK", "SUPER_ADMIN", "IT_OPS", "SECRET_BRANCH"] },
+      { path: "/acr/new", label: "Initiate ACR", icon: FilePlus, roles: ["CLERK"] },
       { path: "/queue", label: "My Queue", icon: InboxIcon, roles: ["CLERK", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "SECRET_BRANCH", "SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "EMPLOYEE"] },
       { path: "/priority", label: "Priority", icon: Star, roles: ["SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "SECRET_BRANCH"] },
       { path: "/overdue", label: "Overdue", icon: AlertTriangle, roles: ["SUPER_ADMIN", "IT_OPS", "DG", "EXECUTIVE_VIEWER", "WING_OVERSIGHT", "ZONAL_OVERSIGHT", "REPORTING_OFFICER", "COUNTERSIGNING_OFFICER", "SECRET_BRANCH"] },

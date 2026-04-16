@@ -30,12 +30,12 @@ const statusLabels: Record<AdverseRemarkStatus, string> = {
 };
 
 const statusColors: Record<AdverseRemarkStatus, string> = {
-  DRAFT: "bg-amber-50 text-amber-700 border-amber-200",
-  ENDORSED_BY_CSO: "bg-red-50 text-red-700 border-red-200",
-  COMMUNICATED: "bg-blue-50 text-blue-700 border-blue-200",
-  ACKNOWLEDGED: "bg-teal-50 text-teal-700 border-teal-200",
-  REPRESENTATION_RECEIVED: "bg-purple-50 text-purple-700 border-purple-200",
-  REPRESENTATION_DECIDED: "bg-green-50 text-green-700 border-green-200",
+  DRAFT:                   "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50",
+  ENDORSED_BY_CSO:         "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800/50",
+  COMMUNICATED:            "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50",
+  ACKNOWLEDGED:            "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800/50",
+  REPRESENTATION_RECEIVED: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50",
+  REPRESENTATION_DECIDED:  "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800/50",
 };
 
 function formatDate(iso: string | null) {

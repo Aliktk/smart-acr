@@ -39,7 +39,7 @@ export class PrismaService
       (this as any).$on("query", (e: Prisma.QueryEvent) => {
         if (e.duration > 500) {
           this.logger.warn(
-            `Slow query (${e.duration}ms): ${e.query}`,
+            `Slow query detected (${e.duration}ms)`,
             "Prisma",
           );
         }

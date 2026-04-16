@@ -58,7 +58,7 @@ export function canAccessPortalPath(subject: PortalAccessSubject, pathname: stri
   }
 
   if (pathname === "/acr/new") {
-    return ["CLERK", "SUPER_ADMIN", "IT_OPS", "SECRET_BRANCH"].includes(roleCode);
+    return roleCode === "CLERK";
   }
 
   if (matchesPrefix(pathname, "/user-management")) {
@@ -81,10 +81,10 @@ export function canAccessPortalPath(subject: PortalAccessSubject, pathname: stri
     case "COUNTERSIGNING_OFFICER":
       return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/search", "/priority", "/overdue"]);
     case "SECRET_BRANCH":
-      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization", "/acr/new"]);
+      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization"]);
     case "SUPER_ADMIN":
     case "IT_OPS":
-      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization", "/acr/new"]);
+      return matchesAnyPrefix(pathname, ["/dashboard", "/queue", "/archive", "/search", "/analytics", "/priority", "/overdue", "/audit-logs", "/organization"]);
     case "DG":
       return matchesAnyPrefix(pathname, ["/dashboard", "/archive", "/search", "/profile", "/settings", "/notifications", "/help-support"]);
     case "EXECUTIVE_VIEWER":

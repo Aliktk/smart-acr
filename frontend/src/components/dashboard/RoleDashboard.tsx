@@ -35,6 +35,9 @@ import {
 } from "@/utils/acr";
 import { getRoleLabel } from "@/utils/roles";
 import { LeadershipDashboard } from "@/components/dashboard/LeadershipDashboard";
+import { EmployeeDashboard } from "@/components/dashboard/EmployeeDashboard";
+import { ClerkDashboard } from "@/components/dashboard/ClerkDashboard";
+import { OperationalDashboard } from "@/components/dashboard/OperationalDashboard";
 
 type LeadershipAnalytics = {
   wingWiseTrends: Array<{ name: string; employees: number; offices: number; acrCount: number }>;
@@ -558,6 +561,33 @@ function DashboardRecordsTable({
   );
 }
 
+const emptyOverview: DashboardOverview = {
+  metrics: {
+    initiatedCount: 0,
+    pendingCount: 0,
+    overdueCount: 0,
+    completedCount: 0,
+    archivedCount: 0,
+    priorityCount: 0,
+    averageCompletionDays: 0,
+  },
+  summary: {
+    fiscalYearLabel: "",
+    totalCount: 0,
+    draftCount: 0,
+    submittedCount: 0,
+    returnedCount: 0,
+    currentFiscalInitiatedCount: 0,
+    currentFiscalPendingCount: 0,
+    currentFiscalCompletedCount: 0,
+    currentFiscalReturnedCount: 0,
+    initiatedDeltaPercent: null,
+    completedDeltaPercent: null,
+  },
+  distribution: [],
+  items: [],
+};
+
 export function RoleDashboard({
   session,
   overview,
@@ -570,8 +600,41 @@ export function RoleDashboard({
   const activeRoleCode: UserRoleCode = session?.activeRoleCode ?? "CLERK";
   const mode = getDashboardMode(activeRoleCode);
 
-  if (session && (mode === "executive" || mode === "secret-branch")) {
+  // ── Route each role tier to the correct scoped dashboard ──
+  if (!session) {
+    return <div className="p-6 text-sm text-[var(--fia-gray-500)]">Loading session…</div>;
+  }
+
+  if (mode === "executive" || mode === "secret-branch") {
     return <LeadershipDashboard session={session} />;
+  }
+
+  if (mode === "employee") {
+    return (
+      <EmployeeDashboard
+        session={session!}
+        overview={overview ?? emptyOverview}
+      />
+    );
+  }
+
+  if (mode === "clerk") {
+    return (
+      <ClerkDashboard
+        session={session!}
+        overview={overview ?? emptyOverview}
+      />
+    );
+  }
+
+  if (mode === "reporting" || mode === "countersigning") {
+    return (
+      <OperationalDashboard
+        session={session!}
+        overview={overview ?? emptyOverview}
+        mode={mode}
+      />
+    );
   }
 
   const config = buildModeConfig(mode);
@@ -698,7 +761,7 @@ export function RoleDashboard({
                       </div>
                     </div>
                     {latestItem ? (
-                      <div className="mt-4 rounded-2xl bg-white px-3 py-3">
+                      <div className="mt-4 rounded-2xl bg-[var(--card)] border border-[var(--fia-gray-100)] px-3 py-3">
                         <p className="text-xs text-[var(--fia-gray-500)]">Latest status</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <StatusChip status={latestItem.status} />

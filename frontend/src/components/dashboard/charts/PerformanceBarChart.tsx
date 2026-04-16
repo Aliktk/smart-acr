@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Label } from "recharts";
 
 interface PerformanceBarChartProps {
   data: Array<{ label: string; total: number; completed?: number; overdue?: number; pending?: number }>;
@@ -33,24 +33,28 @@ export function PerformanceBarChart({ data, title, subtitle, layout = "vertical"
           <span className="h-2 w-2 rounded-full bg-[#EF4444]" /> Overdue
         </span>
       </div>
-      <ResponsiveContainer width="100%" height={Math.max(200, data.length * (isHorizontal ? 36 : 0) + (isHorizontal ? 20 : 220))}>
+      <ResponsiveContainer width="100%" height={Math.max(220, data.length * (isHorizontal ? 38 : 0) + (isHorizontal ? 48 : 240))}>
         <BarChart
           data={data}
           layout={isHorizontal ? "vertical" : "horizontal"}
-          margin={{ top: 5, right: 5, bottom: 5, left: isHorizontal ? 80 : -20 }}
+          margin={{ top: 5, right: 12, bottom: isHorizontal ? 24 : 40, left: isHorizontal ? 4 : 4 }}
           barGap={2}
-          barSize={isHorizontal ? 14 : undefined}
+          barSize={isHorizontal ? 13 : undefined}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--fia-gray-200, #e5e7eb)" strokeOpacity={0.5} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--fia-gray-200, #e5e7eb)" strokeOpacity={0.5} horizontal={isHorizontal} vertical={!isHorizontal} />
           {isHorizontal ? (
             <>
-              <XAxis type="number" tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }} tickLine={false} axisLine={false} />
-              <YAxis type="category" dataKey="label" tick={{ fontSize: 10, fill: "var(--fia-gray-600)" }} tickLine={false} axisLine={false} width={75} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }} tickLine={false} axisLine={{ stroke: "var(--fia-gray-200)", strokeOpacity: 0.6 }} allowDecimals={false}>
+                <Label value="Records" offset={-8} position="insideBottom" style={{ fontSize: 9, fill: "var(--fia-gray-400)", textTransform: "uppercase", letterSpacing: "0.04em" }} />
+              </XAxis>
+              <YAxis type="category" dataKey="label" tick={{ fontSize: 10, fill: "var(--fia-gray-600)" }} tickLine={false} axisLine={false} width={82} />
             </>
           ) : (
             <>
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={50} />
-              <YAxis tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }} tickLine={false} axisLine={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }} tickLine={false} axisLine={{ stroke: "var(--fia-gray-200)", strokeOpacity: 0.6 }} interval={0} angle={-30} textAnchor="end" height={52} />
+              <YAxis tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }} tickLine={false} axisLine={false} width={32} allowDecimals={false}>
+                <Label value="Records" angle={-90} position="insideLeft" offset={10} style={{ fontSize: 9, fill: "var(--fia-gray-400)", textTransform: "uppercase", letterSpacing: "0.04em" }} />
+              </YAxis>
             </>
           )}
           <Tooltip

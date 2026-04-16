@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -21,12 +22,24 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { getDashboardAnalytics } from "@/api/client";
+import { getDashboardAnalytics, getDashboardHeatmap } from "@/api/client";
 import { PortalPageHeader, PortalSurface, EmptyState, SegmentedTabs } from "@/components/portal/PortalPrimitives";
-import { OverdueBadge, PriorityBadge, StatCard, StatusChip } from "@/components/ui";
+import { DashboardSkeleton, LiveIndicator, OverdueBadge, PriorityBadge, StatCard, StatusChip } from "@/components/ui";
 import { InsightsPanel } from "./InsightsPanel";
+import { KpiGaugesRow } from "./KpiGaugesRow";
 import { WorkflowPipeline } from "./WorkflowPipeline";
-import { StatusPieChart, TrendAreaChart, PerformanceBarChart, TurnaroundLollipop, HeatmapTable } from "./charts";
+import {
+  ArchiveWaterfall,
+  EChartsAreaTrend,
+  EChartsDonut,
+  EChartsHorizontalBar,
+  EChartsStackedBar,
+  FIAOperationsMap,
+  HeatmapTable,
+  OfficerWorkloadBubble,
+  TurnaroundLollipop,
+  UnitPerformanceRadar,
+} from "./charts";
 import type {
   AcrSummary,
   DashboardAnalyticsResponse,
@@ -144,11 +157,14 @@ function chartLegendColor(color: DashboardTone | string) {
   return color;
 }
 
-function InlineFilter({ value, options, onChange, allLabel = "All" }: {
+function InlineFilter({
+  value, options, onChange, allLabel = "All", icon,
+}: {
   value: string;
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
   allLabel?: string;
+  icon?: React.ReactNode;
 }) {
   const isActive = Boolean(value);
 
@@ -157,10 +173,12 @@ function InlineFilter({ value, options, onChange, allLabel = "All" }: {
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`appearance-none cursor-pointer whitespace-nowrap rounded-full border py-[5px] pl-2.5 pr-6 text-xs font-medium outline-none transition-all ${
+        className={`appearance-none cursor-pointer whitespace-nowrap rounded-full border py-1.5 text-xs font-semibold outline-none transition-all duration-150 ${
+          icon ? "pl-6 pr-7" : "pl-3 pr-7"
+        } ${
           isActive
-            ? "border-[var(--fia-cyan)] bg-[var(--fia-cyan-bg,rgba(0,149,217,0.08))] text-[var(--fia-cyan)]"
-            : "border-[var(--fia-gray-200)] bg-transparent text-[var(--fia-gray-600)] hover:border-[var(--fia-gray-300)] hover:bg-[var(--fia-gray-50)]"
+            ? "border-[#1A1C6E] bg-[#1A1C6E] text-white shadow-sm"
+            : "border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] text-[var(--fia-gray-600)] hover:border-[var(--fia-gray-300)] hover:bg-[var(--card)] hover:text-[var(--fia-gray-800)] hover:shadow-sm"
         }`}
       >
         <option value="">{allLabel}</option>
@@ -168,18 +186,31 @@ function InlineFilter({ value, options, onChange, allLabel = "All" }: {
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </select>
-      <ChevronDown size={10} className={`pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 ${isActive ? "text-[var(--fia-cyan)]" : "text-[var(--fia-gray-400)]"}`} />
+      {icon && (
+        <span className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 ${isActive ? "text-white/80" : "text-[var(--fia-gray-400)]"}`}>
+          {icon}
+        </span>
+      )}
+      <ChevronDown
+        size={10}
+        className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 ${isActive ? "text-white/70" : "text-[var(--fia-gray-400)]"}`}
+      />
     </div>
   );
 }
 
 function ActiveChip({ label, value, onClear }: { label: string; value: string; onClear: () => void }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--fia-cyan)] pl-2 pr-1 py-0.5 text-[10px] font-semibold text-white">
-      <span className="opacity-70">{label}:</span>
-      <span className="max-w-[120px] truncate">{value}</span>
-      <button type="button" onClick={onClear} className="rounded-full p-0.5 hover:bg-white/20 transition" aria-label={`Clear ${label}`}>
-        <X size={9} />
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1A1C6E] pl-2.5 pr-1.5 py-1 text-[10px] font-semibold text-white shadow-sm">
+      <span className="opacity-60">{label}:</span>
+      <span className="max-w-[110px] truncate">{value}</span>
+      <button
+        type="button"
+        onClick={onClear}
+        className="ml-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/30"
+        aria-label={`Clear ${label}`}
+      >
+        <X size={8} />
       </button>
     </span>
   );
@@ -223,38 +254,50 @@ function LeadershipFilters({
   if (filters.status) activeFilters.push({ key: "status", label: "Status", value: analytics.filterOptions.statuses.find((o) => o.value === filters.status)?.label ?? filters.status });
   if (filters.templateFamily) activeFilters.push({ key: "templateFamily", label: "Template", value: analytics.filterOptions.templateFamilies.find((o) => o.value === filters.templateFamily)?.label ?? filters.templateFamily });
 
+  const hasActive = activeFilters.length > 0;
+
   return (
-    <div className="rounded-2xl border border-[var(--fia-gray-200)] bg-[var(--card)] shadow-sm">
-      {/* Single-row scrollable filter bar */}
-      <div className="flex items-center gap-1.5 overflow-x-auto px-3 py-2 scrollbar-none" style={{ scrollbarWidth: "none" }}>
-        <div className="flex shrink-0 items-center gap-1 mr-0.5">
-          <SlidersHorizontal size={12} className="text-[var(--fia-gray-400)]" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--fia-gray-400)]">Filters</span>
+    <div className={`rounded-2xl border bg-[var(--card)] shadow-sm transition-all ${hasActive ? "border-[#1A1C6E]/25" : "border-[var(--fia-gray-200)]"}`}>
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2 px-3.5 py-2.5">
+        {/* Label */}
+        <div className="flex shrink-0 items-center gap-1.5 mr-1">
+          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[var(--fia-gray-100)]">
+            <SlidersHorizontal size={11} className="text-[var(--fia-gray-500)]" />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--fia-gray-400)]">Filter</span>
         </div>
+
+        {/* Divider */}
+        <div className="h-4 w-px bg-[var(--fia-gray-200)] shrink-0" />
 
         <InlineFilter
           value={filters.datePreset === "all" ? "" : filters.datePreset}
           options={analytics.filterOptions.datePresets.filter((o) => o.value !== "all").map((o) => ({ value: o.value, label: o.label }))}
           onChange={(value) => onChange("datePreset", value || "all")}
           allLabel="All time"
+          icon={<Clock3 size={10} />}
         />
         <InlineFilter
           value={filters.scopeTrack}
           options={analytics.filterOptions.scopeTracks.map((o) => ({ value: o.value, label: o.label }))}
           onChange={(value) => onChange("scopeTrack", value)}
           allLabel="Track"
+          icon={<Layers3 size={10} />}
         />
         <InlineFilter
           value={filters.wingId}
           options={analytics.filterOptions.wings.map((o) => ({ value: o.id, label: o.label }))}
           onChange={(value) => onChange("wingId", value)}
           allLabel="Wing"
+          icon={<Landmark size={10} />}
         />
         <InlineFilter
           value={filters.regionId}
           options={analytics.filterOptions.regions.map((o) => ({ value: o.id, label: o.label }))}
           onChange={(value) => onChange("regionId", value)}
           allLabel="Region"
+          icon={<Filter size={10} />}
         />
         <InlineFilter
           value={filters.zoneId}
@@ -273,29 +316,32 @@ function LeadershipFilters({
           options={analytics.filterOptions.statuses.map((o) => ({ value: o.value, label: o.label }))}
           onChange={(value) => onChange("status", value)}
           allLabel="Status"
+          icon={<BarChart3 size={10} />}
         />
         <InlineFilter
           value={filters.templateFamily}
           options={analytics.filterOptions.templateFamilies.map((o) => ({ value: o.value, label: o.label }))}
           onChange={(value) => onChange("templateFamily", value)}
           allLabel="Form"
+          icon={<ClipboardCheck size={10} />}
         />
 
-        {activeFilters.length > 0 ? (
+        {hasActive ? (
           <button
             type="button"
             onClick={onReset}
-            className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-[5px] text-[10px] font-semibold text-[var(--fia-gray-500)] transition hover:bg-[var(--fia-gray-100)] hover:text-[var(--fia-gray-700)]"
+            className="ml-auto shrink-0 inline-flex items-center gap-1.5 rounded-full border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] px-2.5 py-1 text-[10px] font-semibold text-[var(--fia-gray-500)] transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           >
             <RefreshCw size={9} className={pending ? "animate-spin" : ""} />
-            Clear
+            Reset
           </button>
         ) : null}
       </div>
 
-      {/* Active chips — only appears when filters are applied */}
-      {activeFilters.length > 0 ? (
-        <div className="flex items-center gap-1.5 overflow-x-auto border-t border-[var(--fia-gray-200)] px-3 py-1.5 scrollbar-none" style={{ scrollbarWidth: "none" }}>
+      {/* Active chips row — only when filters are applied */}
+      {hasActive ? (
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-[#1A1C6E]/10 bg-[#1A1C6E]/[0.03] px-3.5 py-2">
+          <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#1A1C6E]/50 mr-1">Active:</span>
           {activeFilters.map((chip) => (
             <ActiveChip key={chip.key} label={chip.label} value={chip.value} onClear={() => onChange(chip.key, "")} />
           ))}
@@ -308,31 +354,64 @@ function LeadershipFilters({
   );
 }
 
+const kpiQueueLinks: Record<string, string> = {
+  overdue:  "/queue?overdue=true",
+  priority: "/queue?priority=true",
+  pending:  "/queue",
+};
+
 function LeadershipKpiGrid({ kpis, trendCard }: { kpis: DashboardKpi[]; trendCard?: DashboardTrendCard }) {
-  // Build per-kpi sparkline from trend points when available
+  const router = useRouter();
+  // Map KPI keys → trend series keys so every card gets a sparkline
+  const sparklineKeyMap: Record<string, string> = {
+    total:          "initiated",
+    completed:      "completed",
+    pending:        "pending",
+    overdue:        "overdue",
+    archived:       "cumulativeArchived",
+    returned:       "pending",    // proxy — closest signal
+    priority:       "overdue",    // proxy — exception signal
+    completionRate: "completed",
+    turnaround:     "completed",
+    avgTurnaround:  "archived",
+    today:          "archived",
+    week:           "archived",
+    month:          "archived",
+    anomalies:      "overdue",
+    downloads:      "archived",
+  };
+
   function sparklineFor(key: string): number[] | undefined {
     if (!trendCard || trendCard.points.length < 2) return undefined;
-    const seriesKey = trendCard.series.find((s) => s.key === key)?.key;
+    const resolvedKey = sparklineKeyMap[key] ?? key;
+    const seriesKey = trendCard.series.find((s) => s.key === resolvedKey)?.key;
     if (!seriesKey) return undefined;
-    return trendCard.points.map((p) => Number(p[seriesKey as keyof DashboardTrendPoint] ?? 0));
+    return trendCard.points.map((p) => Number((p as unknown as Record<string, unknown>)[seriesKey] ?? 0));
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {kpis.map((kpi) => {
-        const Icon = kpiIcons[kpi.key] ?? BarChart3;
-        return (
-          <StatCard
-            key={kpi.key}
-            title={kpi.label}
-            value={formatNumber(kpi.value)}
-            subtitle={kpi.helper}
-            icon={<Icon size={18} />}
-            accent={metricTone(kpi.key)}
-            sparkline={sparklineFor(kpi.key)}
-          />
-        );
-      })}
+    <div className="overflow-x-auto pb-1">
+      <div
+        className="grid gap-3"
+        style={{ gridTemplateColumns: `repeat(${kpis.length}, minmax(140px, 1fr))` }}
+      >
+        {kpis.map((kpi) => {
+          const Icon = kpiIcons[kpi.key] ?? BarChart3;
+          return (
+            <StatCard
+              key={kpi.key}
+              title={kpi.label}
+              value={formatNumber(kpi.value)}
+              subtitle={kpi.helper}
+              icon={<Icon size={13} />}
+              accent={metricTone(kpi.key)}
+              sparkline={sparklineFor(kpi.key)}
+              size="compact"
+              onClick={kpiQueueLinks[kpi.key] ? () => router.push(kpiQueueLinks[kpi.key]) : undefined}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -397,7 +476,7 @@ function TrendExplorer({ card }: { card: DashboardTrendCard }) {
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                 active
                   ? "border-transparent text-white"
-                  : "border-[var(--fia-gray-200)] bg-white text-[var(--fia-gray-700)]"
+                  : "border-[var(--fia-gray-200)] bg-[var(--card)] text-[var(--fia-gray-700)]"
               }`}
               style={active ? { background: chartLegendColor(series.color) } : undefined}
             >
@@ -408,7 +487,7 @@ function TrendExplorer({ card }: { card: DashboardTrendCard }) {
         })}
       </div>
 
-      <div className="rounded-[22px] border border-[var(--fia-gray-100)] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFCFE_100%)] p-4">
+      <div className="rounded-[22px] border border-[var(--fia-gray-100)] bg-[var(--card)] dark:bg-[var(--card)] p-4">
         <svg
           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
           className="h-[260px] w-full"
@@ -475,7 +554,7 @@ function TrendExplorer({ card }: { card: DashboardTrendCard }) {
         </svg>
 
         {hoveredPoint ? (
-          <div className="mt-3 flex flex-wrap items-start justify-between gap-3 rounded-[18px] border border-[var(--fia-gray-100)] bg-white px-4 py-3">
+          <div className="mt-3 flex flex-wrap items-start justify-between gap-3 rounded-[18px] border border-[var(--fia-gray-100)] bg-[var(--card)] px-4 py-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">Selected point</p>
               <p className="mt-1 text-sm font-semibold text-[var(--fia-gray-900)]">{hoveredPoint.label}</p>
@@ -543,7 +622,7 @@ function InteractiveDonut({
             );
           })}
         </svg>
-        <div className="absolute flex h-20 w-20 flex-col items-center justify-center rounded-full bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
+        <div className="absolute flex h-20 w-20 flex-col items-center justify-center rounded-full bg-[var(--card)] shadow-[var(--shadow-md)]">
           <span className="text-[1.15rem] font-semibold text-[var(--fia-gray-950)]">{formatNumber(total)}</span>
           <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--fia-gray-400)]">records</span>
         </div>
@@ -559,7 +638,7 @@ function InteractiveDonut({
               className={`flex w-full items-center justify-between rounded-[16px] border px-3 py-2.5 text-left transition ${
                 selected
                   ? "border-transparent bg-[var(--fia-navy-50)]"
-                  : "border-[var(--fia-gray-200)] bg-white hover:bg-[var(--fia-gray-50)]"
+                  : "border-[var(--fia-gray-200)] bg-[var(--card)] hover:bg-[var(--fia-gray-50)]"
               }`}
             >
               <span className="flex items-center gap-2.5">
@@ -612,7 +691,7 @@ function ComparisonBars({
           const active = selectedId === entry.id;
 
           return (
-            <div key={entry.id} className={`rounded-[18px] border px-4 py-3 transition ${active ? "border-transparent bg-[var(--fia-navy-50)]" : "border-[var(--fia-gray-200)] bg-white"}`}>
+            <div key={entry.id} className={`rounded-[18px] border px-4 py-3 transition ${active ? "border-transparent bg-[var(--fia-navy-50)]" : "border-[var(--fia-gray-200)] bg-[var(--card)]"}`}>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
@@ -691,7 +770,7 @@ function MetricList({
             className={`block w-full rounded-[18px] border px-4 py-3 text-left transition ${
               active
                 ? "border-transparent bg-[var(--fia-navy-50)]"
-                : "border-[var(--fia-gray-200)] bg-white hover:bg-[var(--fia-gray-50)]"
+                : "border-[var(--fia-gray-200)] bg-[var(--card)] hover:bg-[var(--fia-gray-50)]"
             }`}
           >
             <div className="mb-2 flex items-start justify-between gap-3">
@@ -745,7 +824,7 @@ function HeatmapMatrix({
                 className={`rounded-[16px] border px-4 py-3 text-left transition ${
                   selectedId === row.id
                     ? "border-transparent bg-[var(--fia-navy-50)]"
-                    : "border-[var(--fia-gray-200)] bg-white hover:bg-[var(--fia-gray-50)]"
+                    : "border-[var(--fia-gray-200)] bg-[var(--card)] hover:bg-[var(--fia-gray-50)]"
                 }`}
               >
                 <p className="text-sm font-semibold text-[var(--fia-gray-900)]">{row.label}</p>
@@ -871,6 +950,7 @@ function LeadershipFocusTable({
 export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
   const [isPending, startTransition] = useTransition();
   const [filters, setFilters] = useState<DashboardFilterState>(() => buildInitialFilters(session));
+  const [mainTab, setMainTab] = useState<"overview" | "analytics" | "region" | "focus">("overview");
   const [trendView, setTrendView] = useState<"workload" | "archive">("workload");
   const [distributionView, setDistributionView] = useState<"status" | "template" | "exceptions">("status");
   const [comparisonView, setComparisonView] = useState<"wing" | "region" | "zone" | "offices">("wing");
@@ -893,6 +973,12 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
       templateFamily: deferredFilters.templateFamily || undefined,
     }),
     placeholderData: (previous) => previous,
+  });
+
+  const heatmapQuery = useQuery({
+    queryKey: ["dashboard-heatmap"],
+    queryFn: getDashboardHeatmap,
+    staleTime: 5 * 60 * 1000,
   });
 
   const analytics = analyticsQuery.data;
@@ -923,8 +1009,67 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
     });
   }
 
+  // ── Derived data for advanced charts — must be declared before early returns ─
+  // Unit Performance Radar — top 4 wings mapped to 5 axes
+  const radarSeries = useMemo(() => {
+    const wings = (analytics?.performance.wing ?? []).filter((w) => w.total > 0).slice(0, 4);
+    if (wings.length === 0) return [];
+    const isSB = analytics?.mode === "secret-branch";
+    const maxTotal = Math.max(1, ...wings.map((w) => w.total));
+    return wings.map((w) => {
+      const completedCount = isSB ? (w.archived ?? 0) : (w.completed ?? 0);
+      const overdueCount   = isSB ? (w.anomalies ?? 0) : (w.overdue ?? 0);
+      const completionPct  = w.total > 0 ? Math.round((completedCount / w.total) * 100) : 0;
+      const lowOverduePct  = w.total > 0 ? Math.max(0, 100 - Math.round((overdueCount / w.total) * 100)) : 100;
+      return {
+        name: w.label,
+        values: [
+          completionPct,
+          Math.max(0, 100 - Math.min(100, (w.avgTurnaroundDays ?? 0) * 2)),
+          completionPct,
+          lowOverduePct,
+          Math.round((w.total / maxTotal) * 100),
+        ],
+      };
+    });
+  }, [analytics?.performance.wing, analytics?.mode]);
+
+  // Archive Waterfall — monthly deltas from cumulative archive trend
+  const waterfallData = useMemo(() => {
+    const pts = analytics?.trends.archive.points ?? [];
+    if (pts.length < 2) return [];
+    return pts.map((p, i, arr) => ({
+      label: p.label,
+      value: p.cumulativeArchived - (i > 0 ? arr[i - 1].cumulativeArchived : 0),
+      cumulative: p.cumulativeArchived,
+    }));
+  }, [analytics?.trends.archive.points]);
+
+  // Officer Workload Bubble — aggregate focus items by holder
+  const bubbleData = useMemo(() => {
+    const now = new Date();
+    const grouped = new Map<string, { name: string; role: string; queueDepth: number; daysSinceOldest: number; overdueCount: number }>();
+    (analytics?.focus.items ?? []).forEach((item: AcrSummary) => {
+      const holderKey = item.currentHolderName ?? item.currentHolderId ?? null;
+      if (!holderKey) return;
+      const existing = grouped.get(holderKey) ?? {
+        name: holderKey,
+        role: item.currentHolderRole ?? "UNKNOWN",
+        queueDepth: 0,
+        daysSinceOldest: 0,
+        overdueCount: 0,
+      };
+      existing.queueDepth += 1;
+      const age = Math.round((now.getTime() - new Date(item.initiatedDate).getTime()) / 86_400_000);
+      existing.daysSinceOldest = Math.max(existing.daysSinceOldest, age);
+      if (item.isOverdue) existing.overdueCount += 1;
+      grouped.set(holderKey, existing);
+    });
+    return Array.from(grouped.values());
+  }, [analytics?.focus.items]);
+
   if (analyticsQuery.isLoading && !analytics) {
-    return <div className="p-6 text-sm text-[var(--fia-gray-500)]">Loading dashboard analytics...</div>;
+    return <DashboardSkeleton />;
   }
 
   if (analyticsQuery.isError || !analytics) {
@@ -985,9 +1130,9 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
             <div className="flex items-center gap-0.5 rounded-full border border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] p-0.5">
               {[
                 { value: "all", label: "All time" },
-                { value: "ytd", label: "YTD" },
-                { value: "last90", label: "90d" },
-                { value: "last30", label: "30d" },
+                { value: "fy", label: "This FY" },
+                { value: "90d", label: "90d" },
+                { value: "30d", label: "30d" },
               ].map((preset) => (
                 <button
                   key={preset.value}
@@ -1003,10 +1148,6 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
                 </button>
               ))}
             </div>
-            <Link href="/archive" className="fia-btn-primary">
-              <Archive size={16} />
-              {analytics.mode === "secret-branch" ? "Open archive register" : "Review archive"}
-            </Link>
           </div>
         )}
       />
@@ -1019,211 +1160,394 @@ export function LeadershipDashboard({ session }: LeadershipDashboardProps) {
         pending={isPending || analyticsQuery.isFetching}
       />
 
-      <LeadershipKpiGrid kpis={analytics.kpis} trendCard={analytics.trends.workload} />
-
-      {/* Pipeline + Insights row */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
-        <WorkflowPipeline
-          stages={(() => {
-            const kv = (key: string) => Number(analytics.kpis.find((k) => k.key === key)?.value ?? 0);
-            const sv = (match: string) => analytics.distributions.status.find((d) => d.label.includes(match))?.value ?? 0;
-            return [
-              { label: "Draft", count: kv("draft") || sv("Draft"), color: "#94A3B8" },
-              { label: "Admin Office", count: kv("adminForwarding") || sv("Admin"), color: "#8B5CF6" },
-              { label: "Reporting", count: kv("pendingRO") || sv("Reporting"), color: "#F59E0B" },
-              { label: "Countersigning", count: kv("pendingCSO") || sv("Countersigning"), color: "#3B82F6" },
-              { label: "Secret Branch", count: kv("pendingSB") || sv("Secret"), color: "#0EA5E9" },
-              { label: "Archived", count: kv("archived") || sv("Archived") || sv("Completed"), color: "#10B981" },
-            ];
-          })()}
-        />
-        <InsightsPanel kpis={analytics.kpis} mode={analytics.mode} />
+      {/* ── Main tab navigation ── */}
+      <div className="flex gap-1 rounded-2xl border border-[var(--fia-gray-200)] bg-[var(--fia-gray-100)] p-1">
+        {([
+          { key: "overview",  label: "Overview" },
+          { key: "analytics", label: "Analytics" },
+          { key: "region",    label: "By Region" },
+          { key: "focus",     label: "Exception Focus" },
+        ] as const).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setMainTab(tab.key)}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-150 ${
+              mainTab === tab.key
+                ? "bg-[var(--fia-navy)] text-white shadow-md"
+                : "text-[var(--fia-gray-500)] hover:bg-[var(--fia-gray-100)] hover:text-[var(--fia-gray-900)] hover:shadow-sm"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Charts Row: Area Trend + Pie + Lollipop */}
-      <div className="grid gap-4 xl:grid-cols-3">
-        <TrendAreaChart
-          title="ACR Activity Trend"
-          subtitle={trendCard.subtitle}
-          data={trendCard.points as unknown as Array<{ label: string; [key: string]: string | number | null | undefined }>}
-          series={trendCard.series.map((s) => ({ key: s.key, label: s.label, color: s.color }))}
-        />
-        <StatusPieChart
-          title="Status Distribution"
-          data={analytics.distributions.status.map((d) => ({ label: d.label, value: d.value }))}
-        />
-        <TurnaroundLollipop
-          title="Avg Turnaround by Stage"
-          data={analytics.performance.turnaroundByStage}
-        />
-      </div>
+      {/* ══════════════════════════ OVERVIEW TAB ══════════════════════════ */}
+      {mainTab === "overview" && (
+        <>
+          <LeadershipKpiGrid kpis={analytics.kpis} trendCard={analytics.trends.workload} />
 
-      {/* Performance Bar Charts Row */}
-      <div className="grid gap-4 xl:grid-cols-2">
-        <PerformanceBarChart
-          title="Wing-wise Performance"
-          subtitle="Completed vs Pending vs Overdue by Wing"
-          data={analytics.performance.wing.map((w) => ({
-            label: w.label,
-            total: w.total,
-            completed: w.completed ?? 0,
-            pending: w.pending ?? 0,
-            overdue: w.overdue ?? 0,
-          }))}
-        />
-        <PerformanceBarChart
-          title="Zone-wise Performance"
-          subtitle="Stacked breakdown by Zone"
-          data={analytics.performance.zone.slice(0, 8).map((z) => ({
-            label: z.label,
-            total: z.total,
-            completed: z.completed ?? 0,
-            pending: z.pending ?? 0,
-            overdue: z.overdue ?? 0,
-          }))}
-          layout="horizontal"
-        />
-      </div>
+          {/* Pipeline + Insights */}
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(240px,300px)]">
+            <WorkflowPipeline
+              stages={(() => {
+                const kv = (key: string) => Number(analytics.kpis.find((k) => k.key === key)?.value ?? 0);
+                const sv = (match: string) => analytics.distributions.status.find((d) => d.label.includes(match))?.value ?? 0;
+                return [
+                  { label: "Draft",          count: kv("draft")           || sv("Draft"),        color: "#94A3B8" },
+                  { label: "Admin Office",   count: kv("adminForwarding") || sv("Admin"),         color: "#8B5CF6" },
+                  { label: "Reporting",      count: kv("pendingRO")       || sv("Reporting"),     color: "#F59E0B" },
+                  { label: "Countersigning", count: kv("pendingCSO")      || sv("Countersigning"), color: "#3B82F6" },
+                  { label: "Secret Branch",  count: kv("pendingSB")       || sv("Secret"),        color: "#0EA5E9" },
+                  { label: "Archived",       count: kv("archived")        || sv("Archived") || sv("Completed"), color: "#10B981" },
+                ];
+              })()}
+            />
+            <InsightsPanel kpis={analytics.kpis} mode={analytics.mode} />
+          </div>
 
-      {/* Heatmap */}
-      {analytics.heatmap ? <HeatmapTable heatmap={analytics.heatmap} /> : null}
+          {/* KPI Gauges row — performance dials */}
+          <KpiGaugesRow kpis={analytics.kpis} mode={analytics.mode} distributions={analytics.distributions} />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]">
-        <PortalSurface
-          title={trendCard.title}
-          subtitle={trendCard.subtitle}
-          action={(
-            <SegmentedTabs
-              value={trendView}
-              onChange={(next) => setTrendView(next as "workload" | "archive")}
-              tabs={[
-                { key: "workload", label: analytics.mode === "secret-branch" ? "Inflow" : "Workload" },
-                { key: "archive", label: analytics.mode === "secret-branch" ? "Activity" : "Archive" },
-              ]}
+          {/* Charts row: Trend + Status Donut (equal halves) */}
+          <div className="grid gap-4 xl:grid-cols-2">
+            <EChartsAreaTrend
+              title="ACR Activity Trend"
+              subtitle={trendCard.subtitle}
+              data={trendCard.points as unknown as Array<{ label: string; [key: string]: string | number | null | undefined }>}
+              series={trendCard.series.map((s) => ({ key: s.key, label: s.label, color: s.color }))}
+              defaultSeries={trendCard.defaultSeries}
+              height={220}
             />
-          )}
-        >
-          <TrendExplorer card={trendCard} />
-        </PortalSurface>
-
-        <PortalSurface
-          title={distributionView === "status" ? "Status distribution" : distributionView === "template" ? "Template distribution" : analytics.mode === "secret-branch" ? "Receipt anomalies" : "Return-rate distribution"}
-          subtitle={distributionView === "status"
-            ? "Use the legend to filter the dashboard by the selected status."
-            : distributionView === "template"
-              ? "Template family mix across the current filter scope."
-              : analytics.mode === "secret-branch"
-                ? "Units with pending receipt anomalies after filtering."
-                : "Wings with the heaviest correction burden."}
-          action={(
-            <SegmentedTabs
-              value={distributionView}
-              onChange={(next) => setDistributionView(next as "status" | "template" | "exceptions")}
-              tabs={[
-                { key: "status", label: "Status" },
-                { key: "template", label: "Template" },
-                { key: "exceptions", label: analytics.mode === "secret-branch" ? "Anomalies" : "Return rate" },
-              ]}
+            <EChartsDonut
+              title="Status Distribution"
+              subtitle="Click a segment to filter"
+              data={analytics.distributions.status.map((d) => ({
+                key: d.filterValue ?? d.key ?? d.label,
+                label: d.label,
+                value: d.value,
+                filterValue: d.filterValue,
+              }))}
+              selectedKey={filters.status}
+              onSelect={(key) => updateFilter("status", key ?? "")}
+              height={220}
             />
-          )}
-        >
-          {distributionView === "status" || distributionView === "template" ? (
-            <InteractiveDonut
-              items={distributionItems as DashboardDistributionItem[]}
-              activeValue={distributionView === "status" ? filters.status : filters.templateFamily}
-              onSelect={(value) => updateFilter(distributionView === "status" ? "status" : "templateFamily", value ?? "")}
-            />
-          ) : (
-            <MetricList
-              entries={distributionItems as Array<{ id?: string; label: string; value: number; meta?: string }>}
-              emptyTitle="No exception data"
-              emptyDescription="No units stand out for this exception view under the current filters."
-              formatter={(value) => analytics.mode === "secret-branch" ? `${value}` : `${value}%`}
-              selectedId={analytics.mode === "secret-branch" ? filters.officeId : filters.wingId}
-              onSelect={(value) => updateFilter(analytics.mode === "secret-branch" ? "officeId" : "wingId", value ?? "")}
-            />
-          )}
-        </PortalSurface>
-      </div>
-
-      <div className={`grid gap-4 ${analytics.mode === "executive" ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]" : "xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]"}`}>
-        <PortalSurface
-          title={comparisonView === "wing"
-            ? `${analytics.mode === "secret-branch" ? "Wing contribution" : "Wing performance"}`
-            : comparisonView === "region"
-              ? `${analytics.mode === "secret-branch" ? "Region contribution" : "Region performance"}`
-              : comparisonView === "zone"
-                ? `${analytics.mode === "secret-branch" ? "Zone contribution" : "Zone performance"}`
-                : analytics.mode === "secret-branch" ? "Top contributing units" : "Office backlog"}
-          subtitle={comparisonView === "offices"
-            ? analytics.mode === "secret-branch"
-              ? "Offices contributing the highest final archive volume."
-              : "Offices carrying the heaviest backlog and exception load."
-            : "Click a row label to narrow the dashboard to that organization unit."}
-          action={(
-            <SegmentedTabs
-              value={comparisonView}
-              onChange={(next) => setComparisonView(next as "wing" | "region" | "zone" | "offices")}
-              tabs={[
-                { key: "wing", label: "Wing" },
-                { key: "region", label: "Region" },
-                { key: "zone", label: "Zone" },
-                { key: "offices", label: analytics.mode === "secret-branch" ? "Top units" : "Offices" },
-              ]}
-            />
-          )}
-        >
-          <ComparisonBars
-            entries={comparisonEntries}
-            metrics={analytics.mode === "secret-branch"
-              ? [
-                  { key: "archived", label: "Archived", color: "green" },
-                  { key: "anomalies", label: "Pending receipt", color: "red" },
-                ]
-              : [
-                  { key: "pending", label: "Pending", color: "cyan" },
-                  { key: "completed", label: "Completed", color: "green" },
-                  { key: "overdue", label: "Overdue", color: "red" },
-                ]}
-            selectedId={comparisonView === "wing" ? filters.wingId : comparisonView === "region" ? filters.regionId : comparisonView === "zone" ? filters.zoneId : filters.officeId}
-            onSelect={(id) => updateFilter(comparisonView === "wing" ? "wingId" : comparisonView === "region" ? "regionId" : comparisonView === "zone" ? "zoneId" : "officeId", id ?? "")}
-            valueFormatter={(entry) => analytics.mode === "secret-branch"
-              ? `${entry.archived ?? 0} archived · ${entry.anomalies ?? 0} pending receipt`
-              : `${entry.completionRate ?? 0}% completion · ${entry.avgTurnaroundDays ?? 0}d turnaround`}
+          </div>
+          <TurnaroundLollipop
+            title="Avg Turnaround by Stage"
+            data={analytics.performance.turnaroundByStage}
           />
-        </PortalSurface>
 
-        <PortalSurface
-          title={analytics.mode === "secret-branch" ? "Source flow" : "Average turnaround by stage"}
-          subtitle={analytics.mode === "secret-branch"
-            ? "Final packets grouped by reporting route into Secret Branch."
-            : "Approximate elapsed time from stage hand-off to completion."}
-        >
-          {analytics.mode === "secret-branch" ? (
-            <InteractiveDonut items={analytics.distributions.sourceFlow ?? []} />
-          ) : (
-            <MetricList
-              entries={turnaroundItems}
-              emptyTitle="No turnaround data"
-              emptyDescription="Completed records are required before turnaround metrics can be shown."
-              formatter={(value) => `${value}d`}
-            />
+        </>
+      )}
+
+      {/* ══════════════════════════ ANALYTICS TAB ══════════════════════════ */}
+      {mainTab === "analytics" && (
+        <>
+          {/* Radar + Waterfall + Bubble — advanced analytics */}
+          {(radarSeries.length > 0 || waterfallData.length > 0 || bubbleData.length > 0) && (
+            <div className="grid gap-4 xl:grid-cols-3">
+              {radarSeries.length > 0 ? (
+                <UnitPerformanceRadar title="Wing Performance Radar" series={radarSeries} />
+              ) : null}
+              {waterfallData.length > 0 ? (
+                <ArchiveWaterfall title="Archive Growth (Monthly)" data={waterfallData} />
+              ) : null}
+              {bubbleData.length > 0 ? (
+                <OfficerWorkloadBubble title="Officer Workload" data={bubbleData} />
+              ) : null}
+            </div>
           )}
-        </PortalSurface>
-      </div>
 
-      {analytics.heatmap ? (
-        <PortalSurface title={analytics.heatmap.title} subtitle={analytics.heatmap.subtitle}>
-          <HeatmapMatrix heatmap={analytics.heatmap} selectedId={filters.wingId} onSelect={(id) => updateFilter("wingId", id ?? "")} />
-        </PortalSurface>
-      ) : null}
+          {/* Performance — ECharts stacked bars */}
+          <div className="grid gap-4 xl:grid-cols-2">
+            <EChartsStackedBar
+              title="Wing-wise Performance"
+              subtitle={analytics.mode === "secret-branch" ? "Archived vs Pending vs Anomalies by Wing" : "Completed vs Pending vs Overdue by Wing"}
+              data={analytics.performance.wing.map((w) => ({
+                label: w.label,
+                id: w.id,
+                completed: analytics.mode === "secret-branch" ? (w.archived ?? 0) : (w.completed ?? 0),
+                pending: analytics.mode === "secret-branch"
+                  ? Math.max(0, w.total - (w.archived ?? 0) - (w.anomalies ?? 0))
+                  : (w.pending ?? 0),
+                overdue: analytics.mode === "secret-branch" ? (w.anomalies ?? 0) : (w.overdue ?? 0),
+              }))}
+              selectedId={filters.wingId}
+              onSelect={(id) => updateFilter("wingId", id ?? "")}
+            />
+            <EChartsStackedBar
+              title="Zone-wise Performance"
+              subtitle={analytics.mode === "secret-branch" ? "Archive breakdown by Zone" : "Stacked breakdown by Zone"}
+              data={analytics.performance.zone.slice(0, 8).map((z) => ({
+                label: z.label,
+                id: z.id,
+                completed: analytics.mode === "secret-branch" ? (z.archived ?? 0) : (z.completed ?? 0),
+                pending: analytics.mode === "secret-branch"
+                  ? Math.max(0, z.total - (z.archived ?? 0) - (z.anomalies ?? 0))
+                  : (z.pending ?? 0),
+                overdue: analytics.mode === "secret-branch" ? (z.anomalies ?? 0) : (z.overdue ?? 0),
+              }))}
+              selectedId={filters.zoneId}
+              onSelect={(id) => updateFilter("zoneId", id ?? "")}
+            />
+          </div>
 
-      <LeadershipFocusTable
-        title={analytics.focus.title}
-        subtitle={analytics.focus.subtitle}
-        items={analytics.focus.items}
-        mode={analytics.mode}
-      />
+          {/* Heatmap */}
+          {analytics.heatmap ? <HeatmapTable heatmap={analytics.heatmap} /> : null}
+
+          {/* Trend + Distribution */}
+          <div className="grid gap-4 xl:grid-cols-2">
+            {/* Left: ECharts area trend with view toggle */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--fia-gray-900)]">{trendCard.title}</h3>
+                  <p className="mt-0.5 text-[11px] text-[var(--fia-gray-500)]">{trendCard.subtitle}</p>
+                </div>
+                <SegmentedTabs
+                  value={trendView}
+                  onChange={(next) => setTrendView(next as "workload" | "archive")}
+                  tabs={[
+                    { key: "workload", label: analytics.mode === "secret-branch" ? "Inflow" : "Workload" },
+                    { key: "archive", label: analytics.mode === "secret-branch" ? "Activity" : "Archive" },
+                  ]}
+                />
+              </div>
+              <EChartsAreaTrend
+                data={trendCard.points as unknown as Array<{ label: string; [key: string]: string | number | null | undefined }>}
+                series={trendCard.series.map((s) => ({ key: s.key, label: s.label, color: s.color }))}
+                defaultSeries={trendCard.defaultSeries}
+                height={240}
+              />
+            </div>
+
+            {/* Right: distribution donut / exceptions list */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--fia-gray-900)]">
+                    {distributionView === "status" ? "Status distribution" : distributionView === "template" ? "Template distribution" : analytics.mode === "secret-branch" ? "Receipt anomalies" : "Return-rate distribution"}
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-[var(--fia-gray-500)]">
+                    {distributionView === "status"
+                      ? "Click a segment to filter the dashboard."
+                      : distributionView === "template"
+                        ? "Template family mix across the current filter scope."
+                        : analytics.mode === "secret-branch"
+                          ? "Units with pending receipt anomalies after filtering."
+                          : "Wings with the heaviest correction burden."}
+                  </p>
+                </div>
+                <SegmentedTabs
+                  value={distributionView}
+                  onChange={(next) => setDistributionView(next as "status" | "template" | "exceptions")}
+                  tabs={[
+                    { key: "status", label: "Status" },
+                    { key: "template", label: "Template" },
+                    { key: "exceptions", label: analytics.mode === "secret-branch" ? "Anomalies" : "Return rate" },
+                  ]}
+                />
+              </div>
+              {distributionView === "status" || distributionView === "template" ? (
+                <EChartsDonut
+                  data={(distributionItems as DashboardDistributionItem[]).map((d) => ({
+                    key: d.filterValue ?? d.key ?? d.label,
+                    label: d.label,
+                    value: d.value,
+                    filterValue: d.filterValue,
+                  }))}
+                  selectedKey={distributionView === "status" ? filters.status : filters.templateFamily}
+                  onSelect={(key) => updateFilter(distributionView === "status" ? "status" : "templateFamily", key ?? "")}
+                  height={240}
+                />
+              ) : (
+                <div className="rounded-2xl border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+                  <MetricList
+                    entries={distributionItems as Array<{ id?: string; label: string; value: number; meta?: string }>}
+                    emptyTitle="No exception data"
+                    emptyDescription="No units stand out for this exception view under the current filters."
+                    formatter={(value) => analytics.mode === "secret-branch" ? `${value}` : `${value}%`}
+                    selectedId={analytics.mode === "secret-branch" ? filters.officeId : filters.wingId}
+                    onSelect={(value) => updateFilter(analytics.mode === "secret-branch" ? "officeId" : "wingId", value ?? "")}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Comparison + Turnaround / Source flow */}
+          <div className="grid gap-4 xl:grid-cols-2">
+            {/* Left: ECharts horizontal bar comparison */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--fia-gray-900)]">
+                    {comparisonView === "wing"
+                      ? analytics.mode === "secret-branch" ? "Wing contribution" : "Wing performance"
+                      : comparisonView === "region"
+                        ? analytics.mode === "secret-branch" ? "Region contribution" : "Region performance"
+                        : comparisonView === "zone"
+                          ? analytics.mode === "secret-branch" ? "Zone contribution" : "Zone performance"
+                          : analytics.mode === "secret-branch" ? "Top contributing units" : "Office backlog"}
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-[var(--fia-gray-500)]">
+                    {comparisonView === "offices"
+                      ? analytics.mode === "secret-branch"
+                        ? "Offices contributing the highest final archive volume."
+                        : "Offices carrying the heaviest backlog and exception load."
+                      : "Click a bar to narrow the dashboard to that organisation unit."}
+                  </p>
+                </div>
+                <SegmentedTabs
+                  value={comparisonView}
+                  onChange={(next) => setComparisonView(next as "wing" | "region" | "zone" | "offices")}
+                  tabs={[
+                    { key: "wing",    label: "Wing" },
+                    { key: "region",  label: "Region" },
+                    { key: "zone",    label: "Zone" },
+                    { key: "offices", label: analytics.mode === "secret-branch" ? "Top units" : "Offices" },
+                  ]}
+                />
+              </div>
+              <EChartsHorizontalBar
+                data={comparisonEntries.map((e) => ({
+                  id: e.id,
+                  label: e.label,
+                  pending: e.pending ?? 0,
+                  completed: e.completed ?? 0,
+                  overdue: e.overdue ?? 0,
+                  archived: e.archived ?? 0,
+                  anomalies: e.anomalies ?? 0,
+                }))}
+                metrics={analytics.mode === "secret-branch"
+                  ? [
+                      { key: "archived",  label: "Archived",       color: "#14B8A6" },
+                      { key: "anomalies", label: "Pending receipt", color: "#F43F5E" },
+                    ]
+                  : [
+                      { key: "completed", label: "Completed", color: "#0D9488" },
+                      { key: "pending",   label: "Pending",   color: "#4F46E5" },
+                      { key: "overdue",   label: "Overdue",   color: "#E11D48" },
+                    ]}
+                selectedId={comparisonView === "wing" ? filters.wingId : comparisonView === "region" ? filters.regionId : comparisonView === "zone" ? filters.zoneId : filters.officeId}
+                onSelect={(id) => updateFilter(comparisonView === "wing" ? "wingId" : comparisonView === "region" ? "regionId" : comparisonView === "zone" ? "zoneId" : "officeId", id ?? "")}
+                compact
+              />
+            </div>
+
+            {/* Right: source flow donut OR turnaround metric list */}
+            <div className="flex flex-col gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-[var(--fia-gray-900)]">
+                  {analytics.mode === "secret-branch" ? "Source flow" : "Avg turnaround by stage"}
+                </h3>
+                <p className="mt-0.5 text-[11px] text-[var(--fia-gray-500)]">
+                  {analytics.mode === "secret-branch"
+                    ? "Final packets grouped by reporting route into Secret Branch."
+                    : "Approximate elapsed time from stage hand-off to completion."}
+                </p>
+              </div>
+              {analytics.mode === "secret-branch" ? (
+                <EChartsDonut
+                  data={(analytics.distributions.sourceFlow ?? []).map((d) => ({
+                    key: d.filterValue ?? d.key ?? d.label,
+                    label: d.label,
+                    value: d.value,
+                    filterValue: d.filterValue,
+                  }))}
+                  height={240}
+                />
+              ) : (
+                <div className="rounded-2xl border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+                  <MetricList
+                    entries={turnaroundItems}
+                    emptyTitle="No turnaround data"
+                    emptyDescription="Completed records are required before turnaround metrics can be shown."
+                    formatter={(value) => `${value}d`}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ══════════════════════════ BY REGION TAB ══════════════════════════ */}
+      {mainTab === "region" && (
+        <>
+          {/* Live Leaflet map with city heatmap — overdue intensity */}
+          <FIAOperationsMap
+            title="FIA Operations Map — Overdue Intensity by Station City"
+            heatPoints={heatmapQuery.data}
+            height={360}
+          />
+
+          {/* Region + Zone ECharts horizontal bars */}
+          <div className="grid gap-4 xl:grid-cols-2">
+            <EChartsHorizontalBar
+              title="Region Performance"
+              subtitle="Completed vs Pending vs Overdue by Region"
+              data={analytics.performance.region.map((r) => ({
+                id: r.id,
+                label: r.label,
+                completed: r.completed ?? 0,
+                pending: r.pending ?? 0,
+                overdue: r.overdue ?? 0,
+              }))}
+              metrics={[
+                { key: "completed", label: "Completed", color: "#0D9488" },
+                { key: "pending",   label: "Pending",   color: "#4F46E5" },
+                { key: "overdue",   label: "Overdue",   color: "#E11D48" },
+              ]}
+              selectedId={filters.regionId}
+              onSelect={(id) => updateFilter("regionId", id ?? "")}
+              compact
+            />
+            <EChartsHorizontalBar
+              title="Zone Performance"
+              subtitle="Completed vs Pending vs Overdue by Zone"
+              data={analytics.performance.zone.slice(0, 12).map((z) => ({
+                id: z.id,
+                label: z.label,
+                completed: z.completed ?? 0,
+                pending: z.pending ?? 0,
+                overdue: z.overdue ?? 0,
+              }))}
+              metrics={[
+                { key: "completed", label: "Completed", color: "#0D9488" },
+                { key: "pending",   label: "Pending",   color: "#4F46E5" },
+                { key: "overdue",   label: "Overdue",   color: "#E11D48" },
+              ]}
+              selectedId={filters.zoneId}
+              onSelect={(id) => updateFilter("zoneId", id ?? "")}
+              compact
+            />
+          </div>
+
+          {/* Heatmap when in region tab */}
+          {analytics.heatmap ? (
+            <PortalSurface title={analytics.heatmap.title} subtitle={analytics.heatmap.subtitle}>
+              <HeatmapMatrix
+                heatmap={analytics.heatmap}
+                selectedId={filters.wingId}
+                onSelect={(id) => updateFilter("wingId", id ?? "")}
+              />
+            </PortalSurface>
+          ) : null}
+        </>
+      )}
+
+      {/* ══════════════════════════ FOCUS TAB ══════════════════════════ */}
+      {mainTab === "focus" && (
+        <LeadershipFocusTable
+          title={analytics.focus.title}
+          subtitle={analytics.focus.subtitle}
+          items={analytics.focus.items}
+          mode={analytics.mode}
+        />
+      )}
     </div>
   );
 }

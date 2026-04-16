@@ -26,7 +26,7 @@ export function usePermissions() {
       isSecretBranch: role === "SECRET_BRANCH",
       isEmployee: role === "EMPLOYEE",
       isDG: role === "DG",
-      canInitiateAcr: role === "CLERK" || isAdmin,
+      canInitiateAcr: role === "CLERK",
       canManageUsers: isAdmin,
       canViewAnalytics: isAdmin || role === "SECRET_BRANCH" || isOversight,
       canViewAuditLogs: isAdmin || role === "SECRET_BRANCH",

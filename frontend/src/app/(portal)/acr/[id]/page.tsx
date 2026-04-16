@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Download, FileText, Send, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Download, FileText, RotateCcw, Send, ShieldCheck, X } from "lucide-react";
 import { getAcrDetail, getEmployeeAcrDetail, transitionAcr, updateAcrFormData } from "@/api/client";
 import { upgradeInlineReplicaAssets } from "@/components/forms";
 import { AdverseRemarksPanel } from "@/components/AdverseRemarksPanel";
@@ -27,11 +27,17 @@ function createEmptyReplicaState(): AcrReplicaState {
 const actionButtonBase =
   "group inline-flex cursor-pointer items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 [&_svg]:transition-transform hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)] hover:[&_svg]:scale-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none";
 const actionButtonSecondary = `${actionButtonBase} border border-[var(--fia-border,#D8DEE8)] bg-white dark:bg-slate-800 dark:border-slate-700 text-[var(--fia-text-secondary,#475569)] dark:text-slate-300`;
-const actionButtonPrimary = `${actionButtonBase} bg-[var(--fia-navy,#1A1C6E)] text-white hover:bg-[var(--fia-navy-hover,#2D308F)]`;
-const actionButtonDanger = `${actionButtonBase} border border-[#FECACA] bg-[#FFF1F2] text-[#BE123C]`;
+const actionButtonPrimary = `${actionButtonBase} bg-gradient-to-r from-[#1A1C6E] to-[#2D308F] text-white shadow-[0_4px_14px_rgba(26,28,110,0.30)] hover:shadow-[0_6px_20px_rgba(26,28,110,0.40)] hover:from-[#2D308F] hover:to-[#3D40B0]`;
+const actionButtonDanger = `${actionButtonBase} bg-gradient-to-r from-[#BE123C] to-[#9F1239] text-white shadow-[0_4px_14px_rgba(190,18,60,0.28)] hover:shadow-[0_6px_20px_rgba(190,18,60,0.38)] hover:from-[#9F1239] hover:to-[#881337]`;
 
 function sanitizePdfFileName(value: string) {
   return value.replace(/[\\/:*?"<>|]+/g, "-").trim();
+}
+
+function getAvatarColor(name: string): string {
+  const palette = ["#1A1C6E","#0095D9","#7C3AED","#BE185D","#059669","#D97706","#0891B2","#DC2626","#7E22CE","#0369A1"];
+  const sum = name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return palette[sum % palette.length];
 }
 
 export default function AcrDetailPage() {
@@ -56,6 +62,8 @@ export default function AcrDetailPage() {
   const [workflowActionLocked, setWorkflowActionLocked] = useState(false);
   const [selectedDeskCode, setSelectedDeskCode] = useState<SecretBranchDeskCode | "">("");
   const [showDeskSelector, setShowDeskSelector] = useState(false);
+  const [pendingReturnAction, setPendingReturnAction] = useState<{ action: string; targetLabel: string } | null>(null);
+  const [returnNoteText, setReturnNoteText] = useState("");
 
   useEffect(() => {
     if (data?.formData?.replicaState) {
@@ -291,12 +299,12 @@ export default function AcrDetailPage() {
   if (error instanceof Error) {
     return (
       <div className="mx-auto flex max-w-3xl flex-col gap-4 p-5">
-        <div className="rounded-[24px] border border-[#FECACA] bg-[#FFF1F2] px-5 py-4">
-          <p className="text-base font-semibold text-[#991B1B]">This ACR is no longer available in your current workflow access.</p>
-          <p className="mt-1 text-sm text-[#B91C1C]">{error.message}</p>
+        <div className="rounded-[24px] border border-[var(--fia-danger-bg)] bg-[var(--fia-danger-bg)] px-5 py-4">
+          <p className="text-base font-semibold text-[var(--fia-danger)]">This ACR is no longer available in your current workflow access.</p>
+          <p className="mt-1 text-sm text-[var(--fia-danger)]">{error.message}</p>
         </div>
         <div>
-          <Link href="/queue" className="inline-flex items-center gap-2 rounded-2xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-[var(--card)] px-4 py-2.5 text-sm font-semibold text-[#475569] dark:text-slate-300">
+          <Link href="/queue" className="inline-flex items-center gap-2 rounded-2xl border border-[var(--fia-border)] bg-[var(--card)] px-4 py-2.5 text-sm font-semibold text-[var(--fia-text-secondary)]">
             <ArrowLeft size={16} />
             Back to Queue
           </Link>
@@ -354,21 +362,21 @@ export default function AcrDetailPage() {
     return (
       <div className="mx-auto flex max-w-screen-xl flex-col gap-5 p-5">
         <div className="flex items-start gap-3">
-          <Link href="/queue" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] text-[#6B7280] dark:text-slate-400 shadow-sm">
+          <Link href="/queue" className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--fia-gray-200)] bg-[var(--card)] text-[var(--fia-gray-500)] shadow-sm">
             <ArrowLeft size={18} />
           </Link>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[1.6rem] font-semibold text-[#111827] dark:text-slate-100">{data.acrNo}</h1>
+              <h1 className="text-[1.6rem] font-semibold text-[var(--fia-gray-900)]">{data.acrNo}</h1>
               <StatusChip status={data.status} />
             </div>
-            <p className="mt-1 text-sm text-[#64748B]">{data.reportingPeriod}</p>
+            <p className="mt-1 text-sm text-[var(--fia-text-secondary)]">{data.reportingPeriod}</p>
           </div>
         </div>
 
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
-            <h2 className="text-lg font-semibold text-[#111827] dark:text-slate-100">ACR metadata</h2>
+          <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-[var(--fia-gray-900)]">ACR metadata</h2>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {[
                 { label: "Name", value: data.employee.name },
@@ -385,17 +393,17 @@ export default function AcrDetailPage() {
                 { label: "Completed / archived", value: data.completedDate ?? data.archivedAt ?? "In progress" },
                 { label: "Restricted PDF retained", value: data.hasHistoricalPdf ? "Yes" : "No" },
               ].map((item) => (
-                <div key={item.label} className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">{item.label}</p>
-                  <p className="mt-2 text-sm font-medium text-[#111827] dark:text-slate-100">{item.value}</p>
+                <div key={item.label} className="rounded-2xl bg-[var(--fia-gray-50)] px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-text-secondary)]">{item.label}</p>
+                  <p className="mt-2 text-sm font-medium text-[var(--fia-gray-900)]">{item.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
-            <h2 className="text-lg font-semibold text-[#111827] dark:text-slate-100">Workflow history</h2>
-            <p className="mt-1 text-sm text-[#64748B]">Only non-confidential workflow metadata is visible here. Form contents, reporting remarks, and restricted internal comments remain hidden.</p>
+          <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-[var(--fia-gray-900)]">Workflow history</h2>
+            <p className="mt-1 text-sm text-[var(--fia-text-secondary)]">Only non-confidential workflow metadata is visible here. Form contents, reporting remarks, and restricted internal comments remain hidden.</p>
             <div className="mt-4">
               <Timeline items={timeline} />
             </div>
@@ -586,17 +594,20 @@ export default function AcrDetailPage() {
       />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <Link href="/queue" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] text-[#6B7280] dark:text-slate-400 shadow-sm">
+          <Link href="/queue" className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--fia-gray-200)] bg-[var(--card)] text-[var(--fia-gray-500)] shadow-sm">
             <ArrowLeft size={18} />
           </Link>
           <div>
+            <span className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--fia-navy-50)] px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--fia-navy-500)] dark:text-[var(--fia-cyan)]">
+              ACR Record
+            </span>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[1.75rem] font-semibold leading-tight text-[#111827] dark:text-slate-100">{data.acrNo}</h1>
+              <h1 className="text-[1.75rem] font-semibold leading-tight text-[var(--fia-gray-900)]">{data.acrNo}</h1>
               <StatusChip status={data.status} />
               {data.isPriority ? <PriorityBadge priority /> : null}
               {data.isOverdue ? <OverdueBadge days={data.overdueDays} /> : null}
             </div>
-            <p className="mt-0.5 text-sm text-[#6B7280] dark:text-slate-400">
+            <p className="mt-0.5 text-sm text-[var(--fia-text-secondary)]">
               {data.employee.name} · {data.employee.rank} · {data.reportingPeriod}
             </p>
           </div>
@@ -607,18 +618,18 @@ export default function AcrDetailPage() {
       {!compactFinalView ? (
       <div id="acr-overview" className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_340px]">
         <section className="space-y-4">
-          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">Employee Information</h2>
+          <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+            <div className="mb-4 -mx-4 -mt-4 rounded-t-[24px] px-4 py-3 bg-gradient-to-r from-[var(--fia-navy-50)] via-[var(--fia-gray-50)] to-transparent">
+              <h2 className="text-[1.15rem] font-semibold text-[var(--fia-gray-900)]">Employee Information</h2>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1A1C6E] text-lg font-semibold text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold text-white shadow-md" style={{ background: getAvatarColor(data.employee.name) }}>
                 {data.employee.name.charAt(0)}
               </div>
               <div>
-                <p className="text-[1.3rem] font-semibold text-[#111827] dark:text-slate-100">{data.employee.name}</p>
-                <p className="text-sm text-[#6B7280] dark:text-slate-400">
+                <p className="text-[1.3rem] font-semibold text-[var(--fia-gray-900)]">{data.employee.name}</p>
+                <p className="text-sm text-[var(--fia-text-secondary)]">
                   {data.employee.rank} · BPS-{data.employee.bps} · {data.employee.serviceYears} yrs service
                 </p>
               </div>
@@ -634,19 +645,19 @@ export default function AcrDetailPage() {
                 { label: "Posting", value: data.employee.posting },
               ].map((field) => (
                 <div key={field.label}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF] dark:text-slate-500">{field.label}</p>
-                  <p className="mt-1.5 text-base font-medium text-[#111827] dark:text-slate-100">{field.value}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">{field.label}</p>
+                  <p className="mt-1.5 text-base font-medium text-[var(--fia-gray-900)]">{field.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#EEF2FF] text-[#4B498C]">
+          <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+            <div className="mb-4 -mx-4 -mt-4 rounded-t-[24px] px-4 py-3 bg-gradient-to-r from-[var(--fia-navy-100)] via-[var(--fia-gray-50)] to-transparent flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--fia-navy-100)] text-[var(--fia-navy-500)]">
                 <FileText size={18} />
               </div>
-              <h2 className="text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">ACR Details</h2>
+              <h2 className="text-[1.15rem] font-semibold text-[var(--fia-gray-900)]">ACR Details</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               {[
@@ -661,8 +672,8 @@ export default function AcrDetailPage() {
                 { label: "Performance Score", value: data.performanceScore ? `${data.performanceScore}/100` : "Pending" },
               ].map((field) => (
                 <div key={field.label}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF] dark:text-slate-500">{field.label}</p>
-                  <p className={`mt-1.5 text-base font-medium ${field.label === "Performance Score" ? "text-[#0095D9]" : "text-[#111827] dark:text-slate-100"}`}>{field.value}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">{field.label}</p>
+                  <p className={`mt-1.5 text-base font-medium ${field.label === "Performance Score" ? "text-[var(--fia-cyan)]" : "text-[var(--fia-gray-900)]"}`}>{field.value}</p>
                 </div>
               ))}
             </div>
@@ -670,25 +681,28 @@ export default function AcrDetailPage() {
         </section>
 
         <aside className="space-y-4">
-          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
-            <h2 className="mb-4 text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">Workflow Timeline</h2>
+          <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+            <h2 className="mb-4 text-[1.15rem] font-semibold text-[var(--fia-gray-900)]">Workflow Timeline</h2>
             <Timeline items={timeline} />
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280] dark:text-slate-400">Due Date</p>
-            <p className="mt-2 text-[1.7rem] font-semibold text-[#111827] dark:text-slate-100">{data.dueDate}</p>
+          <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">Due Date</p>
+            <p className={`mt-2 text-[1.7rem] font-semibold ${data.isOverdue ? "text-[var(--fia-danger)]" : "text-[var(--fia-gray-900)]"}`}>{data.dueDate}</p>
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280] dark:text-slate-400">Workflow Progress</p>
+          <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">Workflow Progress</p>
             <div className="mt-3 space-y-2.5">
               {workflowProgress.map((step) => (
                 <div key={step.label} className="flex items-center gap-3 text-sm">
-                  <span className={`flex h-5 w-5 items-center justify-center rounded-full ${step.done ? "bg-green-100 text-green-600" : "bg-[#F4F6FB] dark:bg-slate-700 text-[#9CA3AF] dark:text-slate-500"}`}>
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center rounded-full ${step.done ? "text-white" : "bg-[var(--fia-gray-100)] text-[var(--fia-gray-400)]"}`}
+                    style={step.done ? { background: "linear-gradient(135deg,#22C55E,#16A34A)", boxShadow: "0 2px 8px rgba(34,197,94,0.3)" } : undefined}
+                  >
                     {step.done ? "✓" : ""}
                   </span>
-                  <span className={step.done ? "font-medium text-[#15803D]" : "text-[#6B7280] dark:text-slate-400"}>{step.label}</span>
+                  <span className={step.done ? "font-medium text-[var(--fia-success)]" : "text-[var(--fia-gray-500)]"}>{step.label}</span>
                 </div>
               ))}
             </div>
@@ -698,14 +712,14 @@ export default function AcrDetailPage() {
       ) : (
       <div id="acr-overview" className="space-y-4">
         <section className="space-y-4">
-          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
+          <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--fia-text-secondary)]">
                   {isSecretBranchView ? "Secret Branch Final Record" : "Executive Record Summary"}
                 </p>
-                <h2 className="mt-2 text-[1.35rem] font-semibold text-[#111827] dark:text-slate-100">{data.employee.name}</h2>
-                <p className="mt-1 text-sm text-[#64748B]">
+                <h2 className="mt-2 text-[1.35rem] font-semibold text-[var(--fia-gray-900)]">{data.employee.name}</h2>
+                <p className="mt-1 text-sm text-[var(--fia-text-secondary)]">
                   {data.employee.rank} · {data.employee.office} · {data.reportingPeriod}
                 </p>
               </div>
@@ -730,35 +744,38 @@ export default function AcrDetailPage() {
                 { label: "Wing", value: data.employee.wing },
                 { label: "Zone", value: data.employee.zone },
               ].map((field) => (
-                <div key={field.label} className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-3 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">{field.label}</p>
-                  <p className="mt-2 text-sm font-medium text-[#111827] dark:text-slate-100">{field.value}</p>
+                <div key={field.label} className="rounded-2xl bg-[var(--fia-gray-50)] px-3 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--fia-gray-400)]">{field.label}</p>
+                  <p className="mt-2 text-sm font-medium text-[var(--fia-gray-900)]">{field.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
+          <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
             <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-              <div className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280] dark:text-slate-400">Workflow Progress</p>
+              <div className="rounded-2xl bg-[var(--fia-gray-50)] px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">Workflow Progress</p>
                 <div className="mt-3 space-y-2">
                   {workflowProgress.map((step) => (
                     <div key={step.label} className="flex items-center gap-3 text-sm">
-                      <span className={`flex h-5 w-5 items-center justify-center rounded-full ${step.done ? "bg-green-100 text-green-600" : "bg-[#E2E8F0] text-[#94A3B8]"}`}>
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-full ${step.done ? "text-white" : "bg-[var(--fia-gray-100)] text-[var(--fia-gray-400)]"}`}
+                        style={step.done ? { background: "linear-gradient(135deg,#22C55E,#16A34A)", boxShadow: "0 2px 8px rgba(34,197,94,0.3)" } : undefined}
+                      >
                         {step.done ? "✓" : ""}
                       </span>
-                      <span className={step.done ? "font-medium text-[#15803D]" : "text-[#64748B]"}>{step.label}</span>
+                      <span className={step.done ? "font-medium text-[var(--fia-success)]" : "text-[var(--fia-text-secondary)]"}>{step.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-4 py-4">
+              <div className="rounded-2xl bg-[var(--fia-gray-50)] px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280] dark:text-slate-400">Workflow History</p>
-                    <p className="mt-1 text-sm text-[#64748B]">Final movement and archival history from the live backend record.</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-500)]">Workflow History</p>
+                    <p className="mt-1 text-sm text-[var(--fia-text-secondary)]">Final movement and archival history from the live backend record.</p>
                   </div>
                   <StatusChip status={data.status} />
                 </div>
@@ -771,18 +788,29 @@ export default function AcrDetailPage() {
       )}
 
       {actionError ? (
-        <div className="rounded-[18px] border border-[#FECACA] bg-[#FFF1F2] px-4 py-3 text-sm text-[#BE123C]">
+        <div className="rounded-[18px] border border-[var(--fia-danger-bg)] bg-[var(--fia-danger-bg)] px-4 py-3 text-sm text-[var(--fia-danger)]">
           {actionError}
         </div>
       ) : null}
 
-      {data.workflowState.startsWith("Returned") && (latestReturnEntry?.remarks || data.remarks) ? (
-        <div className="rounded-[20px] border border-[#FCD34D] bg-[#FFFBEB] px-4 py-3.5 text-sm text-[#92400E]">
-          <p className="font-semibold text-[#78350F]">Returned for correction</p>
-          <p className="mt-1 leading-6">{latestReturnEntry?.remarks ?? data.remarks}</p>
-          <p className="mt-2 text-xs text-[#A16207]">
-            Returned by {latestReturnEntry?.actor ?? "Workflow reviewer"} · {latestReturnEntry?.role ?? "Reviewer"} · {latestReturnEntry?.timestamp ?? "Recorded in workflow history"}
-          </p>
+      {(latestReturnEntry?.remarks || data.remarks) ? (
+        <div className={`rounded-[20px] px-4 py-3.5 text-sm ${
+          data.workflowState.startsWith("Returned")
+            ? "border border-[var(--fia-warning-bg)] bg-[var(--fia-warning-bg)] text-[var(--fia-warning)]"
+            : "border border-[var(--fia-navy-100)] bg-[var(--fia-navy-50)] text-[var(--fia-text-primary)]"
+        }`}>
+          <div className="flex items-start gap-2">
+            <RotateCcw size={15} className="mt-0.5 shrink-0" />
+            <div>
+              <p className={`font-semibold ${data.workflowState.startsWith("Returned") ? "text-[var(--fia-warning)]" : "text-[var(--fia-navy-500)]"}`}>
+                {data.workflowState.startsWith("Returned") ? "Returned for correction" : "Previously returned — correction note"}
+              </p>
+              <p className="mt-1 leading-6">{latestReturnEntry?.remarks ?? data.remarks}</p>
+              <p className={`mt-2 text-xs ${data.workflowState.startsWith("Returned") ? "text-[var(--fia-gray-600)]" : "text-[var(--fia-gray-600)]"}`}>
+                Returned by {latestReturnEntry?.actor ?? "Workflow reviewer"} · {latestReturnEntry?.role ?? "Reviewer"} · {latestReturnEntry?.timestamp ?? "Recorded in workflow history"}
+              </p>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -796,12 +824,12 @@ export default function AcrDetailPage() {
 
       {/* Secret Branch Verification Card */}
       {(data.secretBranch?.verifiedBy || data.secretBranch?.reviewedAt || canReviewAsSecretBranch || canVerifyAsSecretBranch) ? (
-        <div className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
+        <div className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#FEF3C7] text-[#D97706]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--fia-warning-bg)] text-[var(--fia-warning)]">
               <ShieldCheck size={18} />
             </div>
-            <h2 className="text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">Secret Branch Verification</h2>
+            <h2 className="text-[1.15rem] font-semibold text-[var(--fia-gray-900)]">Secret Branch Verification</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {[
@@ -813,31 +841,31 @@ export default function AcrDetailPage() {
               { label: "Status", value: data.secretBranch?.verifiedBy ? "Verified" : data.secretBranch?.reviewedAt ? "Pending AD Verification" : "Pending Review" },
             ].map((field) => (
               <div key={field.label}>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF] dark:text-slate-500">{field.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--fia-gray-400)]">{field.label}</p>
                 <p className={`mt-1.5 text-base font-medium ${
                   field.label === "Status"
-                    ? data.secretBranch?.verifiedBy ? "text-emerald-600" : "text-amber-600"
-                    : "text-[#111827] dark:text-slate-100"
+                    ? data.secretBranch?.verifiedBy ? "text-[var(--fia-success)]" : "text-[var(--fia-warning)]"
+                    : "text-[var(--fia-gray-900)]"
                 }`}>{field.value}</p>
               </div>
             ))}
           </div>
           {data.secretBranch?.verificationNotes ? (
-            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Verification Remarks</p>
-              <p className="mt-1 text-sm text-[#374151] dark:text-slate-300">{data.secretBranch.verificationNotes}</p>
+            <div className="mt-3 rounded-2xl border border-[var(--fia-success-bg)] bg-[var(--fia-success-bg)] px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Verification Remarks</p>
+              <p className="mt-1 text-sm text-[var(--fia-gray-700)]">{data.secretBranch.verificationNotes}</p>
             </div>
           ) : null}
         </div>
       ) : null}
 
       {compactFinalView ? (
-      <details id="digital-form-replica" className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] shadow-sm">
-        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-[#111827] dark:text-slate-100">
+      <details id="digital-form-replica" className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] shadow-sm">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-[var(--fia-gray-900)]">
           Digital Form Replica
         </summary>
-        <div className="border-t border-[#EEF2F7] p-4">
-          <div className="overflow-x-auto rounded-[20px] bg-[#EDF2F7] p-3">
+        <div className="border-t border-[var(--fia-gray-100)] p-4">
+          <div className="overflow-x-auto rounded-[20px] bg-[#EDF2F7] dark:bg-[#0F1117] p-3">
             <div ref={exportReplicaRef} className="mx-auto w-full max-w-[1120px]">
                 <FormPreview
                   templateFamily={data.templateFamily}
@@ -860,23 +888,23 @@ export default function AcrDetailPage() {
         </div>
       </details>
       ) : (
-      <section id="digital-form-replica" className="rounded-[24px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-[var(--card)] p-4 shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-[#EEF2F7] pb-3.5 sm:flex-row sm:items-start sm:justify-between">
+      <section id="digital-form-replica" className="rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] p-4 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-[var(--fia-gray-100)] pb-3.5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-[1.15rem] font-semibold text-[#111827] dark:text-slate-100">Digital Form Replica</h2>
+            <h2 className="text-[1.15rem] font-semibold text-[var(--fia-gray-900)]">Digital Form Replica</h2>
           </div>
           {workflowMeta?.lastEditedAt ? (
-            <div className="rounded-2xl bg-[#F8FAFC] dark:bg-slate-800 px-4 py-2.5 text-sm text-[#475569]">
-              <p className="font-semibold text-[#111827] dark:text-slate-100">Last saved</p>
+            <div className="rounded-2xl bg-[var(--fia-gray-50)] px-4 py-2.5 text-sm text-[var(--fia-text-secondary)]">
+              <p className="font-semibold text-[var(--fia-gray-900)]">Last saved</p>
               <p className="mt-1">
                 {workflowMeta.lastEditedBy ?? "System"}{workflowMeta.lastEditedRole ? ` • ${workflowMeta.lastEditedRole}` : ""}
               </p>
-              <p className="text-xs text-[#64748B]">{new Date(workflowMeta.lastEditedAt).toLocaleString("en-PK")}</p>
+              <p className="text-xs text-[var(--fia-gray-500)]">{new Date(workflowMeta.lastEditedAt).toLocaleString("en-PK")}</p>
             </div>
           ) : null}
         </div>
 
-        <div className="mt-4 overflow-x-auto rounded-[20px] bg-[#EDF2F7] p-3 sm:p-4 lg:p-5">
+        <div className="mt-4 overflow-x-auto rounded-[20px] bg-[#EDF2F7] dark:bg-[#0F1117] p-3 sm:p-4 lg:p-5">
           <div ref={exportReplicaRef} className="mx-auto w-full max-w-[1120px]">
               <FormPreview
                 templateFamily={data.templateFamily}
@@ -901,7 +929,7 @@ export default function AcrDetailPage() {
       </div>
 
       <section className="portal-floating-action-bar">
-        <div className="rounded-[24px] border border-[#D8DEE8] dark:border-slate-700 bg-white/96 dark:bg-[var(--card)]/96 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur">
+        <div className="rounded-[24px] border border-[var(--fia-border)] bg-[var(--card)]/96 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur">
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5 xl:justify-end">
@@ -926,7 +954,7 @@ export default function AcrDetailPage() {
                 type="button"
                 disabled={!formDirty || formBusy}
                 onClick={() => void persistFormIfNeeded()}
-                className={`${actionButtonSecondary} text-[#1A1C6E]`}
+                className={`${actionButtonSecondary} text-[var(--primary)]`}
               >
                 <FileText size={16} />
                 Save Form Changes
@@ -975,7 +1003,7 @@ export default function AcrDetailPage() {
                   <select
                     value={selectedDeskCode}
                     onChange={(e) => setSelectedDeskCode(e.target.value as SecretBranchDeskCode | "")}
-                    className="rounded-xl border border-[#D8DEE8] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-medium text-[#111827] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#1A1C6E]"
+                    className="rounded-xl border border-[var(--fia-border)] bg-[var(--card)] px-3 py-2 text-sm font-medium text-[var(--fia-gray-900)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                   >
                     <option value="">Select DA Desk</option>
                     <option value="DA1">DA1</option>
@@ -1033,14 +1061,10 @@ export default function AcrDetailPage() {
               <button
                 type="button"
                 disabled={formBusy}
-                onClick={() =>
-                  void handleWorkflowAction({
-                    action: "return_to_clerk",
-                    remarks: "Please review and correct the clerk section before resubmission.",
-                  })
-                }
+                onClick={() => { setPendingReturnAction({ action: "return_to_clerk", targetLabel: "Clerk" }); setReturnNoteText(""); }}
                 className={actionButtonDanger}
               >
+                <RotateCcw size={16} />
                 Return to Clerk
               </button>
             ) : null}
@@ -1048,14 +1072,10 @@ export default function AcrDetailPage() {
               <button
                 type="button"
                 disabled={formBusy}
-                onClick={() =>
-                  void handleWorkflowAction({
-                    action: "return_to_reporting",
-                    remarks: "Please review and correct the reporting section before resubmission.",
-                  })
-                }
+                onClick={() => { setPendingReturnAction({ action: "return_to_reporting", targetLabel: "Reporting Officer" }); setReturnNoteText(""); }}
                 className={actionButtonDanger}
               >
+                <RotateCcw size={16} />
                 Return to Reporting Officer
               </button>
             ) : null}
@@ -1063,14 +1083,10 @@ export default function AcrDetailPage() {
               <button
                 type="button"
                 disabled={formBusy}
-                onClick={() =>
-                  void handleWorkflowAction({
-                    action: "return_to_countersigning",
-                    remarks: "Please review and correct the countersigning section before resubmission.",
-                  })
-                }
+                onClick={() => { setPendingReturnAction({ action: "return_to_countersigning", targetLabel: "Countersigning Officer" }); setReturnNoteText(""); }}
                 className={actionButtonDanger}
               >
+                <RotateCcw size={16} />
                 Return to Countersigning Officer
               </button>
             ) : null}
@@ -1080,6 +1096,81 @@ export default function AcrDetailPage() {
         </div>
       </section>
       <div className="h-28" />
+
+      {/* Return Note Dialog */}
+      {pendingReturnAction ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(2px)" }}>
+          <div className="w-full max-w-md rounded-[24px] border border-[var(--fia-gray-200)] bg-[var(--card)] shadow-[0_24px_64px_rgba(15,23,42,0.22)] p-6">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--fia-danger-bg)] text-[var(--fia-danger)]">
+                  <RotateCcw size={18} />
+                </div>
+                <div>
+                  <p className="text-[1.05rem] font-semibold text-[var(--fia-gray-900)]">
+                    Return to {pendingReturnAction.targetLabel}
+                  </p>
+                  <p className="text-xs text-[var(--fia-text-secondary)]">
+                    {data.acrNo} · {data.employee.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingReturnAction(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--fia-gray-400)] hover:bg-[var(--fia-gray-100)]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--fia-danger-bg)] bg-[var(--fia-danger-bg)] px-3 py-2.5 text-xs text-[var(--fia-danger)] mb-4">
+              This ACR will be sent back to the <strong>{pendingReturnAction.targetLabel}</strong> for correction. All previously filled data will remain intact.
+            </div>
+
+            <div className="mb-4">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">
+                Return Note <span className="normal-case tracking-normal text-[var(--fia-danger)]">*</span>
+              </label>
+              <textarea
+                value={returnNoteText}
+                onChange={(e) => setReturnNoteText(e.target.value)}
+                placeholder={`Explain why this ACR is being returned to the ${pendingReturnAction.targetLabel}. This note will be visible to the recipient and recorded in the workflow history.`}
+                maxLength={2000}
+                rows={4}
+                className="w-full rounded-2xl border border-[var(--fia-border)] bg-[var(--fia-gray-50)] px-4 py-3 text-sm text-[var(--fia-gray-900)] placeholder:text-[var(--fia-gray-400)] focus:outline-none focus:ring-2 focus:ring-[var(--fia-danger-bg)] focus:border-[var(--fia-danger)] resize-none"
+              />
+              <p className="mt-1 text-right text-xs text-[var(--fia-gray-400)]">{returnNoteText.length} / 2000</p>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingReturnAction(null)}
+                className={actionButtonSecondary}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={returnNoteText.trim().length < 10 || formBusy}
+                onClick={() => {
+                  const action = pendingReturnAction;
+                  setPendingReturnAction(null);
+                  void handleWorkflowAction({ action: action.action, remarks: returnNoteText.trim() });
+                }}
+                className={actionButtonDanger}
+              >
+                <RotateCcw size={16} />
+                Confirm Return
+              </button>
+            </div>
+            {returnNoteText.trim().length > 0 && returnNoteText.trim().length < 10 ? (
+              <p className="mt-2 text-center text-xs text-[var(--fia-danger)]">Note must be at least 10 characters.</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

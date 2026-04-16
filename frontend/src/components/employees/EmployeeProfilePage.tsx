@@ -78,9 +78,9 @@ export function EmployeeProfilePage() {
             { label: "Countersigning Officer", value: profile.readOnlyFields.countersigningOfficer ?? "Not assigned" },
             { label: "Template Family", value: profile.templateFamily },
           ].map((item) => (
-            <div key={item.label} className="rounded-2xl border border-[#E2E8F0] bg-[#FBFCFE] px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">{item.label}</p>
-              <p className="mt-2 text-sm font-medium text-[#111827] dark:text-slate-100">{item.value}</p>
+            <div key={item.label} className="rounded-2xl border border-[#E2E8F0] dark:border-[var(--fia-gray-200)] bg-[#FBFCFE] dark:bg-[var(--fia-gray-50)] px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B] dark:text-[var(--fia-gray-500)]">{item.label}</p>
+              <p className="mt-2 text-sm font-medium text-[#111827] dark:text-[var(--fia-gray-900)]">{item.value}</p>
             </div>
           ))}
         </div>

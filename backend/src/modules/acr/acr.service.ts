@@ -1062,7 +1062,13 @@ export class AcrService {
           acrRecordId: acr.id,
           actorId: user.id,
           actorRole: displayRole(user.activeRole),
-          action: wasReturnedRecord && action === "submit_to_reporting" ? "Resubmitted to Reporting Officer" : this.actionTimelineLabel(action),
+          action: wasReturnedRecord && action === "submit_to_reporting"
+            ? "Resubmitted to Reporting Officer"
+            : wasReturnedRecord && action === "forward_to_countersigning"
+              ? "Resubmitted to Countersigning Officer"
+              : wasReturnedRecord && action === "submit_to_secret_branch"
+                ? "Resubmitted to Secret Branch"
+                : this.actionTimelineLabel(action),
           status: next.workflowState === AcrWorkflowState.ARCHIVED ? "completed" : action.startsWith("return_") ? "returned" : "completed",
           remarks: action.startsWith("return_") ? remarks : undefined,
         },
@@ -1074,13 +1080,23 @@ export class AcrService {
       acrRecordId: acr.id,
       recordType: "ACR",
       recordId: acr.id,
-      action: wasReturnedRecord && action === "submit_to_reporting" ? "ACR resubmitted to reporting" : `ACR ${action}`,
+      action: wasReturnedRecord && action === "submit_to_reporting"
+        ? "ACR resubmitted to reporting"
+        : wasReturnedRecord && action === "forward_to_countersigning"
+          ? "ACR resubmitted to countersigning"
+          : wasReturnedRecord && action === "submit_to_secret_branch"
+            ? "ACR resubmitted to secret branch"
+            : `ACR ${action}`,
       actorRole: displayRole(user.activeRole),
       ipAddress,
       details:
         wasReturnedRecord && action === "submit_to_reporting"
           ? `Corrected ACR resubmitted to ${acr.reportingOfficer.displayName}.`
-          : remarks ?? `ACR transitioned to ${next.statusLabel}.`,
+          : wasReturnedRecord && action === "forward_to_countersigning"
+            ? `Corrected ACR resubmitted to ${acr.countersigningOfficer?.displayName ?? "countersigning officer"}.`
+            : wasReturnedRecord && action === "submit_to_secret_branch"
+              ? "Corrected ACR resubmitted to Secret Branch."
+              : remarks ?? `ACR transitioned to ${next.statusLabel}.`,
     });
 
     if (action === "submit_to_reporting") {
@@ -1100,8 +1116,10 @@ export class AcrService {
         userId: acr.countersigningOfficerId,
         acrId: acr.id,
         type: NotificationType.INFO,
-        title: "Countersigning Review Required",
-        message: `ACR ${acr.acrNo} has been submitted for countersigning review.`,
+        title: wasReturnedRecord ? "Corrected ACR Resubmitted" : "Countersigning Review Required",
+        message: wasReturnedRecord
+          ? `Corrected ACR ${acr.acrNo} has been resubmitted for countersigning review.`
+          : `ACR ${acr.acrNo} has been submitted for countersigning review.`,
       });
     }
 
@@ -1110,8 +1128,10 @@ export class AcrService {
         userId: secretBranchAssignment?.verificationUser?.id,
         acrId: acr.id,
         type: NotificationType.INFO,
-        title: "Secret Branch Review Required",
-        message: `ACR ${acr.acrNo} has been submitted for Secret Branch review.`,
+        title: wasReturnedRecord ? "Corrected ACR Resubmitted" : "Secret Branch Review Required",
+        message: wasReturnedRecord
+          ? `Corrected ACR ${acr.acrNo} has been resubmitted for Secret Branch review.`
+          : `ACR ${acr.acrNo} has been submitted for Secret Branch review.`,
       });
     }
 

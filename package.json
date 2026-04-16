@@ -13,6 +13,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "seed": "pnpm --filter @smart-acr/backend prisma:seed",
+    "seed:dashboard": "pnpm --filter @smart-acr/backend seed:dashboard",
     "db:generate": "pnpm --filter @smart-acr/backend prisma:generate",
     "db:push": "pnpm --filter @smart-acr/backend prisma:push",
     "db:migrate": "pnpm --filter @smart-acr/backend prisma:migrate",

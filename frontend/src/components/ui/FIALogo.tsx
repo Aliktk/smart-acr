@@ -60,12 +60,12 @@ export function FIALogo({ variant = "full", size = "md", theme = "dark", classNa
     return (
       <div className={`flex items-center gap-2.5 ${className}`}>
         <FIAShield size={cfg.icon} theme={theme} />
-        <div className="min-w-0">
+        <div className="min-w-0 text-center">
           <p
             className={`truncate font-semibold leading-none tracking-[0.01em] ${cfg.title}`}
             style={{ color: titleColor }}
           >
-            Federal Investigation Authority
+            FIA
           </p>
           <p
             className={`truncate font-medium leading-none tracking-[0.08em] ${cfg.subtitle}`}
@@ -90,7 +90,13 @@ export function FIALogo({ variant = "full", size = "md", theme = "dark", classNa
             fontSize: size === "xl" ? "1.5rem" : size === "lg" ? "1.25rem" : "1.125rem",
           }}
         >
-          Federal Investigation Authority
+          FIA
+        </p>
+        <p
+          className="mt-0.5 text-[10px] font-medium tracking-[0.04em]"
+          style={{ color: metaColor }}
+        >
+          Federal Investigation Agency
         </p>
         <p
           className="mt-1 text-sm font-semibold tracking-[0.12em]"

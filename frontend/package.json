@@ -14,11 +14,17 @@
     "test": "tsc -p tsconfig.spec.json && node -e \"require('fs').mkdirSync('.test-dist',{ recursive: true }); require('fs').writeFileSync('.test-dist/package.json', JSON.stringify({ type: 'commonjs' }))\" && node .test-dist/components/forms/form-templates.spec.js"
   },
   "dependencies": {
+    "@nivo/chord": "^0.99.0",
+    "@nivo/core": "^0.99.0",
+    "@nivo/sankey": "^0.99.0",
     "@tanstack/react-query": "^5.69.0",
     "@tanstack/react-query-devtools": "^5.69.0",
     "clsx": "^2.1.1",
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.6",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
+    "leaflet.heat": "^0.2.0",
     "lucide-react": "^0.487.0",
     "next": "^15.2.3",
     "playwright-core": "^1.59.1",

@@ -16,6 +16,7 @@ import type {
   DashboardOverview,
   DashboardAnalyticsResponse,
   DashboardDatePreset,
+  HeatmapPoint,
   EmployeePortalProfile,
   EmployeePortalProfileInput,
   EmployeeSearchResponse,
@@ -712,6 +713,10 @@ export function getDashboardAnalytics(filters?: {
   if (filters?.templateFamily) search.set("templateFamily", filters.templateFamily);
   const suffix = search.toString() ? `?${search.toString()}` : "";
   return apiFetch<DashboardAnalyticsResponse>(`/analytics/dashboard${suffix}`);
+}
+
+export function getDashboardHeatmap(): Promise<HeatmapPoint[]> {
+  return apiFetch<HeatmapPoint[]>("/analytics/heatmap");
 }
 
 // --- Reference Data ---

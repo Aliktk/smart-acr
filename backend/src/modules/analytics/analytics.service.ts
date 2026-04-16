@@ -11,6 +11,15 @@ import {
   type DashboardDatePreset,
 } from "./dto/dashboard-analytics-query.dto";
 
+export interface HeatmapPoint {
+  city: string;
+  lat: number;
+  lng: number;
+  intensity: number;
+  overdue: number;
+  total: number;
+}
+
 const FULL_ANALYTICS_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.IT_OPS,
@@ -572,6 +581,105 @@ export class AnalyticsService {
     return mode === "secret-branch"
       ? this.buildSecretBranchAnalytics(filteredRecords, accessibleRecords, filterOptions, query)
       : this.buildExecutiveAnalytics(filteredRecords, accessibleRecords, filterOptions, query);
+  }
+
+  async heatmap(userId: string, activeRole: UserRole): Promise<HeatmapPoint[]> {
+    const scopedUser = await loadScopedUser(this.prisma, userId, activeRole);
+    if (!canViewAnalytics(scopedUser)) {
+      throw new ForbiddenException("Insufficient permissions for heatmap data");
+    }
+
+    const employeeWhere = FULL_ANALYTICS_ROLES.includes(scopedUser.activeRole)
+      ? undefined
+      : buildScopedOrgWhere(scopedUser) ?? undefined;
+
+    const where: Prisma.AcrRecordWhereInput = employeeWhere
+      ? { employee: { is: employeeWhere } }
+      : {};
+
+    const acrs = await this.prisma.acrRecord.findMany({
+      where,
+      select: {
+        workflowState: true,
+        dueDate: true,
+        employee: {
+          select: {
+            station: { select: { name: true, id: true } },
+          },
+        },
+      },
+    });
+
+    const FIA_CITY_COORDS: Record<string, { lat: number; lng: number }> = {
+      "Karachi":     { lat: 24.8607, lng: 67.0011 },
+      "Lahore":      { lat: 31.5204, lng: 74.3587 },
+      "Islamabad":   { lat: 33.6844, lng: 73.0479 },
+      "Peshawar":    { lat: 34.0151, lng: 71.5249 },
+      "Quetta":      { lat: 30.1798, lng: 66.9750 },
+      "Multan":      { lat: 30.1575, lng: 71.5249 },
+      "Faisalabad":  { lat: 31.4504, lng: 73.1350 },
+      "Hyderabad":   { lat: 25.3960, lng: 68.3578 },
+      "Rawalpindi":  { lat: 33.5651, lng: 73.0169 },
+      "Gujranwala":  { lat: 32.1877, lng: 74.1945 },
+      "Sialkot":     { lat: 32.4945, lng: 74.5229 },
+      "Abbottabad":  { lat: 34.1463, lng: 73.2117 },
+      "Sukkur":      { lat: 27.7052, lng: 68.8574 },
+      "Larkana":     { lat: 27.5570, lng: 68.2140 },
+    };
+
+    const cityMap = new Map<string, { total: number; overdue: number; lat: number; lng: number }>();
+    const now = new Date();
+
+    for (const acr of acrs) {
+      const stationName = acr.employee?.station?.name ?? null;
+      if (!stationName) continue;
+
+      const normalizedCity = Object.keys(FIA_CITY_COORDS).find(
+        (k) =>
+          k.toLowerCase() === stationName.toLowerCase() ||
+          stationName.toLowerCase().startsWith(k.toLowerCase().substring(0, 4)),
+      );
+      if (!normalizedCity) continue;
+
+      const coords = FIA_CITY_COORDS[normalizedCity];
+      const existing = cityMap.get(normalizedCity) ?? {
+        total: 0,
+        overdue: 0,
+        lat: coords.lat,
+        lng: coords.lng,
+      };
+      existing.total += 1;
+
+      const isOverdue =
+        acr.dueDate &&
+        acr.dueDate < now &&
+        acr.workflowState !== AcrWorkflowState.ARCHIVED &&
+        acr.workflowState !== AcrWorkflowState.DRAFT;
+      if (isOverdue) existing.overdue += 1;
+
+      cityMap.set(normalizedCity, existing);
+    }
+
+    const result: HeatmapPoint[] = [];
+
+    for (const [city, coords] of Object.entries(FIA_CITY_COORDS)) {
+      const data = cityMap.get(city);
+      if (data && data.total > 0) {
+        const intensity = Math.min(1, data.overdue / Math.max(1, data.total));
+        result.push({
+          city,
+          lat: coords.lat,
+          lng: coords.lng,
+          intensity,
+          overdue: data.overdue,
+          total: data.total,
+        });
+      } else {
+        result.push({ city, lat: coords.lat, lng: coords.lng, intensity: 0, overdue: 0, total: 0 });
+      }
+    }
+
+    return result;
   }
 
   private async loadScopedRecords(user: ScopedUser, mode: "executive" | "secret-branch") {
@@ -1179,7 +1287,25 @@ export class AnalyticsService {
     const weekStart = startOfWeek(new Date());
     const monthStart = startOfMonth(new Date());
 
+    const pendingDARecords = records.filter(
+      (record) => record.raw.workflowState === AcrWorkflowState.PENDING_SECRET_BRANCH_REVIEW,
+    );
+
     const kpis = [
+      {
+        key: "total",
+        label: "Total records in scope",
+        value: records.length,
+        helper: window.label,
+        tone: "navy",
+      },
+      {
+        key: "pendingDA",
+        label: "Pending DA assignment",
+        value: pendingDARecords.length,
+        helper: "Awaiting DA review",
+        tone: pendingDARecords.length > 0 ? "amber" : "green",
+      },
       {
         key: "archived",
         label: "Total archived ACRs",
@@ -1354,7 +1480,7 @@ export class AnalyticsService {
       heading: {
         eyebrow: "Secret Branch archive operations",
         title: "Secret Branch Dashboard",
-        description: "Archive-focused monitoring across final inflow, pending receipt anomalies, workflow source mix, and retrieval activity.",
+        description: "",
       },
       appliedFilters: {
         datePreset: query.datePreset ?? "180d",

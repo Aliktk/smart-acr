@@ -13,23 +13,23 @@ function getNotificationVisuals(notification: NotificationItem) {
     case "warning":
       return {
         icon: AlertTriangle,
-        iconWrap: "bg-[#FFF7ED] text-[#F59E0B]",
+        iconWrap: "bg-amber-50 text-amber-500 dark:bg-amber-900/30 dark:text-amber-400",
       };
     case "success":
       return {
         icon: CheckCircle2,
-        iconWrap: "bg-[#ECFDF5] text-[#16A34A]",
+        iconWrap: "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400",
       };
     case "danger":
       return {
         icon: X,
-        iconWrap: "bg-[#FEF2F2] text-[#EF4444]",
+        iconWrap: "bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400",
       };
     case "info":
     default:
       return {
         icon: Info,
-        iconWrap: "bg-[#EFF6FF] text-[#3B82F6]",
+        iconWrap: "bg-blue-50 text-blue-500 dark:bg-blue-900/30 dark:text-blue-400",
       };
   }
 }
@@ -107,12 +107,12 @@ export function NotificationPanel() {
         }`}
       >
       <div className="flex w-full flex-col">
-        <div className="bg-[#1A1C6E] px-4 py-3.5 text-white">
+        <div className="bg-[var(--fia-navy)] px-4 py-3.5 text-white dark:bg-[#0D0F1A]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell size={16} className="text-white" />
               <h3 className="text-base font-semibold text-white">Notifications</h3>
-              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#EF4444] px-1.5 py-0.5 text-[10px] font-bold text-white">
+              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
                 {unreadCount}
               </span>
             </div>

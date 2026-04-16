@@ -149,7 +149,7 @@ function Field(props: {
           props.disabled
             ? "cursor-not-allowed border-[var(--fia-gray-200)] bg-[var(--fia-gray-50)] text-[var(--fia-gray-400)]"
             : props.error
-            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20"
+            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20 dark:border-rose-800/60 dark:bg-rose-900/20 dark:text-[var(--fia-gray-900)]"
             : "border-[var(--fia-gray-200)] bg-white text-[var(--fia-gray-900)] focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
         }`}
       />
@@ -180,7 +180,7 @@ function SelectField(props: {
         onChange={(event) => props.onChange?.(event.target.value)}
         className={`w-full rounded-[16px] border px-4 py-2.5 text-sm outline-none transition-all ${
           props.error
-            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20"
+            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20 dark:border-rose-800/60 dark:bg-rose-900/20 dark:text-[var(--fia-gray-900)]"
             : "border-[var(--fia-gray-200)] bg-white text-[var(--fia-gray-900)] focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
         }`}
       >
@@ -252,7 +252,7 @@ function TextareaField(props: {
         onChange={(event) => props.onChange?.(event.target.value)}
         className={`w-full resize-none rounded-[16px] border px-4 py-2.5 text-sm outline-none transition-all ${
           props.error
-            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20"
+            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20 dark:border-rose-800/60 dark:bg-rose-900/20 dark:text-[var(--fia-gray-900)]"
             : "border-[var(--fia-gray-200)] bg-white text-[var(--fia-gray-900)] focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
         }`}
       />
@@ -282,7 +282,7 @@ function DateField(props: {
         onChange={(event) => props.onChange?.(event.target.value)}
         className={`w-full rounded-[16px] border px-4 py-2.5 text-sm outline-none transition-all ${
           props.error
-            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20"
+            ? "border-[#FCA5A5] bg-[#FFF5F5] text-[var(--fia-gray-900)] focus:border-[#DC2626] focus:ring-4 focus:ring-[#FCA5A5]/20 dark:border-rose-800/60 dark:bg-rose-900/20 dark:text-[var(--fia-gray-900)]"
             : "border-[var(--fia-gray-200)] bg-white text-[var(--fia-gray-900)] focus:border-[var(--fia-cyan)] focus:ring-4 focus:ring-[rgba(0,149,217,0.12)]"
         }`}
       />
@@ -379,7 +379,7 @@ function AssetCard(props: {
           </div>
         </div>
         {props.asset ? (
-          <span className="rounded-full border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#166534]">
+          <span className="rounded-full border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#166534] dark:border-green-800/60 dark:bg-green-900/20 dark:text-green-400">
             Saved
           </span>
         ) : (
@@ -413,7 +413,7 @@ function AssetCard(props: {
           type="button"
           onClick={props.onRemove}
           disabled={!props.asset || props.busyUpload || props.busyRemove}
-          className="inline-flex items-center gap-2 rounded-[12px] border border-[#FECACA] bg-[#FFF1F2] px-4 py-2.5 text-sm font-semibold text-[#B42318] disabled:cursor-not-allowed disabled:border-[var(--fia-gray-200)] disabled:bg-[var(--fia-gray-50)] disabled:text-[var(--fia-gray-400)]"
+          className="inline-flex items-center gap-2 rounded-[12px] border border-[#FECACA] bg-[#FFF1F2] px-4 py-2.5 text-sm font-semibold text-[#B42318] dark:border-rose-800/60 dark:bg-rose-900/20 dark:text-rose-400 disabled:cursor-not-allowed disabled:border-[var(--fia-gray-200)] disabled:bg-[var(--fia-gray-50)] disabled:text-[var(--fia-gray-400)]"
         >
           <Trash2 size={16} />
           {props.busyRemove ? "Removing..." : "Remove"}
@@ -582,11 +582,11 @@ function ServiceRecordSection(props: {
           </div>
         </div>
       ) : (
-        <div className="mb-5 flex items-start gap-3 rounded-[20px] border border-[#FEF3C7] bg-[#FFFBEB] p-4">
-          <Info size={16} className="mt-0.5 shrink-0 text-[#B45309]" />
+        <div className="mb-5 flex items-start gap-3 rounded-[20px] border border-[#FEF3C7] bg-[#FFFBEB] p-4 dark:border-amber-800/60 dark:bg-amber-900/20">
+          <Info size={16} className="mt-0.5 shrink-0 text-[#B45309] dark:text-amber-400" />
           <div>
-            <p className="text-sm font-semibold text-[#92400E]">Employee record not yet created</p>
-            <p className="mt-1 text-xs leading-5 text-[#A16207]">
+            <p className="text-sm font-semibold text-[#92400E] dark:text-amber-300">Employee record not yet created</p>
+            <p className="mt-1 text-xs leading-5 text-[#A16207] dark:text-amber-400/80">
               Your rank, posting, and organisational details will be filled in by a Clerk when they create your employee record. You can save the personal details below now — they will be used as pre-fill when your record is set up.
             </p>
           </div>
@@ -1084,7 +1084,6 @@ export function UserSettingsPage({
   const canUseSignatureAndStamp =
     user?.activeRoleCode === "REPORTING_OFFICER" ||
     user?.activeRoleCode === "COUNTERSIGNING_OFFICER" ||
-    user?.activeRoleCode === "ADDITIONAL_DIRECTOR" ||
     (user?.activeRoleCode === "SECRET_BRANCH" && Boolean(user?.secretBranchProfile?.canVerify));
 
   function handleProfileSave() {
@@ -1195,10 +1194,10 @@ export function UserSettingsPage({
                     type="button"
                     onClick={() => setActiveTab(tab.key)}
                     className={`flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left text-sm transition-colors ${
-                      active ? "bg-[var(--fia-navy-100)] text-[var(--fia-navy)]" : "text-[var(--fia-gray-600)] hover:bg-[var(--fia-gray-50)]"
+                      active ? "bg-[var(--fia-navy-100)] text-[var(--fia-navy)] dark:text-[var(--fia-navy-400)]" : "text-[var(--fia-gray-600)] hover:bg-[var(--fia-gray-50)]"
                     }`}
                   >
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-[14px] ${active ? "bg-white text-[var(--fia-navy)]" : "bg-[var(--fia-gray-50)] text-[var(--fia-gray-500)]"}`}>
+                    <span className={`flex h-9 w-9 items-center justify-center rounded-[14px] ${active ? "bg-white text-[var(--fia-navy)] dark:bg-[var(--fia-navy-50)] dark:text-[var(--fia-navy-400)]" : "bg-[var(--fia-gray-50)] text-[var(--fia-gray-500)]"}`}>
                       <Icon size={16} />
                     </span>
                     <span className={active ? "font-semibold" : "font-medium"}>{tab.label}</span>

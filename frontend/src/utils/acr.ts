@@ -60,7 +60,8 @@ export function isReturnedStatus(status: AcrStatus) {
     status === "Returned" ||
     status === "Returned to Clerk" ||
     status === "Returned to Reporting Officer" ||
-    status === "Returned to Countersigning Officer"
+    status === "Returned to Countersigning Officer" ||
+    status === "Returned to Admin Office"
   );
 }
 
@@ -128,14 +129,17 @@ export function getCurrentStageLabel(item: AcrSummary) {
   if (item.workflowState === "Draft" || isDraftStatus(item.status)) {
     return "Clerk drafting";
   }
-  if (item.workflowState === "Returned" || item.workflowState === "Returned to Clerk" || isReturnedStatus(item.status)) {
-    return "Returned to clerk";
-  }
-  if (item.workflowState === "Returned to Reporting Officer") {
+  if (item.workflowState === "Returned to Reporting Officer" || item.status === "Returned to Reporting Officer") {
     return "Returned to reporting officer";
   }
-  if (item.workflowState === "Returned to Countersigning Officer") {
+  if (item.workflowState === "Returned to Countersigning Officer" || item.status === "Returned to Countersigning Officer") {
     return "Returned to countersigning officer";
+  }
+  if (item.workflowState === "Returned to Admin Office" || item.status === "Returned to Admin Office") {
+    return "Returned to admin office";
+  }
+  if (item.workflowState === "Returned" || item.workflowState === "Returned to Clerk" || item.status === "Returned to Clerk" || item.status === "Returned") {
+    return "Returned to clerk";
   }
   if (item.workflowState === "Pending Reporting" || item.status === "Pending Reporting Officer" || item.status === "In Review" || item.status === "Overdue") {
     return "Reporting review";

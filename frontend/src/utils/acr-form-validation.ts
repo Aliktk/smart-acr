@@ -141,7 +141,10 @@ export function getActionFormValidationMessage(params: {
   }
 
   if (params.action === "submit_to_secret_branch") {
-    const scope = params.workflowState === "Pending Countersigning" ? "countersigning" : "reporting";
+    const scope =
+      params.workflowState === "Pending Countersigning" || params.workflowState === "Returned to Countersigning Officer"
+        ? "countersigning"
+        : "reporting";
     return getReviewerSubmissionValidationMessage({
       scope,
       templateFamily: params.templateFamily,

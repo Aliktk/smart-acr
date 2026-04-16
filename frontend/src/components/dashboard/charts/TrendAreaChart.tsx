@@ -1,12 +1,13 @@
 "use client";
 
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Label } from "recharts";
 
 interface TrendAreaChartProps {
   data: Array<{ label: string; [key: string]: string | number | null | undefined }>;
   series: Array<{ key: string; label: string; color: string }>;
   title?: string;
   subtitle?: string;
+  yAxisLabel?: string;
 }
 
 const TONE_COLORS: Record<string, string> = {
@@ -18,7 +19,7 @@ const TONE_COLORS: Record<string, string> = {
   slate: "#64748B",
 };
 
-export function TrendAreaChart({ data, series, title, subtitle }: TrendAreaChartProps) {
+export function TrendAreaChart({ data, series, title, subtitle, yAxisLabel = "Count" }: TrendAreaChartProps) {
   if (data.length === 0) return null;
 
   return (
@@ -37,22 +38,49 @@ export function TrendAreaChart({ data, series, title, subtitle }: TrendAreaChart
           </span>
         ))}
       </div>
-      <ResponsiveContainer width="100%" height={220}>
-        <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+      <ResponsiveContainer width="100%" height={230}>
+        <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 24, left: 12 }}>
           <defs>
             {series.map((s) => {
               const color = TONE_COLORS[s.color] ?? s.color;
               return (
                 <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                  <stop offset="5%" stopColor={color} stopOpacity={0.18} />
                   <stop offset="95%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
               );
             })}
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--fia-gray-200, #e5e7eb)" strokeOpacity={0.5} />
-          <XAxis dataKey="label" tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }} tickLine={false} axisLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }} tickLine={false} axisLine={false} />
+          <XAxis
+            dataKey="label"
+            tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }}
+            tickLine={false}
+            axisLine={{ stroke: "var(--fia-gray-200)", strokeOpacity: 0.6 }}
+            interval="preserveStartEnd"
+          >
+            <Label
+              value="Period"
+              offset={-8}
+              position="insideBottom"
+              style={{ fontSize: 9, fill: "var(--fia-gray-400)", textTransform: "uppercase", letterSpacing: "0.04em" }}
+            />
+          </XAxis>
+          <YAxis
+            tick={{ fontSize: 10, fill: "var(--fia-gray-400)" }}
+            tickLine={false}
+            axisLine={false}
+            width={36}
+            allowDecimals={false}
+          >
+            <Label
+              value={yAxisLabel}
+              angle={-90}
+              position="insideLeft"
+              offset={8}
+              style={{ fontSize: 9, fill: "var(--fia-gray-400)", textTransform: "uppercase", letterSpacing: "0.04em" }}
+            />
+          </YAxis>
           <Tooltip
             contentStyle={{
               background: "var(--card, #fff)",

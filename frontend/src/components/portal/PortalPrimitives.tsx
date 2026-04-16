@@ -123,7 +123,7 @@ export function QuickLinkCard({
     cyan: { badge: "bg-[var(--fia-cyan-100)] text-[var(--fia-cyan)]" },
     amber: { badge: "bg-[var(--fia-warning-bg)] text-[var(--fia-warning)]" },
     green: { badge: "bg-[var(--fia-success-bg)] text-[var(--fia-success)]" },
-    red: { badge: "bg-[#FFF1F2] text-[#E11D48]" },
+    red: { badge: "bg-[var(--fia-danger-bg)] text-[var(--fia-danger)]" },
   } as const;
 
   return (
@@ -177,7 +177,7 @@ export function QuietDonutChart({ data }: { data: ChartDatum[] }) {
     <div className="flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="relative flex items-center justify-center">
         <svg viewBox="0 0 200 200" className="h-40 w-40 -rotate-90">
-          <circle cx="100" cy="100" r={radius} fill="none" stroke="#EEF2F7" strokeWidth="20" />
+          <circle cx="100" cy="100" r={radius} fill="none" stroke="var(--fia-gray-100)" strokeWidth="20" />
           {data.map((entry) => {
             if (entry.value <= 0) {
               return null;
@@ -237,7 +237,7 @@ export function SegmentedTabs<T extends string>({
   onChange: (next: T) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-nowrap gap-1 overflow-x-auto">
       {tabs.map((tab) => {
         const active = tab.key === value;
 
@@ -246,15 +246,15 @@ export function SegmentedTabs<T extends string>({
             key={tab.key}
             type="button"
             onClick={() => onChange(tab.key)}
-            className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
               active
                 ? "bg-[var(--fia-navy)] text-white dark:bg-[var(--fia-cyan)] dark:text-white"
-                : "bg-[var(--fia-gray-50)] text-[var(--fia-gray-600)] hover:bg-[var(--fia-gray-100)]"
+                : "bg-[var(--fia-gray-100)] text-[var(--fia-gray-600)] hover:bg-[var(--fia-gray-200)]"
             }`}
           >
             {tab.label}
             {typeof tab.count === "number" ? (
-                <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${active ? "bg-white/15" : "bg-[var(--card)] text-[var(--fia-gray-500)]"}`}>
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/20" : "bg-white text-[var(--fia-gray-500)]"}`}>
                   {tab.count}
                 </span>
               ) : null}

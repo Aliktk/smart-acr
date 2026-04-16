@@ -1063,15 +1063,15 @@ export function UserManagementPage() {
                     {drawerMode !== "create" && detailQuery.data ? (
                       <PortalSurface title="Lifecycle" className="shadow-none">
                         <div className="grid gap-4 md:grid-cols-3">
-                          <div className="rounded-2xl border border-[#E2E8F0] bg-[#FBFCFE] px-4 py-3">
+                          <div className="rounded-2xl border border-[#E2E8F0] dark:border-[var(--fia-gray-200)] bg-[#FBFCFE] dark:bg-[var(--fia-gray-50)] px-4 py-3">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Created</p>
                             <p className="mt-2 text-sm font-semibold text-[var(--fia-gray-900)]">{humanDate(detailQuery.data.createdAt)}</p>
                           </div>
-                          <div className="rounded-2xl border border-[#E2E8F0] bg-[#FBFCFE] px-4 py-3">
+                          <div className="rounded-2xl border border-[#E2E8F0] dark:border-[var(--fia-gray-200)] bg-[#FBFCFE] dark:bg-[var(--fia-gray-50)] px-4 py-3">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Last Updated</p>
                             <p className="mt-2 text-sm font-semibold text-[var(--fia-gray-900)]">{humanDate(detailQuery.data.updatedAt)}</p>
                           </div>
-                          <div className="rounded-2xl border border-[#E2E8F0] bg-[#FBFCFE] px-4 py-3">
+                          <div className="rounded-2xl border border-[#E2E8F0] dark:border-[var(--fia-gray-200)] bg-[#FBFCFE] dark:bg-[var(--fia-gray-50)] px-4 py-3">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fia-gray-500)]">Last Login</p>
                             <p className="mt-2 text-sm font-semibold text-[var(--fia-gray-900)]">{humanDate(detailQuery.data.lastLoginAt)}</p>
                           </div>
@@ -1083,7 +1083,7 @@ export function UserManagementPage() {
                       <PortalSurface title="Recent Audit Activity" className="shadow-none">
                         <div className="space-y-3">
                           {detailQuery.data.recentAudit.length ? detailQuery.data.recentAudit.map((entry) => (
-                            <div key={entry.id} className="rounded-2xl border border-[#E2E8F0] bg-[#FBFCFE] px-4 py-3">
+                            <div key={entry.id} className="rounded-2xl border border-[#E2E8F0] dark:border-[var(--fia-gray-200)] bg-[#FBFCFE] dark:bg-[var(--fia-gray-50)] px-4 py-3">
                               <div className="flex items-start justify-between gap-3">
                                 <div>
                                   <p className="text-sm font-semibold text-[var(--fia-gray-900)]">{entry.action}</p>

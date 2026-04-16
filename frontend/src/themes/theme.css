@@ -190,9 +190,13 @@
 
   /* ─── Status Backgrounds ─── */
   --fia-success-bg:   rgba(22,163,74,0.15);
+  --fia-success:      #4ADE80;
   --fia-warning-bg:   rgba(217,119,6,0.15);
+  --fia-warning:      #FCD34D;
   --fia-danger-bg:    rgba(220,38,38,0.15);
+  --fia-danger:       #F87171;
   --fia-info-bg:      rgba(37,99,235,0.15);
+  --fia-info:         #60A5FA;
 
   /* ─── Brand Light Variants ─── */
   --fia-navy-100:     rgba(45,48,143,0.25);
@@ -398,14 +402,15 @@
   color: var(--color-white) !important;
 }
 
-/* Keep branded solid action controls legible across pages. */
+/* Keep branded solid action controls legible across pages.
+   Always white text — var(--fia-white) inverts in dark mode so we use --color-white. */
 :is(button, a)[class*="bg-[#1A1C6E]"],
 :is(button, a)[class*="bg-[#2D308F]"],
 :is(button, a)[class*="bg-[#0095D9]"],
 :is(button, a)[class*="bg-[var(--fia-navy)]"],
 :is(button, a)[class*="bg-[var(--fia-navy-500)]"],
 :is(button, a)[class*="bg-[var(--fia-cyan)]"] {
-  color: var(--fia-white) !important;
+  color: var(--color-white) !important;
 }
 
 :is(button, a)[class*="bg-[#1A1C6E]"] *,
