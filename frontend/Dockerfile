@@ -14,7 +14,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY frontend/package.json frontend/package.json
 COPY backend/package.json backend/package.json
 
-RUN pnpm install --frozen-lockfile
+RUN echo "node-linker=hoisted" > .npmrc && \
+    pnpm install --no-frozen-lockfile
 
 FROM deps AS build
 

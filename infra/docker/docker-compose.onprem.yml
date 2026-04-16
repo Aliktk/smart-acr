@@ -7,10 +7,6 @@ services:
     restart: unless-stopped
     env_file:
       - ./env/backend.prod.env
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-smart_acr}
-      POSTGRES_USER: ${POSTGRES_USER:-smartacr}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-this-password}
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -108,7 +104,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["pnpm", "--filter", "@smart-acr/backend", "prisma:migrate:deploy"]
+    command: ["sh", "-c", "node_modules/.bin/prisma migrate deploy"]
     restart: "no"
     networks:
       - internal
@@ -122,7 +118,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["pnpm", "--filter", "@smart-acr/backend", "prisma:seed"]
+    command: ["sh", "-c", "node_modules/.bin/tsx prisma/seed.ts"]
     restart: "no"
     networks:
       - internal
