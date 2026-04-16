@@ -13,14 +13,15 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 COPY backend ./backend
 COPY frontend ./frontend
+# express is a peerDependency of @nestjs/platform-express — pnpm deploy skips
+# peer deps. Add it as a direct dep here so the deploy stage picks it up.
+RUN pnpm --filter @smart-acr/backend add express@^4.21.2
 RUN pnpm --filter @smart-acr/backend prisma:generate
 RUN pnpm --filter @smart-acr/backend build
-# pnpm v10 requires --legacy for non-injected workspaces.
-# --legacy creates a flat node_modules with real files (no symlinks) that
-# survives copying across Docker stages.
+# --legacy required for pnpm v10+ in non-injected workspaces.
+# Produces a flat node_modules with real files (no symlinks) safe to copy.
 RUN pnpm deploy --legacy --filter @smart-acr/backend --prod /workspace/deployed
-# Overwrite the deployed @prisma/client with the generated version so that
-# Prisma enums (UserRole etc.) exist at runtime.
+# Overwrite @prisma/client with the generated version (has UserRole enums etc.)
 RUN cp -r /workspace/node_modules/.pnpm/@prisma+client*/node_modules/@prisma/client/. /workspace/deployed/node_modules/@prisma/client/ \
  && cp -r /workspace/node_modules/.pnpm/@prisma+client*/node_modules/.prisma /workspace/deployed/node_modules/.prisma
 
